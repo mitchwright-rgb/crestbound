@@ -30,10 +30,10 @@ const courseSpecs = [
   { id: 'nightshift', name: 'Night Shift', short: 'NIGHT SHIFT', accent: '#ef6f52', description: 'Low tunnels, hazard lanes, and an enemy-heavy sprint.' },
 ] as const;
 const modifierSpecs = [
-  { id: 'clear', name: 'Clear Skies' },
-  { id: 'tailwind', name: 'Tailwind' },
-  { id: 'moonstep', name: 'Moonstep' },
-  { id: 'sparkstorm', name: 'Teal Sparks' },
+  { id: 'clear', name: 'Clear Skies', description: 'The standard route: normal gravity, normal wind, and familiar light.' },
+  { id: 'tailwind', name: 'Tailwind', description: 'A steady breeze gives Sunny a small forward push while moving right.' },
+  { id: 'moonstep', name: 'Moonstep', description: 'Lower gravity gives every jump more height and longer airtime.' },
+  { id: 'sparkstorm', name: 'Spark Storm', description: 'More light turns teal and appears along optional side paths.' },
 ] as const;
 const dailyCourse = courseSpecs[dailyCourseIndex];
 const dailyModifier = modifierSpecs[((daySerial + dailyCourseIndex) % modifierSpecs.length + modifierSpecs.length) % modifierSpecs.length];
@@ -143,6 +143,7 @@ export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const screenRef = useRef<Screen>('title');
   const waitingForLandscapeRef = useRef(false);
+  const coachPauseRef = useRef(false);
   const inputRef = useRef({ left: false, right: false, jump: false, dash: false });
   const resetRef = useRef<(() => void) | null>(null);
   const [screen, setScreen] = useState<Screen>('title');
@@ -164,6 +165,7 @@ export default function Home() {
   const [rank, setRank] = useState<number | null>(null);
   const [homePanel, setHomePanel] = useState<HomePanel>('none');
   const [showDashCoach, setShowDashCoach] = useState(false);
+  const [showModifierCoach, setShowModifierCoach] = useState(false);
   const [community, setCommunity] = useState<Community>({ players: 0, lights: 0, goal: 2500, nearby: [], playerRank: null, recent: [] });
 
   useEffect(() => { mutedRef.current = muted; }, [muted]);
@@ -276,8 +278,16 @@ export default function Home() {
 
   function dismissDashCoach(learned = false) {
     dashCoachRef.current = false; setShowDashCoach(false);
+    coachPauseRef.current = false;
     window.localStorage.setItem('crestbound-dash-learned', '1');
     if (learned) track('dash_learned');
+  }
+
+  function dismissModifierCoach() {
+    setShowModifierCoach(false);
+    coachPauseRef.current = dashCoachRef.current;
+    window.localStorage.setItem(`crestbound-twist-seen-${localDay}-${modifier.id}`, '1');
+    track('modifier_learned');
   }
 
   async function startGame(tryImmersive = false) {
@@ -301,7 +311,10 @@ export default function Home() {
     setWaitingForLandscape(shouldWaitForLandscape);
     setGameScreen('playing');
     const needsCoach = !window.localStorage.getItem('crestbound-dash-learned');
+    const needsModifierCoach = !isPractice && !window.localStorage.getItem(`crestbound-twist-seen-${localDay}-${modifier.id}`);
+    coachPauseRef.current = needsCoach || needsModifierCoach;
     dashCoachRef.current = needsCoach; setShowDashCoach(needsCoach); if (!isPractice) track('run_start');
+    setShowModifierCoach(needsModifierCoach);
     if (replaying && !isPractice) track('replay');
     if (!shouldWaitForLandscape) startMusic();
     requestAnimationFrame(() => canvasRef.current?.focus());
@@ -819,7 +832,7 @@ export default function Home() {
     function loop(now: number) {
       const dt = Math.min(.033, (now - last) / 1000);
       last = now;
-      if (screenRef.current === 'playing' && !waitingForLandscapeRef.current) update(dt);
+      if (screenRef.current === 'playing' && !waitingForLandscapeRef.current && !coachPauseRef.current) update(dt);
       draw();
       animation = requestAnimationFrame(loop);
     }
@@ -885,6 +898,7 @@ export default function Home() {
               <p className="kicker">READY, SUNNY?</p><h2>How to Play</h2>
               <div><b>RUN</b><span>Arrow keys / A D / touch arrows</span><b>JUMP</b><span>Space / touch JUMP · tap twice</span><b>DASH</b><span>Shift or X / touch DASH · recharges</span></div>
               <p>Touch controls appear automatically. Turn your phone sideways for the full course.</p>
+              <section className="twist-directory"><h3>Daily Twists</h3>{modifierSpecs.map((item) => <article className={item.id === modifier.id && !isPractice ? 'today' : ''} key={item.id}><b>{item.name}{item.id === modifier.id && !isPractice ? ' · TODAY' : ''}</b><span>{item.description}</span></article>)}</section>
               <p className="app-tip"><b>FULL-SCREEN TEST</b> On iPhone, tap Share, then Add to Home Screen. Crestbound will open without Safari&apos;s bars.</p>
               <button className="panel-close" type="button" onClick={() => setHomePanel('none')}>Got It</button>
             </aside>}
@@ -916,7 +930,7 @@ export default function Home() {
         )}
 
         {screen === 'playing' && (
-          <>{waitingForLandscape && <div className="rotate-prompt"><span aria-hidden="true">↻</span><strong>Turn Sideways to Start</strong><small>Your run and timer are paused until the phone is in landscape.</small></div>}{showDashCoach && !waitingForLandscape && <div className="dash-coach"><b>DASH IS YOUR EDGE</b><span>Press SHIFT or X — or tap DASH — to burst through hazards. The HUD tells you when it recharges.</span><button type="button" onClick={() => dismissDashCoach()}>GOT IT</button></div>}<div className="touch-controls" aria-label="Touch controls">
+          <>{waitingForLandscape && <div className="rotate-prompt"><span aria-hidden="true">↻</span><strong>Turn Sideways to Start</strong><small>Your run and timer are paused until the phone is in landscape.</small></div>}{showModifierCoach && !waitingForLandscape ? <div className="dash-coach modifier-coach"><b>TODAY&apos;S TWIST · {modifier.name}</b><span>{modifier.description}</span><button type="button" onClick={dismissModifierCoach}>LET&apos;S RUN</button></div> : showDashCoach && !waitingForLandscape && <div className="dash-coach"><b>DASH IS YOUR EDGE</b><span>Press SHIFT or X — or tap DASH — to burst through hazards. The HUD tells you when it recharges.</span><button type="button" onClick={() => dismissDashCoach()}>GOT IT</button></div>}<div className="touch-controls" aria-label="Touch controls">
             <div><button type="button" aria-label="Move left" onPointerDown={(event) => beginPress('left', event)} onPointerUp={(event) => endPress('left', event)} onPointerCancel={(event) => endPress('left', event)} onLostPointerCapture={() => press('left', false)}>←</button><button type="button" aria-label="Move right" onPointerDown={(event) => beginPress('right', event)} onPointerUp={(event) => endPress('right', event)} onPointerCancel={(event) => endPress('right', event)} onLostPointerCapture={() => press('right', false)}>→</button></div>
             <div><button className={hud.dashReady ? 'dash-control ready' : 'dash-control'} type="button" aria-label={hud.dashReady ? 'Dash ready' : 'Dash charging'} onPointerDown={(event) => beginPress('dash', event)} onPointerUp={(event) => endPress('dash', event)} onPointerCancel={(event) => endPress('dash', event)} onLostPointerCapture={() => press('dash', false)}>DASH</button><button className="jump-control" type="button" aria-label="Jump" onPointerDown={(event) => beginPress('jump', event)} onPointerUp={(event) => endPress('jump', event)} onPointerCancel={(event) => endPress('jump', event)} onLostPointerCapture={() => press('jump', false)}>JUMP</button></div>
           </div></>
