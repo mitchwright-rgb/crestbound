@@ -1,13 +1,11 @@
 'use client';
 
-/* eslint-disable @next/next/no-img-element -- game sprites are rendered directly into canvas */
-
 import { FormEvent, PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type Screen = 'title' | 'playing' | 'paused' | 'won' | 'over';
 type Hud = { sparks: number; total: number; lives: number; time: number; best: number | null; checkpoint: number; progress: number; dashReady: boolean };
 type Platform = { x: number; y: number; w: number; h: number; moving?: boolean; phase?: number; baseY?: number };
-type Spark = { x: number; y: number; taken?: boolean; secret?: boolean };
+type Spark = { x: number; y: number; taken?: boolean; secret?: boolean; storm?: boolean };
 type Enemy = { x: number; y: number; minX: number; maxX: number; speed: number; dir: number; alive: boolean };
 type Board = 'daily' | 'weekly' | 'all';
 type BoardEntry = { rank: number; name: string; timeMs: number; sparks: number; points?: number; runs?: number };
@@ -33,7 +31,7 @@ const modifierSpecs = [
   { id: 'clear', name: 'Clear Skies', description: 'The standard route: normal gravity, normal wind, and familiar light.' },
   { id: 'tailwind', name: 'Tailwind', description: 'A steady breeze gives Sunny a small forward push while moving right.' },
   { id: 'moonstep', name: 'Moonstep', description: 'Lower gravity gives every jump more height and longer airtime.' },
-  { id: 'sparkstorm', name: 'Spark Storm', description: 'More light turns teal and appears along optional side paths.' },
+  { id: 'sparkstorm', name: 'Spark Storm', description: 'Extra teal Storm Lights appear on high routes. Each recharges Dash and shields one hit for five seconds.' },
 ] as const;
 const dailyCourse = courseSpecs[dailyCourseIndex];
 const dailyModifier = modifierSpecs[((daySerial + dailyCourseIndex) % modifierSpecs.length + modifierSpecs.length) % modifierSpecs.length];
@@ -79,10 +77,15 @@ function buildCourse(index: number, modifierId: string) {
       const xShift = copy === 0 || platform.y >= 600 ? 0 : [-30, 48, 0, 72][platformIndex % 4];
       return { ...platform, x: platform.x + copy * COURSE_OFFSET + xShift, y, baseY: platform.moving ? y : platform.baseY };
     }));
+    const regularSparks: Spark[] = [0, 1].flatMap((copy) => baseSparkSeed.map((spark, sparkIndex) => ({ ...spark, x: spark.x + copy * COURSE_OFFSET + (copy ? (sparkIndex % 3 - 1) * 38 : 0) })));
+    const stormSparks = modifierId === 'sparkstorm' ? platforms
+      .filter((platform, platformIndex) => platform.y < 520 && platformIndex % 4 === 1)
+      .slice(0, 12)
+      .map((platform, stormIndex) => ({ x: platform.x + platform.w * (stormIndex % 2 ? .72 : .28), y: platform.y - 74, storm: true })) : [];
     return {
       platforms,
       spikeZones: [0, 1].flatMap((copy) => baseSpikeZones.map((spike, spikeIndex) => ({ ...spike, x: spike.x + copy * COURSE_OFFSET + (copy ? spikeIndex % 2 * 70 : 0) }))),
-      sparkSeed: [0, 1].flatMap((copy) => baseSparkSeed.map((spark, sparkIndex) => ({ ...spark, x: spark.x + copy * COURSE_OFFSET + (copy ? (sparkIndex % 3 - 1) * 38 : 0), secret: spark.secret || (modifierId === 'sparkstorm' && sparkIndex % 6 === 0) }))),
+      sparkSeed: [...regularSparks, ...stormSparks].sort((a, b) => a.x - b.x),
       enemySeed: [0, 1].flatMap((copy) => baseEnemySeed.map((enemy) => ({ ...enemy, x: enemy.x + copy * COURSE_OFFSET, minX: enemy.minX + copy * COURSE_OFFSET, maxX: enemy.maxX + copy * COURSE_OFFSET, speed: enemy.speed + copy * 18 }))),
       checkpoints: [120, 2180, 4780, 7720, 9780, 12380],
     };
@@ -109,14 +112,19 @@ function buildCourse(index: number, modifierId: string) {
     }
   }
 
-  const aerial = platforms.filter((platform) => platform.y < 600).map((platform, sparkIndex) => ({ x: platform.x + platform.w / 2, y: platform.y - 48, secret: sparkIndex % 7 === 0 || (modifierId === 'sparkstorm' && sparkIndex % 4 === 0) }));
+  const aerial = platforms.filter((platform) => platform.y < 600).map((platform, sparkIndex) => ({ x: platform.x + platform.w / 2, y: platform.y - 48, secret: sparkIndex % 7 === 0 }));
   const groundLight = Array.from({ length: 20 }, (_, section) => ({ x: section * 760 + 105, y: 555, secret: false }));
+  const regularSparks = [...aerial, ...groundLight].sort((a, b) => a.x - b.x).slice(0, 60);
+  const stormSparks = modifierId === 'sparkstorm' ? platforms
+    .filter((platform, platformIndex) => platform.y < 500 && platformIndex % 5 === 2)
+    .slice(0, 12)
+    .map((platform, stormIndex) => ({ x: platform.x + platform.w * (stormIndex % 2 ? .7 : .3), y: platform.y - 78, storm: true })) : [];
   const ground = platforms.filter((platform) => platform.y >= 600 && platform.w >= 430);
   const enemySeed = ground.filter((_, groundIndex) => groundIndex > 0 && (index === 2 || groundIndex % 2 === 0)).map((platform, enemyIndex) => ({
     x: platform.x + Math.min(platform.w - 80, 260 + enemyIndex % 3 * 70), y: 570, minX: platform.x + 60, maxX: platform.x + platform.w - 60,
     speed: (index === 2 ? 155 : 115) + enemyIndex % 4 * 18, dir: enemyIndex % 2 ? -1 : 1, alive: true,
   }));
-  return { platforms, spikeZones, sparkSeed: [...aerial, ...groundLight].sort((a, b) => a.x - b.x).slice(0, 60), enemySeed, checkpoints: [120, 2400, 4680, 7720, 10000, 12300] };
+  return { platforms, spikeZones, sparkSeed: [...regularSparks, ...stormSparks].sort((a, b) => a.x - b.x), enemySeed, checkpoints: [120, 2400, 4680, 7720, 10000, 12300] };
 }
 
 function formatTime(seconds: number) {
@@ -437,6 +445,10 @@ export default function Home() {
     let lastHud = 0;
     let animation = 0;
     let screenShake = 0;
+    let stormShield = 0;
+    let checkpointToast = 0;
+    let checkpointLifeAwarded = false;
+    let runEnded = false;
     let trace: Array<{ t: number; x: number; y: number }> = [];
     let traceTimer = 0;
     let ghost: Array<{ t: number; x: number; y: number }> = [];
@@ -448,11 +460,22 @@ export default function Home() {
       player.x = checkpoints[checkpointIndex]; player.y = 620 - player.h; player.vx = 0; player.vy = 0; player.grounded = true; player.jumps = 0; player.invuln = 1.5;
     };
     const hurt = () => {
-      if (player.invuln > 0) return;
-      lives -= 1;
+      if (runEnded || player.invuln > 0) return;
+      if (stormShield > 0) {
+        stormShield = 0;
+        player.invuln = .7;
+        screenShake = .1;
+        tone('checkpoint');
+        return;
+      }
+      lives = Math.max(0, lives - 1);
       screenShake = .24;
       tone('hit');
+      setHud((current) => ({ ...current, lives }));
       if (lives <= 0) {
+        runEnded = true;
+        player.invuln = 999;
+        inputRef.current = { left: false, right: false, jump: false, dash: false };
         setGameScreen('over');
       } else resetPosition();
     };
@@ -460,7 +483,7 @@ export default function Home() {
       player.x = 120; player.y = 620 - player.h; player.vx = 0; player.vy = 0; player.grounded = true; player.invuln = 1.25; player.jumps = 0;
       sparks = sparkSeed.map((item) => ({ ...item }));
       enemies = enemySeed.map((item) => ({ ...item }));
-      lives = 3; collected = 0; elapsed = 0; cameraX = 0; checkpointIndex = 0; jumpBuffer = 0; coyote = 0; previousJump = false; previousDash = false; trace = []; traceTimer = 0;
+      lives = 3; collected = 0; elapsed = 0; cameraX = 0; checkpointIndex = 0; jumpBuffer = 0; coyote = 0; previousJump = false; previousDash = false; trace = []; traceTimer = 0; stormShield = 0; checkpointToast = 0; checkpointLifeAwarded = false; runEnded = false;
       const storedBest = window.localStorage.getItem(`crestbound-best-${course.id}`);
       setHud({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: storedBest ? Number(storedBest) : null, checkpoint: 0, progress: 0, dashReady: true });
     };
@@ -494,6 +517,8 @@ export default function Home() {
       traceTimer += dt;
       if (traceTimer >= .12) { trace.push({ t: elapsed, x: player.x, y: player.y }); traceTimer = 0; }
       player.invuln = Math.max(0, player.invuln - dt);
+      stormShield = Math.max(0, stormShield - dt);
+      checkpointToast = Math.max(0, checkpointToast - dt);
       player.dashCooldown = Math.max(0, player.dashCooldown - dt);
       player.dashTime = Math.max(0, player.dashTime - dt);
       jumpBuffer = Math.max(0, jumpBuffer - dt);
@@ -570,11 +595,25 @@ export default function Home() {
         if (spark.taken) return;
         const dx = player.x + player.w / 2 - spark.x;
         const dy = player.y + player.h / 2 - spark.y;
-        if (dx * dx + dy * dy < 2200) { spark.taken = true; collected += 1; player.dashCooldown = 0; tone('spark'); }
+        if (dx * dx + dy * dy < 2200) {
+          spark.taken = true;
+          collected += 1;
+          if (spark.storm) {
+            player.dashCooldown = 0;
+            stormShield = 5;
+          } else player.dashCooldown = Math.max(0, player.dashCooldown - .35);
+          tone('spark');
+        }
       });
 
       if (checkpointIndex < checkpoints.length - 1 && player.x > checkpoints[checkpointIndex + 1]) {
-        checkpointIndex += 1; lives = Math.min(3, lives + 1); tone('checkpoint');
+        checkpointIndex += 1;
+        const previousLives = lives;
+        lives = Math.min(3, lives + 1);
+        checkpointLifeAwarded = lives > previousLives;
+        checkpointToast = 2.2;
+        setHud((current) => ({ ...current, lives, checkpoint: checkpointIndex }));
+        tone('checkpoint');
         if (!isPractice) track('checkpoint');
       }
       if (player.x > FINISH_X) {
@@ -763,10 +802,11 @@ export default function Home() {
       sparks.forEach((spark, index) => {
         if (spark.taken) return;
         const bob = Math.round(Math.sin(elapsed * 5 + index) * 4 / 4) * 4;
-        ctx.save(); ctx.translate(spark.x, spark.y + bob); const color = spark.secret ? '#78d7d2' : '#f5d263';
+        ctx.save(); ctx.translate(spark.x, spark.y + bob); const color = spark.storm ? '#78d7d2' : '#f5d263';
         ctx.fillStyle = '#071316'; ctx.fillRect(-12, -20, 24, 40); ctx.fillRect(-20, -12, 40, 24);
         ctx.fillStyle = color; ctx.fillRect(-8, -20, 16, 40); ctx.fillRect(-20, -8, 40, 16);
         ctx.fillStyle = '#fff8e9'; ctx.fillRect(-4, -8, 8, 16);
+        if (spark.storm) { ctx.fillStyle = '#78d7d2'; ctx.fillRect(-28, -4, 4, 8); ctx.fillRect(24, -4, 4, 8); ctx.fillRect(-4, -28, 8, 4); }
         if (Math.floor(elapsed * 6 + index) % 3 === 0) { ctx.fillRect(-24, -20, 4, 4); ctx.fillRect(20, 16, 4, 4); }
         ctx.restore();
       });
@@ -794,6 +834,14 @@ export default function Home() {
       else if (player.invuln > .9) spriteIndex = 6;
       else if (!player.grounded) spriteIndex = player.vy < 0 ? 3 : 4;
       else if (Math.abs(player.vx) > 80) spriteIndex = Math.floor(elapsed * 10) % 2 ? 1 : 2;
+      if (stormShield > 0) {
+        const pulse = Math.floor(elapsed * 8) % 2 ? 4 : 0;
+        ctx.fillStyle = '#78d7d2';
+        ctx.fillRect(player.x - 12 - pulse, player.y - 10, 8, player.h + 20);
+        ctx.fillRect(player.x + player.w + 4 + pulse, player.y - 10, 8, player.h + 20);
+        ctx.fillRect(player.x - 4, player.y - 18 - pulse, player.w + 8, 8);
+        ctx.fillRect(player.x - 4, player.y + player.h + 10 + pulse, player.w + 8, 8);
+      }
       if (spriteSheet.complete && spriteSheet.naturalWidth) {
         const drawH = spriteIndex === 5 ? 106 : 116;
         const drawW = drawH * (32 / 48);
@@ -826,6 +874,13 @@ export default function Home() {
           ctx.fillRect(Math.floor(x / 4) * 4 + 4, Math.floor(y / 4) * 4 + 24, 4, 8);
         }
         ctx.globalAlpha = 1;
+      }
+      if (checkpointToast > 0) {
+        const message = checkpointLifeAwarded ? 'CHECKPOINT  +1 LIFE' : 'CHECKPOINT  LIFE FULL';
+        ctx.fillStyle = 'rgba(3, 19, 23, .92)'; ctx.fillRect(430, 112, 420, 58);
+        ctx.fillStyle = '#78d7d2'; ctx.fillRect(430, 112, 420, 6);
+        ctx.fillStyle = checkpointLifeAwarded ? '#f5d263' : '#fff8e9';
+        ctx.font = 'bold 22px monospace'; ctx.textAlign = 'center'; ctx.fillText(message, 640, 149); ctx.textAlign = 'start';
       }
     }
 
@@ -869,10 +924,13 @@ export default function Home() {
           <div className="title-screen">
             <div className="home-hero">
               <div className="home-cover">
-                <img src="/crestbound-square-key-art.svg" width="1254" height="1254" alt="Sunny runs across the golden-hour Crestbound skyline beneath the A Daily Skyline Run tagline" />
+                <picture>
+                  <source media="(orientation: landscape)" srcSet="/crestbound-home-hero.svg" />
+                  <img src="/crestbound-square-key-art.svg" width="1254" height="1254" alt="Sunny runs across the golden-hour Crestbound skyline beneath the A Daily Skyline Run tagline" />
+                </picture>
               </div>
               <div className="home-dashboard">
-                <div className="daily-course"><span>{isPractice ? 'PRACTICE RUN' : 'TODAY\'S RUN'}</span><b>{course.name}</b></div>
+                <div className="daily-course"><span>{isPractice ? 'PRACTICE RUN' : 'TODAY\'S RUN'}</span><b>{course.name}</b><em>{isPractice ? 'STANDARD RULES' : `TWIST · ${modifier.name}`}</em></div>
                 <button className="play-button" type="button" onClick={() => void startGame(true)}>{isPractice ? 'Start Practice' : 'Play Today\'s Run'} <span aria-hidden="true">▶</span></button>
                 <div className="daily-glance"><span>{community.players} {community.players === 1 ? 'SUNCRESTER HAS' : 'SUNCRESTERS HAVE'} RUN TODAY</span><b>{entries[0] ? `FASTEST: ${entries[0].name} · ${formatTime(entries[0].timeMs / 1000)}` : 'BE THE FIRST FINISHER'}</b></div>
                 <div className="home-links"><button type="button" onClick={() => { setHomePanel('leaderboard'); track('leaderboard_open'); }}>Leaderboard</button><button type="button" onClick={() => setHomePanel('courses')}>{isPractice ? 'Change Course' : 'Practice Courses'}</button><button type="button" onClick={() => setHomePanel('help')}>How to Play</button></div>
@@ -898,6 +956,7 @@ export default function Home() {
               <p className="kicker">READY, SUNNY?</p><h2>How to Play</h2>
               <div><b>RUN</b><span>Arrow keys / A D / touch arrows</span><b>JUMP</b><span>Space / touch JUMP · tap twice</span><b>DASH</b><span>Shift or X / touch DASH · recharges</span></div>
               <p>Touch controls appear automatically. Turn your phone sideways for the full course.</p>
+              <section className="world-rules"><h3>World Rules</h3><article><b>GOLD LIGHT</b><span>Shortens Dash recharge.</span></article><article><b>STORM LIGHT</b><span>Teal. In Spark Storm, fully recharges Dash and shields one hit for five seconds.</span></article><article><b>CHECKPOINT</b><span>Saves your route and restores one life, up to three.</span></article><article><b>ENEMY</b><span>Dash through it or land on it from above.</span></article></section>
               <section className="twist-directory"><h3>Daily Twists</h3>{modifierSpecs.map((item) => <article className={item.id === modifier.id && !isPractice ? 'today' : ''} key={item.id}><b>{item.name}{item.id === modifier.id && !isPractice ? ' · TODAY' : ''}</b><span>{item.description}</span></article>)}</section>
               <p className="app-tip"><b>FULL-SCREEN TEST</b> On iPhone, tap Share, then Add to Home Screen. Crestbound will open without Safari&apos;s bars.</p>
               <button className="panel-close" type="button" onClick={() => setHomePanel('none')}>Got It</button>
