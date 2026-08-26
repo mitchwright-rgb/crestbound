@@ -469,6 +469,11 @@ export default function Home() {
       }
       ctx.fillStyle = '#78d7d2';
       for (let index = 0; index < 16; index += 1) { const x = ((index * 101 - cameraX * .52) % 1440 + 1440) % 1440 - 80; ctx.fillRect(x, 520 + (index % 3) * 10, 10, 4); }
+      ctx.fillStyle = '#071b20'; ctx.fillRect(-8, 574, VIEW_W + 16, 10);
+      ctx.fillStyle = '#183c40';
+      for (let x = -80 - ((cameraX * .64) % 96); x < VIEW_W + 96; x += 96) { ctx.fillRect(x, 548, 8, 36); ctx.fillRect(x + 8, 552, 64, 4); }
+      ctx.fillStyle = zone > 1 ? '#d18c18' : '#18a7a2';
+      for (let index = 0; index < 8; index += 1) { const x = ((index * 227 - cameraX * .38) % 1700 + 1700) % 1700 - 100; ctx.fillRect(x, 535 + (index % 2) * 12, 20, 4); }
       ctx.restore();
 
       ctx.save(); ctx.translate(-cameraX, 0);
@@ -480,8 +485,13 @@ export default function Home() {
         ctx.fillStyle = '#f2b52b'; ctx.fillRect(px, py, platform.w, 8);
         ctx.fillStyle = '#fff0a8'; ctx.fillRect(px + 8, py + 2, Math.max(0, platform.w - 16), 2);
         ctx.fillStyle = '#071316'; for (let x = px + 18; x < px + platform.w - 8; x += 48) ctx.fillRect(x, py + 12, 5, 5);
+        ctx.fillStyle = '#6f4213'; ctx.fillRect(px, py + 20, platform.w, 4);
         for (let x = px; x < px + platform.w; x += 32) for (let y = py + 24; y < py + platform.h; y += 24) {
           ctx.fillStyle = ((x + y) / 8) % 2 ? '#12363a' : '#17454a'; ctx.fillRect(x, y, 24, 16);
+        }
+        if (platform.h > 32) {
+          ctx.fillStyle = '#09272b';
+          for (let x = px + 12; x < px + platform.w - 20; x += 96) { ctx.fillRect(x, py + 34, 8, platform.h - 34); ctx.fillRect(x + 8, py + 38, 36, 6); }
         }
       });
       const drawSign = (x: number, y: number, text: string, accent: string) => {
@@ -489,11 +499,13 @@ export default function Home() {
         ctx.fillStyle = accent; ctx.fillRect(x, y, 138, 36);
         ctx.fillStyle = '#071316'; ctx.fillRect(x + 5, y + 5, 128, 26);
         ctx.fillStyle = accent; ctx.font = 'bold 18px monospace'; ctx.fillText(text, x + 12, y + 24);
+        ctx.fillStyle = '#fff8e9'; ctx.fillRect(x + 4, y + 4, 3, 3); ctx.fillRect(x + 131, y + 29, 3, 3);
       };
       drawSign(760, 535, 'KEEP GOING', '#78d7d2');
       drawSign(3720, 545, 'HALFWAY', '#f5d263');
       drawSign(7060, 540, 'FINAL PUSH', '#ef6f52');
       spikeZones.forEach((spike) => {
+        ctx.fillStyle = '#071316'; ctx.fillRect(spike.x, spike.y + 20, spike.w, 8);
         ctx.fillStyle = '#f06f52';
         for (let x = spike.x; x < spike.x + spike.w; x += 24) { ctx.beginPath(); ctx.moveTo(x, spike.y + 24); ctx.lineTo(x + 12, spike.y); ctx.lineTo(x + 24, spike.y + 24); ctx.closePath(); ctx.fill(); }
       });
@@ -515,9 +527,13 @@ export default function Home() {
       enemies.forEach((enemy) => {
         if (!enemy.alive) return;
         const ex = Math.floor(enemy.x / 4) * 4; const ey = Math.floor(enemy.y / 4) * 4;
+        const step = Math.floor(elapsed * 8 + enemy.x / 80) % 2 ? 4 : 0;
+        ctx.fillStyle = '#071316'; ctx.fillRect(ex - 22, ey - 34, 10, 10); ctx.fillRect(ex - 8, ey - 40, 12, 12); ctx.fillRect(ex + 8, ey - 34, 10, 10);
+        ctx.fillStyle = '#e2aa2f'; ctx.fillRect(ex - 18, ey - 32, 6, 6); ctx.fillRect(ex - 4, ey - 36, 8, 8); ctx.fillRect(ex + 10, ey - 32, 6, 6);
         ctx.fillStyle = '#ef6f52'; ctx.fillRect(ex - 28, ey - 20, 56, 40); ctx.fillRect(ex - 20, ey - 28, 40, 56);
         ctx.fillStyle = '#071316'; ctx.fillRect(ex - 16, ey - 8, 12, 12); ctx.fillRect(ex + 8, ey - 8, 12, 12);
         ctx.fillStyle = '#fff8e9'; ctx.fillRect(ex - 12, ey - 8, 4, 4); ctx.fillRect(ex + 12, ey - 8, 4, 4);
+        ctx.fillStyle = '#071316'; ctx.fillRect(ex - 22 - step, ey + 20, 16, 8); ctx.fillRect(ex + 8 + step, ey + 20, 16, 8);
       });
       ctx.fillStyle = '#071316'; ctx.fillRect(7500, 414, 88, 24); ctx.fillStyle = '#f5d263'; ctx.font = 'bold 16px monospace'; ctx.fillText('EXIT', 7520, 432);
       ctx.fillStyle = '#b96f14'; ctx.fillRect(7484, 440, 120, 180); ctx.fillStyle = '#f5d263'; ctx.fillRect(7496, 452, 96, 168);
