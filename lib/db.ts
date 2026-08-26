@@ -22,7 +22,7 @@ export function chicagoKeys(now = new Date()) {
   const value = Object.fromEntries(parts.map((part) => [part.type, part.value]));
   const day = `${value.year}-${value.month}-${value.day}`;
   const local = new Date(`${day}T12:00:00Z`);
-  const yearStart = new Date(Date.UTC(local.getUTCFullYear(), 0, 1));
-  const week = Math.ceil((((local.getTime() - yearStart.getTime()) / 86400000) + yearStart.getUTCDay() + 1) / 7);
-  return { day, week: `${value.year}-W${String(week).padStart(2, '0')}` };
+  const sunday = new Date(local);
+  sunday.setUTCDate(local.getUTCDate() - local.getUTCDay());
+  return { day, week: sunday.toISOString().slice(0, 10) };
 }

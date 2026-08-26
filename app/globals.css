@@ -176,7 +176,7 @@ body { overflow: hidden; color: var(--cream); background: #071316; font-family: 
   .community-progress progress { height: 14px; margin-block: 7px 4px; }
   .home-links { gap: 24px; }
   .home-links button { min-height: 44px; font-size: 12px; }
-  .home-panel { width: min(540px, calc(100% - 22px)); }
+  .home-panel { width: min(540px, calc(100% - 22px)); max-height: calc(100svh - 24px); overflow-y: auto; overscroll-behavior: contain; }
   .board-heading { font-size: 18px; }
   .board-heading small, .board-tabs button { font-size: 11px; }
   .board-tabs button, .panel-close { min-height: 44px; }
@@ -197,6 +197,13 @@ body { overflow: hidden; color: var(--cream); background: #071316; font-family: 
   .hud-stats small { font-size: 10px; }
   .hud-actions button { min-width: 44px; min-height: 44px; font-size: 10px; }
   .touch-controls .dash-control, .touch-controls .jump-control { font-size: 11px; }
+  .game-modal { max-height: calc(100svh - max(16px, env(safe-area-inset-top)) - max(16px, env(safe-area-inset-bottom))); overflow-y: auto; overscroll-behavior: contain; }
+  .game-modal > p:first-child { font-size: 11px; }
+  .game-modal .secondary { min-height: 44px; font-size: 11px; }
+  .result-grid small { font-size: 10px; }
+  .score-form label { font-size: 11px; }
+  .score-form small, .score-form em { font-size: 10px; line-height: 1.35; }
+  .score-form button { min-height: 44px; font-size: 12px; }
   .dash-coach { bottom: 82px; width: min(420px, calc(100% - 170px)); padding: 9px 12px; }
   .dash-coach b { font-size: 12px; }
   .dash-coach span { font-size: 14px; }

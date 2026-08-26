@@ -676,7 +676,7 @@ export default function Home() {
               <span><b>{formatTime(hud.time)}</b><small>TIME</small></span>
             </div>
             <div className="hud-actions">
-              <button type="button" onClick={toggleSound} aria-label={muted ? 'Turn sound on' : 'Mute sound'}>{muted ? 'MUTE' : '♪ ON'}</button>
+              <button type="button" onClick={toggleSound} aria-label={muted ? 'Turn sound on' : 'Mute sound'}>{muted ? '♪ OFF' : '♪ ON'}</button>
               <button type="button" onClick={togglePause} aria-label={screen === 'paused' ? 'Resume game' : 'Pause game'}>{screen === 'paused' ? '▶' : 'Ⅱ'}</button>
             </div>
             <div className="route-meter" aria-label={`${Math.round(hud.progress / (WORLD_W - 265) * 100)} percent through the course`}><span style={{ width: `${Math.min(100, hud.progress / (WORLD_W - 265) * 100)}%` }} /></div>
@@ -695,8 +695,8 @@ export default function Home() {
                 <p className="tagline">Run the skyline. Find the light. Beat Suncrest&apos;s time.</p>
                 <div className="daily-course"><span>TODAY&apos;S COURSE</span><b>{course.name}</b><em>{modifier.name}</em></div>
                 <button className="play-button" type="button" onClick={() => void startGame()}>Play Today&apos;s Run <span aria-hidden="true">▶</span></button>
-                <div className="daily-glance"><span>{community.players} SUNCRESTERS TODAY</span><b>{entries[0] ? `#1 ${entries[0].name} · ${formatTime(entries[0].timeMs / 1000)}` : 'BE THE FIRST FINISHER'}</b></div>
-                <div className="community-progress"><div><span>COMMUNITY LIGHT</span><b>{community.lights.toLocaleString()} / {community.goal.toLocaleString()}</b></div><progress value={Math.min(community.lights, community.goal)} max={community.goal} /><small>{Math.max(1, streak)} day personal streak</small></div>
+                <div className="daily-glance"><span>{community.players} {community.players === 1 ? 'SUNCRESTER' : 'SUNCRESTERS'} TODAY</span><b>{entries[0] ? `#1 ${entries[0].name} · ${formatTime(entries[0].timeMs / 1000)}` : 'BE THE FIRST FINISHER'}</b></div>
+                <div className="community-progress"><div><span>COMMUNITY LIGHT</span><b>{community.lights.toLocaleString()} / {community.goal.toLocaleString()}</b></div><progress value={Math.min(community.lights, community.goal)} max={community.goal} /><small>{streak > 0 ? `${streak} ${streak === 1 ? 'day' : 'days'} personal streak` : 'Start your streak today'}</small></div>
                 <div className="home-links"><button type="button" onClick={() => { setHomePanel('leaderboard'); track('leaderboard_open'); }}>Leaderboard</button><button type="button" onClick={() => setHomePanel('help')}>How to Play</button></div>
               </div>
             </div>
