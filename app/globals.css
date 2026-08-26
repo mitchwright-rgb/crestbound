@@ -5,7 +5,7 @@
 html, body { min-height: 100%; margin: 0; }
 button, input { font: inherit; }
 button:focus-visible, input:focus-visible, canvas:focus-visible { outline: 4px solid var(--teal-light); outline-offset: 3px; }
-body { overflow: hidden; color: var(--cream); background: #071316; font-family: var(--font-geist-mono), ui-monospace, monospace; image-rendering: pixelated; }
+body { overflow: hidden; color: var(--cream); background: #071316; font-family: var(--font-playful), system-ui, sans-serif; image-rendering: pixelated; }
 .shell { min-height: 100svh; display: grid; place-items: center; padding: 16px; background: #071316; }
 .game-frame { position: relative; width: min(1280px, 100%); aspect-ratio: 16/9; max-height: calc(100svh - 32px); overflow: hidden; isolation: isolate; border: 6px solid #171b1c; background: #0d2428; box-shadow: 0 0 0 4px #e2aa2f, 0 0 0 8px #0b252a, 14px 14px 0 #020707; }
 .game-frame::after { position: absolute; z-index: 40; inset: 0; content: ''; pointer-events: none; background: repeating-linear-gradient(0deg, rgb(255 255 255 / 0%) 0 3px, rgb(1 10 12 / 9%) 3px 4px); mix-blend-mode: multiply; }
@@ -58,3 +58,66 @@ body { overflow: hidden; color: var(--cream); background: #071316; font-family: 
 @media (max-height: 560px) and (orientation: landscape) { .shell { padding: 0; }.game-frame { width: 100vw; height: 100svh; max-height: none; border: 0; box-shadow: none; }.title-screen { grid-template-columns: 1fr 300px; padding: 20px 30px; }.title-card h1 { font-size: 50px; }.title-card > p:not(.kicker):not(.controller-note) { margin: 11px 0; font-size: 12px; }.title-meta { margin-bottom: 12px; }.control-hint, .controller-note { display: none; }.leaderboard { transform: scale(.88); transform-origin: center right; }.game-modal { padding: 16px 22px; }.game-modal h2 { margin-bottom: 10px; }.result-grid { margin: 10px 0; }.score-form { margin-bottom: 10px; padding: 8px; }.touch-controls button { width: 52px; height: 52px; }.touch-controls .dash-control, .touch-controls .jump-control { width: 60px; height: 60px; } }
 @media (max-width: 700px) { .game-canvas { object-fit: contain; } }
 @media (prefers-reduced-motion: reduce) { * { transition-duration: .001ms !important; } }
+
+/* Crestbound title system */
+.title-screen { display: grid; grid-template-columns: 1fr; place-items: center; padding: clamp(28px, 5vw, 64px); background: radial-gradient(circle at 28% 46%, rgb(24 167 162 / 23%), transparent 30%), linear-gradient(90deg, rgb(2 11 14 / 80%), rgb(4 20 24 / 48%)); }
+.home-hero { width: min(940px, 100%); display: grid; grid-template-columns: minmax(170px, 260px) minmax(0, 1fr); align-items: center; gap: clamp(26px, 5vw, 70px); }
+.sunny-lockup { display: grid; justify-items: center; align-content: center; gap: 5px; transform: rotate(-2deg); }
+.sunny-hero { width: clamp(150px, 19vw, 230px); aspect-ratio: 2 / 3; background: url('/sunny-pixel-master.svg') 0 0 / 800% 100% no-repeat; filter: drop-shadow(10px 10px 0 rgb(2 7 7 / 55%)); }
+.sunny-lockup > span { padding: 5px 10px; border: 3px solid #171b1c; color: #071316; background: var(--teal-light); box-shadow: 4px 4px 0 #171b1c; font-family: var(--font-pixel), monospace; font-size: 11px; font-weight: 700; letter-spacing: .08em; }
+.title-card { padding: 0; border: 0; text-shadow: 4px 4px 0 #071316; }
+.kicker, .title-card h1, .play-button, .home-links button, .daily-glance, .board-heading, .board-tabs button, .panel-close, .how-to h2, .how-to b, .hud, .game-modal h2, .game-modal > p:first-child { font-family: var(--font-pixel), monospace; }
+.kicker { margin-bottom: 10px; color: var(--teal-light); font-size: clamp(9px, 1.1vw, 12px); letter-spacing: .13em; }
+.title-card h1 { margin: 0; color: var(--gold-light); font-size: clamp(44px, 7.3vw, 88px); line-height: .9; letter-spacing: -.055em; text-shadow: 5px 5px 0 #b85f1c, 9px 9px 0 #071316; }
+.title-card .tagline { max-width: 620px; margin: 22px 0; color: #eaf9f5; font-size: clamp(17px, 2vw, 23px); font-weight: 600; line-height: 1.25; }
+.title-card .play-button { min-height: 58px; padding: 13px 22px; border: 4px solid #171b1c; color: #071316; background: var(--gold); box-shadow: 6px 6px 0 #171b1c; font-size: clamp(12px, 1.45vw, 16px); cursor: pointer; text-transform: uppercase; }
+.title-card .play-button:active { transform: translate(4px, 4px); box-shadow: 2px 2px 0 #171b1c; }
+.daily-glance { display: flex; flex-wrap: wrap; gap: 8px 12px; margin-top: 20px; color: #9ec4c2; font-size: 9px; }
+.daily-glance span { color: var(--coral); }.daily-glance b { color: #d9eeee; font-weight: 400; }
+.home-links { display: flex; gap: 18px; margin-top: 14px; }
+.home-links button { padding: 0 0 3px; border: 0; border-bottom: 2px solid #416d70; color: var(--teal-light); background: transparent; font-size: 9px; cursor: pointer; text-transform: uppercase; }
+.home-links button:hover { color: var(--gold-light); border-color: var(--gold); }
+.home-panel { position: absolute; z-index: 30; left: 50%; top: 50%; width: min(520px, calc(100% - 34px)); transform: translate(-50%, -50%); }
+.title-screen:has(.home-panel)::after { position: absolute; z-index: 25; inset: 0; content: ''; background: rgb(1 7 9 / 74%); backdrop-filter: blur(3px); }
+.home-panel { z-index: 31; }
+.panel-close { width: 100%; min-height: 42px; border: 0; border-top: 3px solid #171b1c; color: #071316; background: var(--gold); cursor: pointer; text-transform: uppercase; }
+.how-to { padding: 25px; border: 4px solid #171b1c; outline: 3px solid var(--gold); color: var(--cream); background: #071b20; box-shadow: 8px 8px 0 #171b1c; }
+.how-to h2 { margin: 5px 0 22px; color: var(--gold-light); font-size: clamp(26px, 5vw, 42px); text-transform: uppercase; }
+.how-to > div { display: grid; grid-template-columns: auto 1fr; gap: 12px 18px; align-items: center; margin-bottom: 20px; }
+.how-to b { color: var(--teal-light); font-size: 10px; }.how-to span { color: #d7e8e5; font-size: 15px; }
+.how-to > p:not(.kicker) { color: #8eb0af; font-size: 13px; line-height: 1.45; }
+.how-to .panel-close { margin: 15px -25px -25px; width: calc(100% + 50px); }
+.rotate-prompt { display: none; }
+
+@media (max-width: 700px) and (orientation: portrait) {
+  .title-screen { display: grid; overflow-y: auto; padding: max(24px, env(safe-area-inset-top)) 20px max(26px, env(safe-area-inset-bottom)); }
+  .home-hero { grid-template-columns: 1fr; gap: 8px; text-align: center; }
+  .sunny-hero { width: min(32vw, 142px); }
+  .sunny-lockup { gap: 0; }
+  .sunny-lockup > span { font-size: 8px; }
+  .title-card h1 { font-size: clamp(41px, 13vw, 62px); }
+  .title-card .tagline { margin: 14px auto 17px; font-size: clamp(15px, 4.4vw, 19px); }
+  .title-card .play-button { min-height: 56px; width: min(100%, 330px); font-size: 11px; }
+  .daily-glance, .home-links { justify-content: center; }
+  .daily-glance { margin-top: 16px; }
+  .home-links { margin-top: 12px; }
+}
+
+@media (orientation: portrait) and (pointer: coarse) {
+  .rotate-prompt { position: absolute; z-index: 50; inset: 0; display: grid; place-content: center; justify-items: center; gap: 12px; padding: 32px; color: var(--cream); background: #06171b; text-align: center; }
+  .rotate-prompt span { color: var(--gold); font-size: 72px; line-height: 1; transform: rotate(-18deg); }
+  .rotate-prompt strong { font-family: var(--font-pixel), monospace; color: var(--gold-light); font-size: clamp(20px, 7vw, 34px); text-transform: uppercase; }
+  .rotate-prompt small { max-width: 280px; color: #a7c7c5; font-size: 16px; line-height: 1.35; }
+}
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .title-screen { display: grid; padding: max(14px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(14px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left)); }
+  .home-hero { grid-template-columns: minmax(120px, 190px) minmax(0, 1fr); gap: clamp(18px, 4vw, 48px); }
+  .sunny-hero { width: min(22vw, 170px); }
+  .title-card h1 { font-size: clamp(42px, 8vw, 68px); }
+  .title-card .tagline { margin: 12px 0; font-size: clamp(13px, 2.3vw, 18px); }
+  .title-card .play-button { min-height: 48px; padding: 9px 16px; font-size: 10px; }
+  .daily-glance { margin-top: 12px; }.home-links { margin-top: 9px; }
+  .touch-controls { left: max(14px, env(safe-area-inset-left)); right: max(14px, env(safe-area-inset-right)); bottom: max(10px, env(safe-area-inset-bottom)); }
+  .hud { left: max(8px, env(safe-area-inset-left)); right: max(8px, env(safe-area-inset-right)); }
+}

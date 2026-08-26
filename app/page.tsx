@@ -11,6 +11,7 @@ type Spark = { x: number; y: number; taken?: boolean; secret?: boolean };
 type Enemy = { x: number; y: number; minX: number; maxX: number; speed: number; dir: number; alive: boolean };
 type Board = 'daily' | 'weekly' | 'all';
 type BoardEntry = { rank: number; name: string; timeMs: number; sparks: number };
+type HomePanel = 'none' | 'leaderboard' | 'help';
 
 const WORLD_W = 7800;
 const VIEW_W = 1280;
@@ -83,6 +84,7 @@ export default function Home() {
   const [submitState, setSubmitState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [rank, setRank] = useState<number | null>(null);
   const [streak, setStreak] = useState(0);
+  const [homePanel, setHomePanel] = useState<HomePanel>('none');
 
   useEffect(() => { mutedRef.current = muted; }, [muted]);
   useEffect(() => {
@@ -561,7 +563,7 @@ export default function Home() {
 
   return (
     <main className="shell">
-      <section className="game-frame" aria-label="Sunny Crestbound platform game">
+      <section className="game-frame" aria-label="Crestbound platform game starring Sunny">
         <canvas ref={canvasRef} className="game-canvas" width={320} height={180} tabIndex={0} aria-label="Platform game. Use arrows or A and D to move, Space to jump, and Shift to dash." />
 
         {screen !== 'title' && (
@@ -582,16 +584,21 @@ export default function Home() {
 
         {screen === 'title' && (
           <div className="title-screen">
-            <div className="title-card">
-              <p className="kicker">SUNCREST GAMES // DAILY RUN</p>
-              <h1>Sunny: <span>Crestbound</span></h1>
-              <p>Same course. One shot at the fastest route. Find the four secret sparks and beat today&apos;s board.</p>
-              <div className="title-meta"><span>🔥 {streak} DAY STREAK</span><span>◆ 4 SECRET SPARKS</span><span>♪ ORIGINAL CHIPTUNE</span></div>
-              <button type="button" onClick={() => void startGame()}>Start Daily Run <span aria-hidden="true">→</span></button>
-              <div className="control-hint"><span>← → / A D</span> Move <span>SPACE</span> Double jump <span>SHIFT / X</span> Dash</div>
-              <p className="controller-note">Keyboard, gamepad, and touch supported. Music starts after you press Start.</p>
+            <div className="home-hero">
+              <div className="sunny-lockup" aria-label="Sunny, the hero of Crestbound">
+                <div className="sunny-hero" aria-hidden="true" />
+                <span>SUNNY</span>
+              </div>
+              <div className="title-card">
+                <p className="kicker">A SUNCREST GAME</p>
+                <h1>CRESTBOUND</h1>
+                <p className="tagline">Run the skyline. Find the light. Beat today&apos;s time.</p>
+                <button className="play-button" type="button" onClick={() => void startGame()}>Play Today&apos;s Run <span aria-hidden="true">▶</span></button>
+                <div className="daily-glance"><span>DAY {Math.max(1, streak)}</span><b>{entries[0] ? `#1 ${entries[0].name} · ${formatTime(entries[0].timeMs / 1000)}` : 'BE THE FIRST FINISHER'}</b></div>
+                <div className="home-links"><button type="button" onClick={() => setHomePanel('leaderboard')}>Leaderboard</button><button type="button" onClick={() => setHomePanel('help')}>How to Play</button></div>
+              </div>
             </div>
-            <aside className="leaderboard" aria-label="Crestbound leaderboard">
+            {homePanel === 'leaderboard' && <aside className="leaderboard home-panel" aria-label="Crestbound leaderboard">
               <div className="board-heading"><span>TOP RUNS</span><small>{board === 'daily' ? 'TODAY' : board === 'weekly' ? 'THIS WEEK' : 'ALL TIME'}</small></div>
               <div className="board-tabs">
                 {(['daily', 'weekly', 'all'] as Board[]).map((item) => <button className={board === item ? 'active' : ''} type="button" key={item} onClick={() => setBoard(item)}>{item === 'daily' ? 'TODAY' : item === 'weekly' ? 'WEEK' : 'ALL'}</button>)}
@@ -603,7 +610,14 @@ export default function Home() {
                 {boardStatus === 'ready' && entries.slice(0, 7).map((entry) => <li key={`${entry.rank}-${entry.name}`}><b>#{entry.rank}</b><span>{entry.name}</span><time>{formatTime(entry.timeMs / 1000)}</time><small>{entry.sparks}◆</small></li>)}
               </ol>
               <p>FASTEST VERIFIED TIME WINS. NICKNAMES ONLY.</p>
-            </aside>
+              <button className="panel-close" type="button" onClick={() => setHomePanel('none')}>Close</button>
+            </aside>}
+            {homePanel === 'help' && <aside className="how-to home-panel" aria-label="How to play Crestbound">
+              <p className="kicker">READY, SUNNY?</p><h2>How to Play</h2>
+              <div><b>RUN</b><span>Hold left or right</span><b>JUMP</b><span>Tap twice for a double jump</span><b>DASH</b><span>Burst across gaps and hazards</span></div>
+              <p>Touch controls appear automatically. Turn your phone sideways for the full course.</p>
+              <button className="panel-close" type="button" onClick={() => setHomePanel('none')}>Got It</button>
+            </aside>}
           </div>
         )}
 
@@ -625,10 +639,10 @@ export default function Home() {
         )}
 
         {screen === 'playing' && (
-          <div className="touch-controls" aria-label="Touch controls">
+          <><div className="rotate-prompt"><span aria-hidden="true">↻</span><strong>Rotate to Play</strong><small>Turn your phone sideways for the full skyline.</small></div><div className="touch-controls" aria-label="Touch controls">
             <div><button type="button" aria-label="Move left" onPointerDown={(event) => beginPress('left', event)} onPointerUp={(event) => endPress('left', event)} onPointerCancel={(event) => endPress('left', event)} onLostPointerCapture={() => press('left', false)}>←</button><button type="button" aria-label="Move right" onPointerDown={(event) => beginPress('right', event)} onPointerUp={(event) => endPress('right', event)} onPointerCancel={(event) => endPress('right', event)} onLostPointerCapture={() => press('right', false)}>→</button></div>
             <div><button className="dash-control" type="button" aria-label="Dash" onPointerDown={(event) => beginPress('dash', event)} onPointerUp={(event) => endPress('dash', event)} onPointerCancel={(event) => endPress('dash', event)} onLostPointerCapture={() => press('dash', false)}>DASH</button><button className="jump-control" type="button" aria-label="Jump" onPointerDown={(event) => beginPress('jump', event)} onPointerUp={(event) => endPress('jump', event)} onPointerCancel={(event) => endPress('jump', event)} onLostPointerCapture={() => press('jump', false)}>JUMP</button></div>
-          </div>
+          </div></>
         )}
       </section>
     </main>

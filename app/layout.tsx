@@ -1,31 +1,33 @@
 import type { Metadata, Viewport } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Fredoka, Silkscreen } from 'next/font/google';
 import './globals.css';
 
-const geistSans = Geist({
-  variable: '--font-geist-sans',
+const fredoka = Fredoka({
+  variable: '--font-playful',
   subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
 });
 
-const geistMono = Geist_Mono({
-  variable: '--font-geist-mono',
+const silkscreen = Silkscreen({
+  variable: '--font-pixel',
   subsets: ['latin'],
+  weight: ['400', '700'],
 });
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://sunny-crestbound.suncrest-7012.chatgpt.site'),
-  title: 'Sunny: Crestbound | Suncrest Games',
-  description: 'Run the skyline, recover the lost light, and master Sunny’s double jump and air dash.',
+  title: 'Crestbound | Suncrest Games',
+  description: 'Guide Sunny across the skyline, recover the lost light, and master the daily run.',
   openGraph: {
-    title: 'Sunny: Crestbound',
-    description: 'Run the skyline. Recover the lost light.',
+    title: 'Crestbound',
+    description: 'Guide Sunny across the skyline. Find the light. Beat today’s time.',
     url: 'https://sunny-crestbound.suncrest-7012.chatgpt.site',
     siteName: 'Suncrest Games',
-    images: [{ url: '/og-pixel.png', width: 1664, height: 936, alt: 'Sunny: Crestbound daily pixel platformer' }],
+    images: [{ url: '/og-pixel.png', width: 1672, height: 941, alt: 'Crestbound daily pixel platformer starring Sunny' }],
     type: 'website',
   },
   twitter: {
-    card: 'summary_large_image', title: 'Sunny: Crestbound', description: 'Run the skyline. Recover the lost light.', images: ['/og-pixel.png'],
+    card: 'summary_large_image', title: 'Crestbound', description: 'Guide Sunny across the skyline. Find the light. Beat today’s time.', images: ['/og-pixel.png'],
   },
 };
 
@@ -41,7 +43,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${fredoka.variable} ${silkscreen.variable} antialiased`}
       >
         {children}
       </body>
