@@ -5,19 +5,40 @@
 import { FormEvent, PointerEvent as ReactPointerEvent, useCallback, useEffect, useRef, useState } from 'react';
 
 type Screen = 'title' | 'playing' | 'paused' | 'won' | 'over';
-type Hud = { sparks: number; total: number; lives: number; time: number; best: number | null; checkpoint: number; progress: number };
+type Hud = { sparks: number; total: number; lives: number; time: number; best: number | null; checkpoint: number; progress: number; dashReady: boolean };
 type Platform = { x: number; y: number; w: number; h: number; moving?: boolean; phase?: number; baseY?: number };
 type Spark = { x: number; y: number; taken?: boolean; secret?: boolean };
 type Enemy = { x: number; y: number; minX: number; maxX: number; speed: number; dir: number; alive: boolean };
 type Board = 'daily' | 'weekly' | 'all';
-type BoardEntry = { rank: number; name: string; timeMs: number; sparks: number };
+type BoardEntry = { rank: number; name: string; timeMs: number; sparks: number; points?: number; runs?: number };
 type HomePanel = 'none' | 'leaderboard' | 'help';
 
-const WORLD_W = 7800;
+type Community = { players: number; lights: number; goal: number; nearby: BoardEntry[]; playerRank: number | null; recent: string[] };
+
+const COURSE_OFFSET = 7600;
+const WORLD_W = 15400;
+const FINISH_X = 15135;
 const VIEW_W = 1280;
 const VIEW_H = 720;
 
-const platforms: Platform[] = [
+const localDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(new Date());
+const daySerial = Math.floor(new Date(`${localDay}T12:00:00Z`).getTime() / 86400000);
+const courseIndex = ((daySerial % 3) + 3) % 3;
+const courseSpecs = [
+  { id: 'goldline', name: 'Goldline Rooftops', short: 'GOLDLINE', accent: '#f5d263' },
+  { id: 'crosswind', name: 'Crosswind Heights', short: 'CROSSWIND', accent: '#78d7d2' },
+  { id: 'nightshift', name: 'Night Shift', short: 'NIGHT SHIFT', accent: '#ef6f52' },
+] as const;
+const modifierSpecs = [
+  { id: 'clear', name: 'Clear Skies' },
+  { id: 'tailwind', name: 'Tailwind' },
+  { id: 'moonstep', name: 'Moonstep' },
+  { id: 'sparkstorm', name: 'Spark Storm' },
+] as const;
+const course = courseSpecs[courseIndex];
+const modifier = modifierSpecs[((daySerial + courseIndex) % modifierSpecs.length + modifierSpecs.length) % modifierSpecs.length];
+
+const basePlatforms: Platform[] = [
   { x: 0, y: 620, w: 860, h: 120 }, { x: 240, y: 500, w: 210, h: 24 }, { x: 560, y: 410, w: 180, h: 24 },
   { x: 950, y: 620, w: 790, h: 120 }, { x: 1020, y: 505, w: 180, h: 24 }, { x: 1280, y: 415, w: 185, h: 24 }, { x: 1510, y: 330, w: 150, h: 24 },
   { x: 1810, y: 620, w: 480, h: 120 }, { x: 1970, y: 485, w: 170, h: 24 },
@@ -29,12 +50,12 @@ const platforms: Platform[] = [
   { x: 6200, y: 620, w: 1600, h: 120 }, { x: 6360, y: 500, w: 190, h: 24 }, { x: 6660, y: 405, w: 180, h: 24 }, { x: 6960, y: 315, w: 180, h: 24 }, { x: 7250, y: 445, w: 210, h: 24 },
 ];
 
-const spikeZones = [
+const baseSpikeZones = [
   { x: 1120, y: 596, w: 130 }, { x: 1675, y: 596, w: 65 }, { x: 4070, y: 596, w: 150 },
   { x: 5030, y: 596, w: 160 }, { x: 5290, y: 596, w: 175 }, { x: 6480, y: 596, w: 130 }, { x: 6850, y: 596, w: 130 },
 ];
 
-const sparkSeed: Spark[] = [
+const baseSparkSeed: Spark[] = [
   { x: 345, y: 450 }, { x: 650, y: 360 }, { x: 1030, y: 565 }, { x: 1370, y: 360 }, { x: 1585, y: 275, secret: true },
   { x: 2055, y: 430 }, { x: 2385, y: 500 }, { x: 2590, y: 400 }, { x: 2795, y: 295 }, { x: 3030, y: 390 },
   { x: 3420, y: 400 }, { x: 3685, y: 305, secret: true }, { x: 4125, y: 435 }, { x: 4400, y: 335 }, { x: 4895, y: 450 },
@@ -42,7 +63,7 @@ const sparkSeed: Spark[] = [
   { x: 6745, y: 350 }, { x: 7045, y: 260, secret: true }, { x: 7340, y: 390 }, { x: 7500, y: 545 },
 ];
 
-const enemySeed: Enemy[] = [
+const baseEnemySeed: Enemy[] = [
   { x: 1180, y: 570, minX: 970, maxX: 1660, speed: 95, dir: 1, alive: true },
   { x: 2040, y: 570, minX: 1830, maxX: 2240, speed: 125, dir: -1, alive: true },
   { x: 4180, y: 570, minX: 3970, maxX: 4610, speed: 150, dir: 1, alive: true },
@@ -50,7 +71,25 @@ const enemySeed: Enemy[] = [
   { x: 6690, y: 570, minX: 6250, maxX: 7100, speed: 185, dir: 1, alive: true },
 ];
 
-const checkpoints = [120, 2180, 4780];
+function elevate(y: number, index: number, copy: number) {
+  if (y >= 600 || courseIndex === 0) return y;
+  const shifts = courseIndex === 1 ? [-24, 16, -42, 26] : [-54, -10, 24, -34];
+  return Math.max(250, Math.min(555, y + shifts[(index + copy) % shifts.length]));
+}
+
+const platforms: Platform[] = [0, 1].flatMap((copy) => basePlatforms.map((platform, index) => {
+  const y = elevate(platform.y, index, copy);
+  const moving = platform.moving || (y < 600 && (index + courseIndex * 2 + copy) % 9 === 0);
+  return { ...platform, x: platform.x + copy * COURSE_OFFSET, y, moving, baseY: moving ? y : platform.baseY };
+}));
+const spikeZones = [0, 1].flatMap((copy) => baseSpikeZones.map((spike) => ({ ...spike, x: spike.x + copy * COURSE_OFFSET })));
+const sparkSeed: Spark[] = [0, 1].flatMap((copy) => baseSparkSeed.map((spark, index) => ({
+  ...spark, x: spark.x + copy * COURSE_OFFSET, y: elevate(spark.y, index, copy), secret: spark.secret || (modifier.id === 'sparkstorm' && index % 6 === 0),
+})));
+const enemySeed: Enemy[] = [0, 1].flatMap((copy) => baseEnemySeed.map((enemy) => ({
+  ...enemy, x: enemy.x + copy * COURSE_OFFSET, minX: enemy.minX + copy * COURSE_OFFSET, maxX: enemy.maxX + copy * COURSE_OFFSET, speed: enemy.speed + courseIndex * 14 + copy * 12,
+})));
+const checkpoints = [120, 2180, 4780, 7720, 9780, 12380];
 
 function formatTime(seconds: number) {
   const minutes = Math.floor(seconds / 60);
@@ -59,9 +98,9 @@ function formatTime(seconds: number) {
 }
 
 function medalFor(seconds: number) {
-  if (seconds < 55) return 'GOLD';
+  if (seconds < 45) return 'GOLD';
   if (seconds < 75) return 'SILVER';
-  if (seconds < 100) return 'BRONZE';
+  if (seconds < 110) return 'BRONZE';
   return 'FINISHER';
 }
 
@@ -73,10 +112,12 @@ export default function Home() {
   const [screen, setScreen] = useState<Screen>('title');
   const [muted, setMuted] = useState(false);
   const mutedRef = useRef(false);
-  const [hud, setHud] = useState<Hud>({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: null, checkpoint: 0, progress: 0 });
+  const [hud, setHud] = useState<Hud>({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: null, checkpoint: 0, progress: 0, dashReady: true });
   const audioRef = useRef<AudioContext | null>(null);
   const musicRef = useRef<{ timer: ReturnType<typeof setInterval>; gain: GainNode; step: number } | null>(null);
   const runIdRef = useRef<string | null>(null);
+  const playerIdRef = useRef('');
+  const dashCoachRef = useRef(false);
   const [board, setBoard] = useState<Board>('daily');
   const [entries, setEntries] = useState<BoardEntry[]>([]);
   const [boardStatus, setBoardStatus] = useState<'loading' | 'ready' | 'offline'>('loading');
@@ -85,10 +126,15 @@ export default function Home() {
   const [rank, setRank] = useState<number | null>(null);
   const [streak, setStreak] = useState(0);
   const [homePanel, setHomePanel] = useState<HomePanel>('none');
+  const [showDashCoach, setShowDashCoach] = useState(false);
+  const [community, setCommunity] = useState<Community>({ players: 0, lights: 0, goal: 2500, nearby: [], playerRank: null, recent: [] });
 
   useEffect(() => { mutedRef.current = muted; }, [muted]);
   useEffect(() => {
-    const stored = window.localStorage.getItem('crestbound-best');
+    let playerId = window.localStorage.getItem('crestbound-player-id');
+    if (!playerId) { playerId = crypto.randomUUID(); window.localStorage.setItem('crestbound-player-id', playerId); }
+    playerIdRef.current = playerId;
+    const stored = window.localStorage.getItem(`crestbound-best-${course.id}`);
     if (stored) setHud((current) => ({ ...current, best: Number(stored) }));
     setNickname(window.localStorage.getItem('crestbound-nickname') ?? '');
     setStreak(Number(window.localStorage.getItem('crestbound-streak')) || 0);
@@ -97,10 +143,12 @@ export default function Home() {
   const loadBoard = useCallback(async (nextBoard: Board) => {
     setBoardStatus('loading');
     try {
-      const response = await fetch(`/api/leaderboard?board=${nextBoard}`, { cache: 'no-store' });
+      const params = new URLSearchParams({ board: nextBoard, courseId: course.id, playerId: playerIdRef.current });
+      const response = await fetch(`/api/leaderboard?${params}`, { cache: 'no-store' });
       if (!response.ok) throw new Error('Leaderboard unavailable');
-      const data = await response.json() as { entries?: BoardEntry[] };
+      const data = await response.json() as { entries?: BoardEntry[]; players?: number; lights?: number; goal?: number; nearby?: BoardEntry[]; playerRank?: number | null; recent?: string[] };
       setEntries(data.entries ?? []);
+      setCommunity({ players: data.players ?? 0, lights: data.lights ?? 0, goal: data.goal ?? 2500, nearby: data.nearby ?? [], playerRank: data.playerRank ?? null, recent: data.recent ?? [] });
       setBoardStatus('ready');
     } catch {
       setEntries([]);
@@ -178,14 +226,27 @@ export default function Home() {
     setScreen(next);
   }
 
+  function track(eventName: string) {
+    if (!playerIdRef.current) return;
+    void fetch('/api/event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventName, playerId: playerIdRef.current, courseId: course.id }) }).catch(() => undefined);
+  }
+
+  function dismissDashCoach(learned = false) {
+    dashCoachRef.current = false; setShowDashCoach(false);
+    window.localStorage.setItem('crestbound-dash-learned', '1');
+    if (learned) track('dash_learned');
+  }
+
   async function startGame() {
     resetRef.current?.();
     setSubmitState('idle'); setRank(null); runIdRef.current = null;
     try {
-      const response = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'start' }) });
+      const response = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'start', playerId: playerIdRef.current, courseId: course.id, modifierId: modifier.id }) });
       if (response.ok) runIdRef.current = ((await response.json()) as { runId: string }).runId;
     } catch { /* Offline play remains available. */ }
     setGameScreen('playing');
+    const needsCoach = !window.localStorage.getItem('crestbound-dash-learned');
+    dashCoachRef.current = needsCoach; setShowDashCoach(needsCoach); track('run_start');
     startMusic();
     requestAnimationFrame(() => canvasRef.current?.focus());
   }
@@ -222,7 +283,7 @@ export default function Home() {
     const cleanName = nickname.trim().toUpperCase();
     window.localStorage.setItem('crestbound-nickname', cleanName); setNickname(cleanName);
     try {
-      const response = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'finish', runId: runIdRef.current, name: cleanName, scoreMs: Math.round(hud.time * 1000), sparks: hud.sparks }) });
+      const response = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'finish', runId: runIdRef.current, playerId: playerIdRef.current, courseId: course.id, modifierId: modifier.id, name: cleanName, scoreMs: Math.round(hud.time * 1000), sparks: hud.sparks }) });
       const data = await response.json() as { rank?: number; error?: string };
       if (!response.ok) throw new Error(data.error);
       setRank(data.rank ?? null); setSubmitState('saved'); setBoard('daily'); void loadBoard('daily');
@@ -283,6 +344,10 @@ export default function Home() {
     let lastHud = 0;
     let animation = 0;
     let screenShake = 0;
+    let trace: Array<{ t: number; x: number; y: number }> = [];
+    let traceTimer = 0;
+    let ghost: Array<{ t: number; x: number; y: number }> = [];
+    try { ghost = JSON.parse(window.localStorage.getItem(`crestbound-ghost-${course.id}`) ?? '[]') as typeof ghost; } catch { ghost = []; }
 
     const tone = sound;
     const overlap = (ax: number, ay: number, aw: number, ah: number, bx: number, by: number, bw: number, bh: number) => ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
@@ -302,8 +367,8 @@ export default function Home() {
       player.x = 120; player.y = 520; player.vx = 0; player.vy = 0; player.invuln = 0; player.jumps = 0;
       sparks = sparkSeed.map((item) => ({ ...item }));
       enemies = enemySeed.map((item) => ({ ...item }));
-      lives = 3; collected = 0; elapsed = 0; cameraX = 0; checkpointIndex = 0; jumpBuffer = 0; coyote = 0; previousJump = false; previousDash = false;
-      setHud((current) => ({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: current.best, checkpoint: 0, progress: 0 }));
+      lives = 3; collected = 0; elapsed = 0; cameraX = 0; checkpointIndex = 0; jumpBuffer = 0; coyote = 0; previousJump = false; previousDash = false; trace = []; traceTimer = 0;
+      setHud((current) => ({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: current.best, checkpoint: 0, progress: 0, dashReady: true }));
     };
     resetRef.current = reset;
 
@@ -332,6 +397,8 @@ export default function Home() {
 
     function update(dt: number) {
       elapsed += dt;
+      traceTimer += dt;
+      if (traceTimer >= .12) { trace.push({ t: elapsed, x: player.x, y: player.y }); traceTimer = 0; }
       player.invuln = Math.max(0, player.invuln - dt);
       player.dashCooldown = Math.max(0, player.dashCooldown - dt);
       player.dashTime = Math.max(0, player.dashTime - dt);
@@ -354,10 +421,12 @@ export default function Home() {
       if (!input.jump && player.vy < -260) player.vy += 1450 * dt;
       if (input.dash && !previousDash && player.dashCooldown <= 0) {
         player.dashTime = 0.17; player.dashCooldown = 0.82; player.vx = player.facing * 900; player.vy *= 0.18; screenShake = .08; tone('dash');
+        if (dashCoachRef.current) dismissDashCoach(true);
       }
       previousJump = input.jump;
       previousDash = input.dash;
-      if (player.dashTime <= 0) player.vy += 1850 * dt;
+      if (modifier.id === 'tailwind' && direction > 0) player.vx += 85 * dt;
+      if (player.dashTime <= 0) player.vy += (modifier.id === 'moonstep' ? 1500 : 1850) * dt;
       player.vy = Math.min(player.vy, 980);
       screenShake = Math.max(0, screenShake - dt);
 
@@ -413,17 +482,22 @@ export default function Home() {
       if (checkpointIndex < checkpoints.length - 1 && player.x > checkpoints[checkpointIndex + 1]) {
         checkpointIndex += 1; lives = Math.min(3, lives + 1); tone('checkpoint');
       }
-      if (player.x > 7535) {
-        const best = Number(window.localStorage.getItem('crestbound-best')) || Infinity;
-        if (elapsed < best) window.localStorage.setItem('crestbound-best', String(elapsed));
-        setHud({ sparks: collected, total: sparks.length, lives, time: elapsed, best: Math.min(best, elapsed), checkpoint: checkpointIndex, progress: player.x });
+      if (player.x > FINISH_X) {
+        const bestKey = `crestbound-best-${course.id}`;
+        const best = Number(window.localStorage.getItem(bestKey)) || Infinity;
+        if (elapsed < best) {
+          window.localStorage.setItem(bestKey, String(elapsed));
+          window.localStorage.setItem(`crestbound-ghost-${course.id}`, JSON.stringify(trace));
+          ghost = trace;
+        }
+        setHud({ sparks: collected, total: sparks.length, lives, time: elapsed, best: Math.min(best, elapsed), checkpoint: checkpointIndex, progress: player.x, dashReady: player.dashCooldown <= 0 });
         recordStreak(); tone('win'); setGameScreen('won');
       }
       cameraX += (Math.max(0, Math.min(WORLD_W - VIEW_W, player.x - 390)) - cameraX) * Math.min(1, dt * 5.5);
       if (elapsed - lastHud > 0.08) {
         lastHud = elapsed;
-        const stored = window.localStorage.getItem('crestbound-best');
-        setHud({ sparks: collected, total: sparks.length, lives, time: elapsed, best: stored ? Number(stored) : null, checkpoint: checkpointIndex, progress: player.x });
+        const stored = window.localStorage.getItem(`crestbound-best-${course.id}`);
+        setHud({ sparks: collected, total: sparks.length, lives, time: elapsed, best: stored ? Number(stored) : null, checkpoint: checkpointIndex, progress: player.x, dashReady: player.dashCooldown <= 0 });
       }
     }
 
@@ -503,7 +577,10 @@ export default function Home() {
       };
       drawSign(760, 535, 'KEEP GOING', '#78d7d2');
       drawSign(3720, 545, 'HALFWAY', '#f5d263');
-      drawSign(7060, 540, 'FINAL PUSH', '#ef6f52');
+      drawSign(7060, 540, 'SECTOR 2', '#ef6f52');
+      drawSign(8960, 535, course.short, course.accent);
+      drawSign(11280, 545, modifier.name.toUpperCase(), '#78d7d2');
+      drawSign(14290, 540, 'FINAL PUSH', '#ef6f52');
       spikeZones.forEach((spike) => {
         ctx.fillStyle = '#071316'; ctx.fillRect(spike.x, spike.y + 20, spike.w, 8);
         ctx.fillStyle = '#f06f52';
@@ -535,10 +612,11 @@ export default function Home() {
         ctx.fillStyle = '#fff8e9'; ctx.fillRect(ex - 12, ey - 8, 4, 4); ctx.fillRect(ex + 12, ey - 8, 4, 4);
         ctx.fillStyle = '#071316'; ctx.fillRect(ex - 22 - step, ey + 20, 16, 8); ctx.fillRect(ex + 8 + step, ey + 20, 16, 8);
       });
-      ctx.fillStyle = '#071316'; ctx.fillRect(7500, 414, 88, 24); ctx.fillStyle = '#f5d263'; ctx.font = 'bold 16px monospace'; ctx.fillText('EXIT', 7520, 432);
-      ctx.fillStyle = '#b96f14'; ctx.fillRect(7484, 440, 120, 180); ctx.fillStyle = '#f5d263'; ctx.fillRect(7496, 452, 96, 168);
-      ctx.fillStyle = Math.floor(elapsed * 5) % 2 ? '#18a7a2' : '#78d7d2'; ctx.fillRect(7512, 468, 64, 152);
-      ctx.fillStyle = '#071820'; ctx.fillRect(7528, 484, 32, 136);
+      const exitX = FINISH_X - 35;
+      ctx.fillStyle = '#071316'; ctx.fillRect(exitX, 414, 88, 24); ctx.fillStyle = '#f5d263'; ctx.font = 'bold 16px monospace'; ctx.fillText('EXIT', exitX + 20, 432);
+      ctx.fillStyle = '#b96f14'; ctx.fillRect(exitX - 16, 440, 120, 180); ctx.fillStyle = '#f5d263'; ctx.fillRect(exitX - 4, 452, 96, 168);
+      ctx.fillStyle = Math.floor(elapsed * 5) % 2 ? '#18a7a2' : '#78d7d2'; ctx.fillRect(exitX + 12, 468, 64, 152);
+      ctx.fillStyle = '#071820'; ctx.fillRect(exitX + 28, 484, 32, 136);
 
       let spriteIndex = 0;
       if (player.invuln > 0 && Math.floor(elapsed * 12) % 2 === 0) ctx.globalAlpha = .35;
@@ -550,6 +628,13 @@ export default function Home() {
       if (spriteSheet.complete && spriteSheet.naturalWidth) {
         const drawH = spriteIndex === 5 ? 106 : 116;
         const drawW = drawH * (32 / 48);
+        if (ghost.length > 1) {
+          const ghostFrame = ghost[Math.min(ghost.length - 1, Math.max(0, Math.floor(elapsed / .12)))];
+          if (ghostFrame && Math.abs(ghostFrame.x - player.x) < VIEW_W * 1.5) {
+            ctx.save(); ctx.globalAlpha = .22; ctx.translate(ghostFrame.x + player.w / 2, ghostFrame.y + player.h); ctx.scale(player.facing, 1);
+            ctx.drawImage(spriteSheet, 0, 0, 32, 48, -drawW / 2, -116, drawW, 116); ctx.restore(); ctx.globalAlpha = 1;
+          }
+        }
         if (player.dashTime > 0) {
           for (let trail = 3; trail > 0; trail -= 1) {
             ctx.globalAlpha = .1 + trail * .08;
@@ -584,7 +669,7 @@ export default function Home() {
 
         {screen !== 'title' && (
           <header className="hud">
-            <div className="hud-brand"><span className="mini-sun">✦</span><strong>CRESTBOUND</strong></div>
+            <div className="hud-brand"><span className="mini-sun">✦</span><strong>{course.short}</strong><i className={hud.dashReady ? 'ready' : ''}>{hud.dashReady ? 'DASH READY' : 'DASH CHARGING'}</i></div>
             <div className="hud-stats">
               <span><b>{'◆'.repeat(hud.lives)}</b><small>LIVES</small></span>
               <span><b>{hud.sparks}/{hud.total}</b><small>LIGHT</small></span>
@@ -607,10 +692,12 @@ export default function Home() {
               </div>
               <div className="title-card">
                 <h1>Crestbound</h1>
-                <p className="tagline">Run the skyline. Find the light. Beat today&apos;s time.</p>
+                <p className="tagline">Run the skyline. Find the light. Beat Suncrest&apos;s time.</p>
+                <div className="daily-course"><span>TODAY&apos;S COURSE</span><b>{course.name}</b><em>{modifier.name}</em></div>
                 <button className="play-button" type="button" onClick={() => void startGame()}>Play Today&apos;s Run <span aria-hidden="true">▶</span></button>
-                <div className="daily-glance"><span>DAY {Math.max(1, streak)}</span><b>{entries[0] ? `#1 ${entries[0].name} · ${formatTime(entries[0].timeMs / 1000)}` : 'BE THE FIRST FINISHER'}</b></div>
-                <div className="home-links"><button type="button" onClick={() => setHomePanel('leaderboard')}>Leaderboard</button><button type="button" onClick={() => setHomePanel('help')}>How to Play</button></div>
+                <div className="daily-glance"><span>{community.players} SUNCRESTERS TODAY</span><b>{entries[0] ? `#1 ${entries[0].name} · ${formatTime(entries[0].timeMs / 1000)}` : 'BE THE FIRST FINISHER'}</b></div>
+                <div className="community-progress"><div><span>COMMUNITY LIGHT</span><b>{community.lights.toLocaleString()} / {community.goal.toLocaleString()}</b></div><progress value={Math.min(community.lights, community.goal)} max={community.goal} /><small>{Math.max(1, streak)} day personal streak</small></div>
+                <div className="home-links"><button type="button" onClick={() => { setHomePanel('leaderboard'); track('leaderboard_open'); }}>Leaderboard</button><button type="button" onClick={() => setHomePanel('help')}>How to Play</button></div>
               </div>
             </div>
             {homePanel === 'leaderboard' && <aside className="leaderboard home-panel" aria-label="Crestbound leaderboard">
@@ -622,14 +709,16 @@ export default function Home() {
                 {boardStatus === 'loading' && <li className="board-message">LOADING RUNS...</li>}
                 {boardStatus === 'offline' && <li className="board-message">BOARD COMES ONLINE WHEN PUBLISHED.</li>}
                 {boardStatus === 'ready' && entries.length === 0 && <li className="board-message">NO FINISHERS YET. CLAIM #1.</li>}
-                {boardStatus === 'ready' && entries.slice(0, 7).map((entry) => <li key={`${entry.rank}-${entry.name}`}><b>#{entry.rank}</b><span>{entry.name}</span><time>{formatTime(entry.timeMs / 1000)}</time><small>{entry.sparks}◆</small></li>)}
+                {boardStatus === 'ready' && entries.slice(0, 7).map((entry) => <li key={`${entry.rank}-${entry.name}`}><b>#{entry.rank}</b><span>{entry.name}</span><time>{board === 'weekly' ? `${entry.points ?? 0} PT` : formatTime(entry.timeMs / 1000)}</time><small>{entry.sparks}◆</small></li>)}
               </ol>
-              <p>FASTEST VERIFIED TIME WINS. NICKNAMES ONLY.</p>
+              {community.playerRank && <div className="nearby-rivals"><b>YOUR NEARBY RIVALS // #{community.playerRank}</b>{community.nearby.map((entry) => <span key={`${entry.rank}-${entry.name}`}>#{entry.rank} {entry.name} <time>{formatTime(entry.timeMs / 1000)}</time></span>)}</div>}
+              {community.recent.length > 0 && <p className="recent-finishers">JUST RAN: {community.recent.join(' · ')}</p>}
+              <p>FASTEST VERIFIED TIME WINS. WEEKLY BOARD REWARDS CONSISTENCY. NICKNAMES ONLY.</p>
               <button className="panel-close" type="button" onClick={() => setHomePanel('none')}>Close</button>
             </aside>}
             {homePanel === 'help' && <aside className="how-to home-panel" aria-label="How to play Crestbound">
               <p className="kicker">READY, SUNNY?</p><h2>How to Play</h2>
-              <div><b>RUN</b><span>Hold left or right</span><b>JUMP</b><span>Tap twice for a double jump</span><b>DASH</b><span>Burst across gaps and hazards</span></div>
+              <div><b>RUN</b><span>Arrow keys / A D / touch arrows</span><b>JUMP</b><span>Space / touch JUMP · tap twice</span><b>DASH</b><span>Shift or X / touch DASH · recharges</span></div>
               <p>Touch controls appear automatically. Turn your phone sideways for the full course.</p>
               <button className="panel-close" type="button" onClick={() => setHomePanel('none')}>Got It</button>
             </aside>}
@@ -654,7 +743,7 @@ export default function Home() {
         )}
 
         {screen === 'playing' && (
-          <><div className="rotate-prompt"><span aria-hidden="true">↻</span><strong>Rotate to Play</strong><small>Turn your phone sideways for the full skyline.</small></div><div className="touch-controls" aria-label="Touch controls">
+          <><div className="rotate-prompt"><span aria-hidden="true">↻</span><strong>Rotate to Play</strong><small>Turn your phone sideways for the full skyline.</small></div>{showDashCoach && <div className="dash-coach"><b>DASH IS YOUR EDGE</b><span>Press SHIFT or X — or tap DASH — to burst through hazards. The HUD tells you when it recharges.</span><button type="button" onClick={() => dismissDashCoach()}>GOT IT</button></div>}<div className="touch-controls" aria-label="Touch controls">
             <div><button type="button" aria-label="Move left" onPointerDown={(event) => beginPress('left', event)} onPointerUp={(event) => endPress('left', event)} onPointerCancel={(event) => endPress('left', event)} onLostPointerCapture={() => press('left', false)}>←</button><button type="button" aria-label="Move right" onPointerDown={(event) => beginPress('right', event)} onPointerUp={(event) => endPress('right', event)} onPointerCancel={(event) => endPress('right', event)} onLostPointerCapture={() => press('right', false)}>→</button></div>
             <div><button className="dash-control" type="button" aria-label="Dash" onPointerDown={(event) => beginPress('dash', event)} onPointerUp={(event) => endPress('dash', event)} onPointerCancel={(event) => endPress('dash', event)} onLostPointerCapture={() => press('dash', false)}>DASH</button><button className="jump-control" type="button" aria-label="Jump" onPointerDown={(event) => beginPress('jump', event)} onPointerUp={(event) => endPress('jump', event)} onPointerCancel={(event) => endPress('jump', event)} onLostPointerCapture={() => press('jump', false)}>JUMP</button></div>
           </div></>

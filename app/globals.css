@@ -135,3 +135,40 @@ body { overflow: hidden; color: var(--cream); background: #071316; font-family: 
   .touch-controls { left: max(14px, env(safe-area-inset-left)); right: max(14px, env(safe-area-inset-right)); bottom: max(10px, env(safe-area-inset-bottom)); }
   .hud { left: max(8px, env(safe-area-inset-left)); right: max(8px, env(safe-area-inset-right)); }
 }
+
+/* Daily course and Suncrest competition loop */
+.daily-course { width: fit-content; display: grid; grid-template-columns: auto auto; gap: 3px 12px; margin: -9px 0 17px; padding: 8px 10px; border: 2px solid #31575a; background: rgb(2 12 15 / 58%); font-family: var(--font-pixel), monospace; text-align: left; }
+.daily-course span { grid-column: 1 / -1; color: #7fa3a3; font-size: 7px; letter-spacing: .14em; }
+.daily-course b { color: var(--gold-light); font-size: 10px; }
+.daily-course em { color: var(--teal-light); font-size: 9px; font-style: normal; }
+.community-progress { width: min(440px, 100%); margin-top: 11px; font-family: var(--font-pixel), monospace; }
+.community-progress > div { display: flex; justify-content: space-between; color: #9ec4c2; font-size: 7px; }
+.community-progress b { color: var(--gold-light); }
+.community-progress progress { width: 100%; height: 10px; margin: 5px 0 2px; border: 2px solid #071316; background: #123137; appearance: none; }
+.community-progress progress::-webkit-progress-bar { background: #123137; }
+.community-progress progress::-webkit-progress-value { background: repeating-linear-gradient(90deg, var(--teal) 0 13px, var(--teal-light) 13px 16px); }
+.community-progress progress::-moz-progress-bar { background: var(--teal); }
+.community-progress small { color: #6f9999; font-size: 7px; }
+.nearby-rivals { display: grid; gap: 5px; padding: 10px 14px; border-top: 3px solid #171b1c; background: #0a252a; font-family: var(--font-pixel), monospace; }
+.nearby-rivals b { color: var(--teal-light); font-size: 8px; }
+.nearby-rivals span { display: flex; justify-content: space-between; color: #c6dcda; font-size: 8px; }
+.nearby-rivals time { color: var(--gold-light); }
+.leaderboard .recent-finishers { color: var(--teal-light); border-top-width: 2px; }
+.hud-brand i { padding-left: 8px; border-left: 2px solid #315357; color: #789b9c; font-size: 7px; font-style: normal; white-space: nowrap; }
+.hud-brand i.ready { color: var(--gold-light); animation: dash-pulse 1s steps(2) infinite; }
+.dash-coach { position: absolute; z-index: 16; left: 50%; bottom: 105px; width: min(440px, calc(100% - 180px)); display: grid; gap: 7px; transform: translateX(-50%); padding: 13px 15px; border: 3px solid #171b1c; outline: 2px solid var(--teal-light); color: #d8ece9; background: rgb(4 19 23 / 96%); box-shadow: 6px 6px 0 #020707; font-family: var(--font-pixel), monospace; text-align: center; }
+.dash-coach b { color: var(--gold-light); font-size: 11px; }
+.dash-coach span { font-family: var(--font-title-pixel), monospace; font-size: 13px; line-height: 1.25; }
+.dash-coach button { justify-self: center; padding: 7px 12px; border: 2px solid #171b1c; color: #071316; background: var(--gold); font-family: var(--font-pixel), monospace; font-size: 8px; cursor: pointer; }
+@keyframes dash-pulse { 50% { color: #fff8e9; text-shadow: 0 0 8px var(--gold); } }
+
+@media (max-width: 700px) and (orientation: portrait) {
+  .daily-course, .community-progress { margin-inline: auto; }
+  .community-progress { text-align: left; }
+}
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .hud-brand i { display: none; }
+  .dash-coach { bottom: 82px; width: min(420px, calc(100% - 170px)); padding: 9px 12px; }
+  .dash-coach span { font-size: 11px; }
+}
