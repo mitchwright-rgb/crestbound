@@ -591,29 +591,44 @@ export default function Home() {
       ctx.setTransform(.25, 0, 0, .25, shakeX * .25, 0);
       ctx.imageSmoothingEnabled = false;
       const atmosphere = [
-        { skyTop: '#4f2942', skyMid: '#bd5140', skyLow: '#f19a52', haze: '#f6c46a', far: '#78434d', near: '#3d3442', window: '#ffd77a', rail: '#f5d263', edge: '#b85b28', blockA: '#4b3540', blockB: '#603c42', support: '#302b35' },
-        { skyTop: '#2386c8', skyMid: '#53b7df', skyLow: '#9ddff0', haze: '#dcf4ef', far: '#72afbd', near: '#347583', window: '#eafffa', rail: '#f5d263', edge: '#c57c25', blockA: '#286372', blockB: '#337988', support: '#1b4e5a' },
-        { skyTop: '#040d19', skyMid: '#081a29', skyLow: '#102c3a', haze: '#163947', far: '#102b39', near: '#071c28', window: '#e8b94d', rail: '#dba42d', edge: '#715020', blockA: '#0b2934', blockB: '#123944', support: '#061923' },
+        { skyTop: '#0d99a8', skyMid: '#63cec4', skyLow: '#ffd36f', haze: '#ff9662', far: '#668292', near: '#365b6d', window: '#ffd86a', rail: '#2bc8c0', edge: '#087d86', blockA: '#164f5f', blockB: '#0e3e4c', support: '#082d38' },
+        { skyTop: '#168fc5', skyMid: '#68cbdc', skyLow: '#d5f1e8', haze: '#fff0b0', far: '#75aeba', near: '#347382', window: '#f5fff5', rail: '#35c9c1', edge: '#087b85', blockA: '#235f70', blockB: '#194e5d', support: '#103b49' },
+        { skyTop: '#06111f', skyMid: '#0a2333', skyLow: '#174251', haze: '#245d68', far: '#153746', near: '#092431', window: '#f5c84d', rail: '#24aaa9', edge: '#0b666d', blockA: '#0e3541', blockB: '#092a35', support: '#061c25' },
       ][activeCourseIndex];
-      ctx.fillStyle = atmosphere.skyTop; ctx.fillRect(-8, 0, VIEW_W + 16, VIEW_H);
-      ctx.fillStyle = atmosphere.skyMid; ctx.fillRect(-8, 176, VIEW_W + 16, 544);
-      ctx.fillStyle = atmosphere.skyLow; ctx.fillRect(-8, 318, VIEW_W + 16, 402);
-      ctx.fillStyle = atmosphere.haze; ctx.fillRect(-8, 394, VIEW_W + 16, 326);
+      const sky = ctx.createLinearGradient(0, 0, 0, VIEW_H);
+      sky.addColorStop(0, atmosphere.skyTop);
+      sky.addColorStop(.38, atmosphere.skyMid);
+      sky.addColorStop(.67, atmosphere.skyLow);
+      sky.addColorStop(1, atmosphere.haze);
+      ctx.fillStyle = sky; ctx.fillRect(-8, 0, VIEW_W + 16, VIEW_H);
       ctx.save();
 
       if (activeCourseIndex === 0) {
         // Goldline: a low, oversized sun and warm bands make the whole route feel like golden hour.
         const sunX = Math.floor((1030 - cameraX * .025) / 8) * 8;
-        ctx.fillStyle = '#df6d3d'; ctx.fillRect(sunX - 76, 176, 152, 120);
-        ctx.fillStyle = '#ffd978'; ctx.fillRect(sunX - 60, 160, 120, 152); ctx.fillRect(sunX - 76, 184, 152, 104);
-        ctx.fillStyle = '#fff0a8'; ctx.fillRect(sunX - 48, 168, 96, 16);
-        for (let index = 0; index < 7; index += 1) {
-          const x = ((index * 271 - cameraX * .07) % 1660 + 1660) % 1660 - 180;
-          const y = 94 + (index % 4) * 58;
-          ctx.fillStyle = index % 2 ? '#e67a4b' : '#f7b467';
-          ctx.fillRect(x, y, 170, 12); ctx.fillRect(x + 34, y - 8, 94, 8);
+        ctx.fillStyle = '#f28a56'; ctx.fillRect(sunX - 78, 178, 156, 116);
+        ctx.fillStyle = '#ffe17b'; ctx.fillRect(sunX - 60, 160, 120, 152); ctx.fillRect(sunX - 76, 184, 152, 104);
+        ctx.fillStyle = '#fff6bd'; ctx.fillRect(sunX - 48, 168, 96, 16);
+        for (let layer = 0; layer < 3; layer += 1) {
+          const speed = .055 + layer * .035;
+          const cloudY = 300 + layer * 54;
+          const cloudColor = ['#fff2bc', '#ffe1a0', '#ffd08a'][layer];
+          for (let index = 0; index < 7; index += 1) {
+            const x = ((index * 258 - cameraX * speed) % 1810 + 1810) % 1810 - 250;
+            const width = 146 + (index % 3) * 42;
+            ctx.fillStyle = cloudColor;
+            ctx.fillRect(x, cloudY + (index % 2) * 16, width, 42);
+            ctx.fillRect(x + 24, cloudY - 20 + (index % 2) * 16, width - 52, 30);
+            ctx.fillRect(x - 22, cloudY + 20 + (index % 2) * 16, width + 58, 24);
+          }
         }
-        ctx.fillStyle = '#f5d263';
+        for (let index = 0; index < 5; index += 1) {
+          const x = ((index * 346 - cameraX * .06) % 1840 + 1840) % 1840 - 220;
+          const y = 78 + (index % 3) * 52;
+          ctx.fillStyle = index % 2 ? '#fff0ad' : '#ffd982';
+          ctx.fillRect(x, y, 132, 10); ctx.fillRect(x + 28, y - 8, 72, 8);
+        }
+        ctx.fillStyle = '#fff0a8';
         for (let index = 0; index < 9; index += 1) ctx.fillRect(((index * 173 - cameraX * .18) % 1500 + 1500) % 1500 - 80, 400 + (index % 3) * 14, 76, 5);
       } else if (activeCourseIndex === 1) {
         // Crosswind: bright blue sky, high sun, and large block clouds keep the aerial route open and clear.
@@ -693,10 +708,10 @@ export default function Home() {
       const activePlatforms = platforms.map((platform) => platform.moving ? { ...platform, y: (platform.baseY ?? platform.y) + Math.sin(elapsed * 1.45 + (platform.phase ?? 0)) * 72 } : platform);
       activePlatforms.forEach((platform) => {
         const px = Math.floor(platform.x / 4) * 4; const py = Math.floor(platform.y / 4) * 4;
-        ctx.fillStyle = '#08191c'; ctx.fillRect(px, py, platform.w, platform.h);
+        ctx.fillStyle = '#061a20'; ctx.fillRect(px - 4, py - 4, platform.w + 8, platform.h + 4);
         ctx.fillStyle = atmosphere.edge; ctx.fillRect(px, py, platform.w, 20);
         ctx.fillStyle = atmosphere.rail; ctx.fillRect(px, py, platform.w, 8);
-        ctx.fillStyle = '#fff0a8'; ctx.fillRect(px + 8, py + 2, Math.max(0, platform.w - 16), 2);
+        ctx.fillStyle = activeCourseIndex === 2 ? '#78d7d2' : '#d9fff0'; ctx.fillRect(px + 8, py + 2, Math.max(0, platform.w - 16), 2);
         ctx.fillStyle = '#071316'; for (let x = px + 18; x < px + platform.w - 8; x += 48) ctx.fillRect(x, py + 12, 5, 5);
         ctx.fillStyle = atmosphere.edge; ctx.fillRect(px, py + 20, platform.w, 4);
         for (let x = px; x < px + platform.w; x += 32) for (let y = py + 24; y < py + platform.h; y += 24) {
