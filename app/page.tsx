@@ -87,7 +87,7 @@ function buildCourse(index: number, modifierId: string) {
       spikeZones: [0, 1].flatMap((copy) => baseSpikeZones.map((spike, spikeIndex) => ({ ...spike, x: spike.x + copy * COURSE_OFFSET + (copy ? spikeIndex % 2 * 70 : 0) }))),
       sparkSeed: [...regularSparks, ...stormSparks].sort((a, b) => a.x - b.x),
       enemySeed: [0, 1].flatMap((copy) => baseEnemySeed.map((enemy) => ({ ...enemy, x: enemy.x + copy * COURSE_OFFSET, minX: enemy.minX + copy * COURSE_OFFSET, maxX: enemy.maxX + copy * COURSE_OFFSET, speed: enemy.speed + copy * 18 }))),
-      checkpoints: [120, 2180, 4780, 7720, 9780, 12380],
+      checkpoints: [270, 2180, 4780, 7720, 9780, 12380],
     };
   }
 
@@ -124,7 +124,7 @@ function buildCourse(index: number, modifierId: string) {
     x: platform.x + Math.min(platform.w - 80, 260 + enemyIndex % 3 * 70), y: 570, minX: platform.x + 60, maxX: platform.x + platform.w - 60,
     speed: (index === 2 ? 155 : 115) + enemyIndex % 4 * 18, dir: enemyIndex % 2 ? -1 : 1, alive: true,
   }));
-  return { platforms, spikeZones, sparkSeed: [...regularSparks, ...stormSparks].sort((a, b) => a.x - b.x), enemySeed, checkpoints: [120, 2400, 4680, 7720, 10000, 12300] };
+  return { platforms, spikeZones, sparkSeed: [...regularSparks, ...stormSparks].sort((a, b) => a.x - b.x), enemySeed, checkpoints: [270, 2400, 4680, 7720, 10000, 12300] };
 }
 
 function formatTime(seconds: number) {
@@ -404,17 +404,28 @@ export default function Home() {
 
   useEffect(() => {
     const portraitPhone = window.matchMedia('(orientation: portrait) and (pointer: coarse)');
+    let orientationTimer = 0;
     const syncOrientation = () => {
-      if (screenRef.current !== 'playing') return;
-      const shouldWait = portraitPhone.matches;
-      waitingForLandscapeRef.current = shouldWait;
-      setWaitingForLandscape(shouldWait);
-      if (shouldWait) stopMusic();
-      else { startMusic(); requestAnimationFrame(() => canvasRef.current?.focus()); }
+      window.clearTimeout(orientationTimer);
+      orientationTimer = window.setTimeout(() => {
+        if (screenRef.current === 'title') {
+          const titleScreen = document.querySelector<HTMLElement>('.title-screen');
+          if (titleScreen) titleScreen.scrollTop = 0;
+          return;
+        }
+        if (screenRef.current !== 'playing') return;
+        const shouldWait = portraitPhone.matches;
+        if (waitingForLandscapeRef.current === shouldWait) return;
+        waitingForLandscapeRef.current = shouldWait;
+        setWaitingForLandscape(shouldWait);
+        if (shouldWait) stopMusic();
+        else { startMusic(); requestAnimationFrame(() => canvasRef.current?.focus()); }
+      }, 160);
     };
     portraitPhone.addEventListener('change', syncOrientation);
     window.addEventListener('orientationchange', syncOrientation);
     return () => {
+      window.clearTimeout(orientationTimer);
       portraitPhone.removeEventListener('change', syncOrientation);
       window.removeEventListener('orientationchange', syncOrientation);
     };
@@ -429,7 +440,7 @@ export default function Home() {
     const spriteSheet = new Image();
     spriteSheet.src = '/sunny-pixel-master.svg';
     const keys = new Set<string>();
-    const player = { x: 120, y: 538, w: 46, h: 82, vx: 0, vy: 0, grounded: true, jumps: 0, dashTime: 0, dashCooldown: 0, facing: 1, invuln: 1.25 };
+    const player = { x: checkpoints[0], y: 538, w: 46, h: 82, vx: 0, vy: 0, grounded: true, jumps: 0, dashTime: 0, dashCooldown: 0, facing: 1, invuln: 1.25 };
     let sparks = sparkSeed.map((item) => ({ ...item }));
     let enemies = enemySeed.map((item) => ({ ...item }));
     let lives = 3;
@@ -480,7 +491,7 @@ export default function Home() {
       } else resetPosition();
     };
     const reset = () => {
-      player.x = 120; player.y = 620 - player.h; player.vx = 0; player.vy = 0; player.grounded = true; player.invuln = 1.25; player.jumps = 0;
+      player.x = checkpoints[0]; player.y = 620 - player.h; player.vx = 0; player.vy = 0; player.grounded = true; player.invuln = 1.25; player.jumps = 0;
       sparks = sparkSeed.map((item) => ({ ...item }));
       enemies = enemySeed.map((item) => ({ ...item }));
       lives = 3; collected = 0; elapsed = 0; cameraX = 0; checkpointIndex = 0; jumpBuffer = 0; coyote = 0; previousJump = false; previousDash = false; trace = []; traceTimer = 0; stormShield = 0; checkpointToast = 0; checkpointLifeAwarded = false; runEnded = false;

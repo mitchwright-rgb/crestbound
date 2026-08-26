@@ -8,8 +8,8 @@ button, input { font: inherit; }
 button:focus-visible, input:focus-visible, canvas:focus-visible { outline: 4px solid var(--teal-light); outline-offset: 3px; }
 body { overflow: hidden; color: var(--cream); background: #071316; font-family: var(--font-playful), system-ui, sans-serif; image-rendering: pixelated; }
 body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; background: #071316; }
-.shell { width: 100vw; width: 100dvw; max-width: none; min-height: 100svh; min-height: 100dvh; display: grid; place-items: center; overflow: hidden; padding: 0; background: #071316; }
-.game-frame { position: relative; width: 100vw; width: 100dvw; max-width: none; height: 100svh; height: 100dvh; max-height: none; overflow: hidden; isolation: isolate; border: 0; background: #071316; box-shadow: none; touch-action: none; }
+.shell { width: 100vw; width: 100dvw; max-width: none; min-height: 100svh; display: grid; place-items: center; overflow: hidden; padding: 0; background: #071316; }
+.game-frame { position: relative; width: 100vw; width: 100dvw; max-width: none; height: 100svh; max-height: none; overflow: hidden; isolation: isolate; border: 0; background: #071316; box-shadow: none; touch-action: none; }
 .game-frame::before { position: absolute; z-index: 3; inset: 0; content: ''; pointer-events: none; background: radial-gradient(ellipse at center, transparent 52%, rgb(1 7 9 / 38%) 100%); }
 .game-frame::after { position: absolute; z-index: 40; inset: 0; content: ''; pointer-events: none; background: repeating-linear-gradient(0deg, rgb(255 255 255 / 0%) 0 3px, rgb(1 10 12 / 9%) 3px 4px); mix-blend-mode: multiply; }
 .game-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: contain; outline: none; background: #071316; image-rendering: pixelated; image-rendering: crisp-edges; }
@@ -529,8 +529,8 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 }
 .home-dashboard .home-links button:hover { border-color: var(--gold); color: var(--gold-light); }
 @media (max-width: 700px) and (orientation: portrait) {
-  .title-screen { height: 100dvh; padding: 0; }
-  .home-hero { height: 100%; display: grid; grid-template-rows: auto minmax(0, 1fr); }
+  .title-screen { height: 100svh; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; padding: 0; }
+  .home-hero { height: auto; min-height: 100%; display: grid; grid-template-rows: auto auto; overflow: visible; }
   .home-cover { width: 100%; height: auto; }
   .home-cover picture, .home-cover img { width: 100%; height: auto; }
   .home-cover img { object-fit: contain; object-position: center; }
@@ -542,7 +542,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
     grid-template-rows: auto auto auto auto;
     align-content: start;
     gap: 14px;
-    padding: 24px 18px 22px;
+    padding: 24px 18px max(34px, calc(env(safe-area-inset-bottom) + 18px));
     border-top-width: 5px;
   }
   .home-dashboard .daily-course { min-height: 78px; padding: 12px 14px; }
@@ -555,23 +555,24 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 }
 
 @media (max-height: 560px) and (orientation: landscape) {
-  html, body, .shell, .game-frame, .title-screen { width: 100vw; width: 100dvw; min-width: 100vw; min-width: 100dvw; height: 100svh; height: 100dvh; }
-  .home-panel { width: min(640px, calc(100% - 24px)); max-height: calc(100dvh - 16px); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
+  html, body, .shell, .game-frame, .title-screen { width: 100vw; width: 100dvw; min-width: 100vw; min-width: 100dvw; height: 100svh; }
+  .home-panel { width: min(700px, calc(100% - 24px)); max-height: calc(100svh - 16px); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
   .home-cover picture, .home-cover img { width: 100%; height: 100%; }
   .home-cover img { object-fit: cover; object-position: center center; }
   .home-dashboard {
-    min-height: 132px;
+    min-height: 160px;
     grid-template-columns: .85fr 1.1fr 1fr;
-    grid-template-rows: 62px 32px;
-    gap: 8px 14px;
-    padding: 9px max(24px, env(safe-area-inset-left)) 8px max(24px, env(safe-area-inset-right));
+    grid-template-rows: 78px 42px;
+    gap: 10px 16px;
+    padding: 12px max(28px, env(safe-area-inset-left)) 10px max(28px, env(safe-area-inset-right));
     border-top-width: 4px;
   }
-  .home-dashboard .daily-course, .home-dashboard .daily-glance { min-height: 58px; padding: 7px 10px; }
-  .home-dashboard .daily-course span { font-size: 8px; }
-  .home-dashboard .daily-course b { font-size: 11px; }
-  .home-dashboard .daily-course em, .home-dashboard .daily-glance { font-size: 8px; }
-  .home-dashboard .play-button { min-height: 58px; padding: 8px 12px; font-size: 10px; }
-  .home-dashboard .home-links { gap: 12px; }
-  .home-dashboard .home-links button { min-height: 30px; padding: 4px; font-size: 8px; }
+  .home-dashboard .daily-course, .home-dashboard .daily-glance { min-height: 74px; padding: 10px 13px; }
+  .home-dashboard .daily-course span { font-size: 11px; }
+  .home-dashboard .daily-course b { font-size: 15px; }
+  .home-dashboard .daily-course em { font-size: 11px; }
+  .home-dashboard .daily-glance { gap: 5px; font-size: 11px; }
+  .home-dashboard .play-button { min-height: 74px; padding: 10px 14px; font-size: 13px; }
+  .home-dashboard .home-links { gap: 14px; }
+  .home-dashboard .home-links button { min-height: 40px; padding: 6px; font-size: 11px; }
 }
