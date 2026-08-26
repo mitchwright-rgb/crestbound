@@ -165,10 +165,40 @@ body { overflow: hidden; color: var(--cream); background: #071316; font-family: 
 @media (max-width: 700px) and (orientation: portrait) {
   .daily-course, .community-progress { margin-inline: auto; }
   .community-progress { text-align: left; }
+  .sunny-lockup > span { min-height: 30px; padding: 7px 12px 6px; font-size: 10px; }
+  .title-card h1 { font-size: clamp(42px, 12.5vw, 54px); }
+  .daily-course { width: 100%; grid-template-columns: minmax(0, 1fr) auto; gap: 5px 14px; padding: 10px 12px; }
+  .daily-course span { font-size: 11px; line-height: 1.35; }
+  .daily-course b { font-size: 14px; line-height: 1.35; }
+  .daily-course em { font-size: 12px; line-height: 1.35; }
+  .daily-glance { gap: 7px 12px; padding: 9px 11px; font-size: 12px; line-height: 1.35; }
+  .community-progress > div, .community-progress small { font-size: 11px; line-height: 1.35; }
+  .community-progress progress { height: 14px; margin-block: 7px 4px; }
+  .home-links { gap: 24px; }
+  .home-links button { min-height: 44px; font-size: 12px; }
+  .home-panel { width: min(540px, calc(100% - 22px)); }
+  .board-heading { font-size: 18px; }
+  .board-heading small, .board-tabs button { font-size: 11px; }
+  .board-tabs button, .panel-close { min-height: 44px; }
+  .board-list li { min-height: 42px; grid-template-columns: 38px 1fr 76px 38px; font-size: 12px; }
+  .leaderboard > p, .leaderboard .recent-finishers, .nearby-rivals b, .nearby-rivals span { font-size: 11px; line-height: 1.4; }
+  .how-to { padding: 22px 18px; }
+  .how-to b { font-size: 12px; }
+  .how-to span, .how-to > p:not(.kicker) { font-size: 15px; }
+  .how-to .panel-close { width: calc(100% + 36px); margin: 15px -18px -22px; font-size: 12px; }
 }
 
 @media (max-height: 560px) and (orientation: landscape) {
-  .hud-brand i { display: none; }
+  .hud-brand { padding-right: 7px; }
+  .hud-brand strong { display: none; }
+  .hud-brand i { display: block; padding-left: 0; border-left: 0; font-size: 10px; }
+  .hud-stats span { min-width: 72px; }
+  .hud-stats b { font-size: 13px; }
+  .hud-stats small { font-size: 10px; }
+  .hud-actions button { min-width: 44px; min-height: 44px; font-size: 10px; }
+  .touch-controls .dash-control, .touch-controls .jump-control { font-size: 11px; }
   .dash-coach { bottom: 82px; width: min(420px, calc(100% - 170px)); padding: 9px 12px; }
-  .dash-coach span { font-size: 11px; }
+  .dash-coach b { font-size: 12px; }
+  .dash-coach span { font-size: 14px; }
+  .dash-coach button { min-width: 92px; min-height: 38px; font-size: 10px; }
 }
