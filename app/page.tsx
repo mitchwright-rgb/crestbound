@@ -863,7 +863,7 @@ export default function Home() {
               </div>
               <div className="title-card">
                 <h1>Crestbound</h1>
-                <p className="tagline">Run the skyline. Find the light. Beat Suncrest&apos;s time.</p>
+                <p className="tagline">A Daily Skyline Run</p>
                 <div className="daily-course"><span>{isPractice ? 'PRACTICE COURSE' : 'TODAY\'S COURSE'}</span><b>{course.name}</b><em>{isPractice ? 'No leaderboard' : modifier.name}</em></div>
                 <button className="play-button" type="button" onClick={() => void startGame(true)}>{isPractice ? 'Start Practice' : 'Play Today\'s Run'} <span aria-hidden="true">▶</span></button>
                 <div className="daily-glance"><span>{community.players} {community.players === 1 ? 'SUNCRESTER' : 'SUNCRESTERS'} TODAY</span><b>{entries[0] ? `#1 ${entries[0].name} · ${formatTime(entries[0].timeMs / 1000)}` : 'BE THE FIRST FINISHER'}</b></div>

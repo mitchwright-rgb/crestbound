@@ -24,7 +24,7 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://sunny-crestbound.suncrest-7012.chatgpt.site'),
   applicationName: 'Crestbound',
   title: 'Crestbound | Suncrest Games',
-  description: 'Guide Sunny across the skyline, recover the lost light, and master the daily run.',
+  description: 'A daily skyline run starring Sunny. Find the light and beat today’s time.',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
@@ -37,14 +37,14 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'Crestbound',
-    description: 'Guide Sunny across the skyline. Find the light. Beat today’s time.',
+    description: 'A daily skyline run starring Sunny. Find the light and beat today’s time.',
     url: 'https://sunny-crestbound.suncrest-7012.chatgpt.site',
     siteName: 'Suncrest Games',
     images: [{ url: '/og-pixel.png', width: 1672, height: 941, alt: 'Crestbound daily pixel platformer starring Sunny' }],
     type: 'website',
   },
   twitter: {
-    card: 'summary_large_image', title: 'Crestbound', description: 'Guide Sunny across the skyline. Find the light. Beat today’s time.', images: ['/og-pixel.png'],
+    card: 'summary_large_image', title: 'Crestbound', description: 'A daily skyline run starring Sunny. Find the light and beat today’s time.', images: ['/og-pixel.png'],
   },
 };
 

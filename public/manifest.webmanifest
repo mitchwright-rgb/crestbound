@@ -1,7 +1,7 @@
 {
   "name": "Crestbound",
   "short_name": "Crestbound",
-  "description": "Run the skyline with Sunny and compete in Suncrest's daily course.",
+  "description": "A daily skyline run starring Sunny. Find the light and beat today's time.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
