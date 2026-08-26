@@ -75,7 +75,7 @@ function buildCourse(index: number, modifierId: string) {
   if (index === 0) {
     const platforms = [0, 1].flatMap((copy) => basePlatforms.map((platform, platformIndex) => {
       const shift = copy === 0 || platform.y >= 600 ? 0 : [24, -42, 36, -28][platformIndex % 4];
-      const y = Math.max(280, Math.min(555, platform.y + shift));
+      const y = platform.y >= 600 ? platform.y : Math.max(280, Math.min(555, platform.y + shift));
       const xShift = copy === 0 || platform.y >= 600 ? 0 : [-30, 48, 0, 72][platformIndex % 4];
       return { ...platform, x: platform.x + copy * COURSE_OFFSET + xShift, y, baseY: platform.moving ? y : platform.baseY };
     }));
@@ -152,6 +152,7 @@ export default function Home() {
   const musicRef = useRef<{ timer: ReturnType<typeof setInterval>; gain: GainNode; step: number } | null>(null);
   const runIdRef = useRef<string | null>(null);
   const playerIdRef = useRef('');
+  const homeTrackedRef = useRef(false);
   const dashCoachRef = useRef(false);
   const [board, setBoard] = useState<Board>('daily');
   const [entries, setEntries] = useState<BoardEntry[]>([]);
@@ -169,10 +170,14 @@ export default function Home() {
     let playerId = window.localStorage.getItem('crestbound-player-id');
     if (!playerId) { playerId = crypto.randomUUID(); window.localStorage.setItem('crestbound-player-id', playerId); }
     playerIdRef.current = playerId;
-    const stored = window.localStorage.getItem(`crestbound-best-${dailyCourse.id}`);
-    if (stored) setHud((current) => ({ ...current, best: Number(stored) }));
-    setNickname(window.localStorage.getItem('crestbound-nickname') ?? '');
-    setStreak(Number(window.localStorage.getItem('crestbound-streak')) || 0);
+    const syncStoredState = window.setTimeout(() => {
+      const stored = window.localStorage.getItem(`crestbound-best-${dailyCourse.id}`);
+      if (stored) setHud((current) => ({ ...current, best: Number(stored) }));
+      setNickname(window.localStorage.getItem('crestbound-nickname') ?? '');
+      setStreak(Number(window.localStorage.getItem('crestbound-streak')) || 0);
+    }, 0);
+    if (!homeTrackedRef.current) { homeTrackedRef.current = true; track('home_view'); }
+    return () => window.clearTimeout(syncStoredState);
   }, []);
 
   const loadBoard = useCallback(async (nextBoard: Board) => {
@@ -191,7 +196,10 @@ export default function Home() {
     }
   }, []);
 
-  useEffect(() => { void loadBoard(board); }, [board, loadBoard]);
+  useEffect(() => {
+    const load = window.setTimeout(() => { void loadBoard(board); }, 0);
+    return () => window.clearTimeout(load);
+  }, [board, loadBoard]);
 
   function stopMusic() {
     const music = musicRef.current;
@@ -273,6 +281,7 @@ export default function Home() {
   }
 
   async function startGame() {
+    const replaying = screenRef.current === 'over' || screenRef.current === 'won';
     resetRef.current?.();
     setSubmitState('idle'); setRank(null); runIdRef.current = null;
     if (!isPractice) {
@@ -284,6 +293,7 @@ export default function Home() {
     setGameScreen('playing');
     const needsCoach = !window.localStorage.getItem('crestbound-dash-learned');
     dashCoachRef.current = needsCoach; setShowDashCoach(needsCoach); if (!isPractice) track('run_start');
+    if (replaying && !isPractice) track('replay');
     startMusic();
     requestAnimationFrame(() => canvasRef.current?.focus());
   }
@@ -519,6 +529,7 @@ export default function Home() {
 
       if (checkpointIndex < checkpoints.length - 1 && player.x > checkpoints[checkpointIndex + 1]) {
         checkpointIndex += 1; lives = Math.min(3, lives + 1); tone('checkpoint');
+        if (!isPractice) track('checkpoint');
       }
       if (player.x > FINISH_X) {
         const bestKey = `crestbound-best-${course.id}`;
@@ -768,6 +779,8 @@ export default function Home() {
     return () => {
       cancelAnimationFrame(animation); stopMusic(); window.removeEventListener('keydown', keyDown); window.removeEventListener('keyup', keyUp); window.removeEventListener('blur', clearKeys); resetRef.current = null;
     };
+  // The game engine is intentionally rebuilt when the selected course mode changes.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCourseIndex, isPractice]);
 
   return (
