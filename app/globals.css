@@ -545,6 +545,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .home-cover img { object-fit: contain; object-position: center; }
   .home-dashboard {
     position: static;
+    height: auto;
     min-height: 0;
     display: grid;
     grid-template-columns: 1fr;
