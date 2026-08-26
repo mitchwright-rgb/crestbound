@@ -869,20 +869,13 @@ export default function Home() {
           <div className="title-screen">
             <div className="home-hero">
               <div className="home-cover">
-                <img src="/crestbound-home-hero.svg" width="1672" height="940" alt="Sunny runs across the golden-hour skyline beneath the Crestbound title and A Daily Skyline Run tagline" />
+                <img src="/crestbound-square-key-art.svg" width="1254" height="1254" alt="Sunny runs across the golden-hour Crestbound skyline beneath the A Daily Skyline Run tagline" />
               </div>
               <div className="home-dashboard">
                 <div className="daily-course"><span>{isPractice ? 'PRACTICE RUN' : 'TODAY\'S RUN'}</span><b>{course.name}</b></div>
                 <button className="play-button" type="button" onClick={() => void startGame(true)}>{isPractice ? 'Start Practice' : 'Play Today\'s Run'} <span aria-hidden="true">▶</span></button>
                 <div className="daily-glance"><span>{community.players} {community.players === 1 ? 'SUNCRESTER HAS' : 'SUNCRESTERS HAVE'} RUN TODAY</span><b>{entries[0] ? `FASTEST: ${entries[0].name} · ${formatTime(entries[0].timeMs / 1000)}` : 'BE THE FIRST FINISHER'}</b></div>
                 <div className="home-links"><button type="button" onClick={() => { setHomePanel('leaderboard'); track('leaderboard_open'); }}>Leaderboard</button><button type="button" onClick={() => setHomePanel('courses')}>{isPractice ? 'Change Course' : 'Practice Courses'}</button><button type="button" onClick={() => setHomePanel('help')}>How to Play</button></div>
-              </div>
-              <div className="home-world-footer" aria-hidden="true">
-                <span className="world-sun" />
-                <div className="world-clouds"><i /><i /><i /><i /></div>
-                <div className="world-city world-city-back"><i /><i /><i /><i /><i /><i /><i /></div>
-                <div className="world-city world-city-front"><i /><i /><i /><i /><i /><i /></div>
-                <div className="world-roofs"><i /><i /><i /></div>
               </div>
             </div>
             {homePanel === 'leaderboard' && <aside className="leaderboard home-panel" aria-label="Crestbound leaderboard">
