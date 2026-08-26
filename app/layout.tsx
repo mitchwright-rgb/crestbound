@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Fredoka, Silkscreen } from 'next/font/google';
+import { Fredoka, Lobster_Two, Silkscreen } from 'next/font/google';
 import './globals.css';
 
 const fredoka = Fredoka({
@@ -10,6 +10,12 @@ const fredoka = Fredoka({
 
 const silkscreen = Silkscreen({
   variable: '--font-pixel',
+  subsets: ['latin'],
+  weight: ['400', '700'],
+});
+
+const lobsterTwo = Lobster_Two({
+  variable: '--font-script',
   subsets: ['latin'],
   weight: ['400', '700'],
 });
@@ -43,7 +49,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${fredoka.variable} ${silkscreen.variable} antialiased`}
+        className={`${fredoka.variable} ${silkscreen.variable} ${lobsterTwo.variable} antialiased`}
       >
         {children}
       </body>
