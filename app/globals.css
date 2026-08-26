@@ -203,14 +203,20 @@ body { overflow: hidden; color: var(--cream); background: #071316; font-family: 
 }
 
 @media (max-height: 560px) and (orientation: landscape) {
-  .hud-brand { padding-right: 7px; }
-  .hud-brand strong { display: none; }
-  .hud-brand i { display: block; padding-left: 0; border-left: 0; font-size: 10px; }
-  .hud-stats span { min-width: 72px; }
-  .hud-stats b { font-size: 13px; }
-  .hud-stats small { font-size: 10px; }
-  .hud-actions button { min-width: 44px; min-height: 44px; font-size: 10px; }
-  .touch-controls .dash-control, .touch-controls .jump-control { font-size: 11px; }
+  .hud { grid-template-columns: 1fr auto; align-items: start; gap: 5px; }
+  .hud-brand { display: none; }
+  .hud-stats { justify-self: start; padding: 2px; border-width: 2px; outline-width: 1px; box-shadow: 3px 3px 0 rgb(2 7 8 / 45%); }
+  .hud-stats span { min-width: 58px; padding: 2px 5px; }
+  .hud-stats b { font-size: 11px; }
+  .hud-stats small { margin-top: 1px; font-size: 7px; }
+  .hud-actions { grid-column: 2; gap: 5px; }
+  .hud-actions button { min-width: 44px; min-height: 44px; border-width: 2px; box-shadow: 3px 3px 0 rgb(2 7 8 / 45%); font-size: 9px; }
+  .route-meter { grid-column: 1 / -1; width: min(48vw, 420px); height: 6px; justify-self: center; margin: -2px 0 0; border-width: 1px; outline: 0; box-shadow: 2px 2px 0 rgb(0 0 0 / 38%); }
+  .touch-controls { bottom: max(7px, env(safe-area-inset-bottom)); }
+  .touch-controls button { width: 46px; height: 46px; border-width: 3px; outline-width: 1px; box-shadow: 3px 3px 0 #020707; opacity: .82; font-size: 18px; }
+  .touch-controls .dash-control, .touch-controls .jump-control { width: 56px; height: 56px; font-size: 9px; }
+  .touch-controls .dash-control.ready { color: #071316; background: repeating-linear-gradient(0deg, var(--teal-light) 0 5px, #62c8c5 5px 6px); }
+  .touch-controls button:active { opacity: 1; }
   .game-modal { max-height: calc(100svh - max(16px, env(safe-area-inset-top)) - max(16px, env(safe-area-inset-bottom))); overflow-y: auto; overscroll-behavior: contain; }
   .game-modal > p:first-child { font-size: 11px; }
   .game-modal .secondary { min-height: 44px; font-size: 11px; }

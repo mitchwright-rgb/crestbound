@@ -142,9 +142,11 @@ export default function Home() {
   const { platforms, spikeZones, sparkSeed, enemySeed, checkpoints } = courseData;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const screenRef = useRef<Screen>('title');
+  const waitingForLandscapeRef = useRef(false);
   const inputRef = useRef({ left: false, right: false, jump: false, dash: false });
   const resetRef = useRef<(() => void) | null>(null);
   const [screen, setScreen] = useState<Screen>('title');
+  const [waitingForLandscape, setWaitingForLandscape] = useState(false);
   const [muted, setMuted] = useState(false);
   const mutedRef = useRef(false);
   const [hud, setHud] = useState<Hud>({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: null, checkpoint: 0, progress: 0, dashReady: true });
@@ -290,24 +292,33 @@ export default function Home() {
         if (response.ok) runIdRef.current = ((await response.json()) as { runId: string }).runId;
       } catch { /* Offline play remains available. */ }
     }
+    const shouldWaitForLandscape = window.matchMedia('(orientation: portrait) and (pointer: coarse)').matches;
+    waitingForLandscapeRef.current = shouldWaitForLandscape;
+    setWaitingForLandscape(shouldWaitForLandscape);
     setGameScreen('playing');
     const needsCoach = !window.localStorage.getItem('crestbound-dash-learned');
     dashCoachRef.current = needsCoach; setShowDashCoach(needsCoach); if (!isPractice) track('run_start');
     if (replaying && !isPractice) track('replay');
-    startMusic();
+    if (!shouldWaitForLandscape) startMusic();
     requestAnimationFrame(() => canvasRef.current?.focus());
   }
 
   function togglePause() {
     if (screenRef.current === 'playing') setGameScreen('paused');
-    else if (screenRef.current === 'paused') { setGameScreen('playing'); startMusic(); }
+    else if (screenRef.current === 'paused') {
+      const shouldWaitForLandscape = window.matchMedia('(orientation: portrait) and (pointer: coarse)').matches;
+      waitingForLandscapeRef.current = shouldWaitForLandscape;
+      setWaitingForLandscape(shouldWaitForLandscape);
+      setGameScreen('playing');
+      if (!shouldWaitForLandscape) startMusic();
+    }
   }
 
   function toggleSound() {
     setMuted((value) => {
       const next = !value;
       mutedRef.current = next;
-      if (next) stopMusic(); else if (screenRef.current === 'playing') startMusic();
+      if (next) stopMusic(); else if (screenRef.current === 'playing' && !waitingForLandscapeRef.current) startMusic();
       return next;
     });
   }
@@ -363,6 +374,24 @@ export default function Home() {
       window.removeEventListener('blur', clearTouchInput);
       window.removeEventListener('pointercancel', clearTouchInput);
       document.removeEventListener('visibilitychange', clearTouchInput);
+    };
+  }, []);
+
+  useEffect(() => {
+    const portraitPhone = window.matchMedia('(orientation: portrait) and (pointer: coarse)');
+    const syncOrientation = () => {
+      if (screenRef.current !== 'playing') return;
+      const shouldWait = portraitPhone.matches;
+      waitingForLandscapeRef.current = shouldWait;
+      setWaitingForLandscape(shouldWait);
+      if (shouldWait) stopMusic();
+      else { startMusic(); requestAnimationFrame(() => canvasRef.current?.focus()); }
+    };
+    portraitPhone.addEventListener('change', syncOrientation);
+    window.addEventListener('orientationchange', syncOrientation);
+    return () => {
+      portraitPhone.removeEventListener('change', syncOrientation);
+      window.removeEventListener('orientationchange', syncOrientation);
     };
   }, []);
 
@@ -771,7 +800,7 @@ export default function Home() {
     function loop(now: number) {
       const dt = Math.min(.033, (now - last) / 1000);
       last = now;
-      if (screenRef.current === 'playing') update(dt);
+      if (screenRef.current === 'playing' && !waitingForLandscapeRef.current) update(dt);
       draw();
       animation = requestAnimationFrame(loop);
     }
@@ -871,9 +900,9 @@ export default function Home() {
         )}
 
         {screen === 'playing' && (
-          <><div className="rotate-prompt"><span aria-hidden="true">↻</span><strong>Turn Sideways to Run</strong><small>Crestbound plays in landscape so you can see the next jump and keep the controls clear.</small></div>{showDashCoach && <div className="dash-coach"><b>DASH IS YOUR EDGE</b><span>Press SHIFT or X — or tap DASH — to burst through hazards. The HUD tells you when it recharges.</span><button type="button" onClick={() => dismissDashCoach()}>GOT IT</button></div>}<div className="touch-controls" aria-label="Touch controls">
+          <>{waitingForLandscape && <div className="rotate-prompt"><span aria-hidden="true">↻</span><strong>Turn Sideways to Start</strong><small>Your run and timer are paused until the phone is in landscape.</small></div>}{showDashCoach && !waitingForLandscape && <div className="dash-coach"><b>DASH IS YOUR EDGE</b><span>Press SHIFT or X — or tap DASH — to burst through hazards. The HUD tells you when it recharges.</span><button type="button" onClick={() => dismissDashCoach()}>GOT IT</button></div>}<div className="touch-controls" aria-label="Touch controls">
             <div><button type="button" aria-label="Move left" onPointerDown={(event) => beginPress('left', event)} onPointerUp={(event) => endPress('left', event)} onPointerCancel={(event) => endPress('left', event)} onLostPointerCapture={() => press('left', false)}>←</button><button type="button" aria-label="Move right" onPointerDown={(event) => beginPress('right', event)} onPointerUp={(event) => endPress('right', event)} onPointerCancel={(event) => endPress('right', event)} onLostPointerCapture={() => press('right', false)}>→</button></div>
-            <div><button className="dash-control" type="button" aria-label="Dash" onPointerDown={(event) => beginPress('dash', event)} onPointerUp={(event) => endPress('dash', event)} onPointerCancel={(event) => endPress('dash', event)} onLostPointerCapture={() => press('dash', false)}>DASH</button><button className="jump-control" type="button" aria-label="Jump" onPointerDown={(event) => beginPress('jump', event)} onPointerUp={(event) => endPress('jump', event)} onPointerCancel={(event) => endPress('jump', event)} onLostPointerCapture={() => press('jump', false)}>JUMP</button></div>
+            <div><button className={hud.dashReady ? 'dash-control ready' : 'dash-control'} type="button" aria-label={hud.dashReady ? 'Dash ready' : 'Dash charging'} onPointerDown={(event) => beginPress('dash', event)} onPointerUp={(event) => endPress('dash', event)} onPointerCancel={(event) => endPress('dash', event)} onLostPointerCapture={() => press('dash', false)}>DASH</button><button className="jump-control" type="button" aria-label="Jump" onPointerDown={(event) => beginPress('jump', event)} onPointerUp={(event) => endPress('jump', event)} onPointerCancel={(event) => endPress('jump', event)} onLostPointerCapture={() => press('jump', false)}>JUMP</button></div>
           </div></>
         )}
       </section>
