@@ -436,6 +436,7 @@ export default function Home() {
     if (!canvas) return;
     const context = canvas.getContext('2d');
     if (!context) return;
+    const touchLandscape = window.matchMedia('(pointer: coarse) and (orientation: landscape)');
 
     const spriteSheet = new Image();
     spriteSheet.src = '/sunny-pixel-master.svg';
@@ -649,6 +650,9 @@ export default function Home() {
     function draw() {
       const ctx = context;
       const shakeX = screenShake > 0 ? ((Math.floor(elapsed * 60) % 3) - 1) * 4 : 0;
+      // Keep the playable rooftop above a phone's thumb controls without
+      // changing the course geometry or the desktop composition.
+      const touchWorldLift = touchLandscape.matches ? 120 : 0;
       ctx.setTransform(.25, 0, 0, .25, shakeX * .25, 0);
       ctx.imageSmoothingEnabled = false;
       const atmosphere = [
@@ -765,7 +769,7 @@ export default function Home() {
         ctx.globalAlpha = 1;
       }
 
-      ctx.save(); ctx.translate(-cameraX, 0);
+      ctx.save(); ctx.translate(-cameraX, -touchWorldLift);
       const activePlatforms = platforms.map((platform) => platform.moving ? { ...platform, y: (platform.baseY ?? platform.y) + Math.sin(elapsed * 1.45 + (platform.phase ?? 0)) * 72 } : platform);
       activePlatforms.forEach((platform) => {
         const px = Math.floor(platform.x / 4) * 4; const py = Math.floor(platform.y / 4) * 4;
@@ -1002,7 +1006,7 @@ export default function Home() {
         {screen === 'playing' && (
           <>{waitingForLandscape && <div className="rotate-prompt"><span aria-hidden="true">↻</span><strong>Turn Sideways to Start</strong><small>Your run and timer are paused until the phone is in landscape.</small></div>}{showModifierCoach && !waitingForLandscape ? <div className="dash-coach modifier-coach"><b>TODAY&apos;S TWIST · {modifier.name}</b><span>{modifier.description}</span><button type="button" onClick={dismissModifierCoach}>LET&apos;S RUN</button></div> : showDashCoach && !waitingForLandscape && <div className="dash-coach"><b>DASH IS YOUR EDGE</b><span>Press SHIFT or X — or tap DASH — to burst through hazards. The HUD tells you when it recharges.</span><button type="button" onClick={() => dismissDashCoach()}>GOT IT</button></div>}<div className="touch-controls" aria-label="Touch controls">
             <div><button type="button" aria-label="Move left" onPointerDown={(event) => beginPress('left', event)} onPointerUp={(event) => endPress('left', event)} onPointerCancel={(event) => endPress('left', event)} onLostPointerCapture={() => press('left', false)}>←</button><button type="button" aria-label="Move right" onPointerDown={(event) => beginPress('right', event)} onPointerUp={(event) => endPress('right', event)} onPointerCancel={(event) => endPress('right', event)} onLostPointerCapture={() => press('right', false)}>→</button></div>
-            <div><button className={hud.dashReady ? 'dash-control ready' : 'dash-control'} type="button" aria-label={hud.dashReady ? 'Dash ready' : 'Dash charging'} onPointerDown={(event) => beginPress('dash', event)} onPointerUp={(event) => endPress('dash', event)} onPointerCancel={(event) => endPress('dash', event)} onLostPointerCapture={() => press('dash', false)}>DASH</button><button className="jump-control" type="button" aria-label="Jump" onPointerDown={(event) => beginPress('jump', event)} onPointerUp={(event) => endPress('jump', event)} onPointerCancel={(event) => endPress('jump', event)} onLostPointerCapture={() => press('jump', false)}>JUMP</button></div>
+            <div><button className={hud.dashReady ? 'dash-control ready' : 'dash-control'} type="button" aria-label={hud.dashReady ? 'Dash ready' : 'Dash charging'} onPointerDown={(event) => beginPress('dash', event)} onPointerUp={(event) => endPress('dash', event)} onPointerCancel={(event) => endPress('dash', event)} onLostPointerCapture={() => press('dash', false)}>DASH</button><button className="jump-control" type="button" aria-label="Jump — tap twice for double jump" onPointerDown={(event) => beginPress('jump', event)} onPointerUp={(event) => endPress('jump', event)} onPointerCancel={(event) => endPress('jump', event)} onLostPointerCapture={() => press('jump', false)}>JUMP 2X</button></div>
           </div></>
         )}
       </section>
