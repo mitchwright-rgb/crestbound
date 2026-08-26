@@ -33,7 +33,7 @@ const modifierSpecs = [
   { id: 'clear', name: 'Clear Skies' },
   { id: 'tailwind', name: 'Tailwind' },
   { id: 'moonstep', name: 'Moonstep' },
-  { id: 'sparkstorm', name: 'Spark Storm' },
+  { id: 'sparkstorm', name: 'Teal Sparks' },
 ] as const;
 const dailyCourse = courseSpecs[dailyCourseIndex];
 const dailyModifier = modifierSpecs[((daySerial + dailyCourseIndex) % modifierSpecs.length + modifierSpecs.length) % modifierSpecs.length];
@@ -162,7 +162,6 @@ export default function Home() {
   const [nickname, setNickname] = useState('');
   const [submitState, setSubmitState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [rank, setRank] = useState<number | null>(null);
-  const [streak, setStreak] = useState(0);
   const [homePanel, setHomePanel] = useState<HomePanel>('none');
   const [showDashCoach, setShowDashCoach] = useState(false);
   const [community, setCommunity] = useState<Community>({ players: 0, lights: 0, goal: 2500, nearby: [], playerRank: null, recent: [] });
@@ -176,7 +175,6 @@ export default function Home() {
       const stored = window.localStorage.getItem(`crestbound-best-${dailyCourse.id}`);
       if (stored) setHud((current) => ({ ...current, best: Number(stored) }));
       setNickname(window.localStorage.getItem('crestbound-nickname') ?? '');
-      setStreak(Number(window.localStorage.getItem('crestbound-streak')) || 0);
     }, 0);
     if (!homeTrackedRef.current) { homeTrackedRef.current = true; track('home_view'); }
     return () => window.clearTimeout(syncStoredState);
@@ -337,7 +335,7 @@ export default function Home() {
     const yesterdayKey = yesterday.toLocaleDateString('en-CA');
     const next = last === yesterdayKey ? (Number(window.localStorage.getItem('crestbound-streak')) || 0) + 1 : 1;
     window.localStorage.setItem('crestbound-last-day', today);
-    window.localStorage.setItem('crestbound-streak', String(next)); setStreak(next);
+    window.localStorage.setItem('crestbound-streak', String(next));
   }
 
   async function submitRun(event: FormEvent) {
@@ -856,29 +854,15 @@ export default function Home() {
 
         {screen === 'title' && (
           <div className="title-screen">
-            <div className="home-clouds" aria-hidden="true"><i /><i /><i /><i /></div>
-            <div className="home-sun" aria-hidden="true" />
-            <div className="home-skyline" aria-hidden="true">{Array.from({ length: 13 }, (_, index) => <i key={index} />)}</div>
-            <div className="home-rooftops" aria-hidden="true"><i /><i /><i /><i /></div>
             <div className="home-hero">
-              <div className="home-stage">
-                <div className="sunny-lockup" aria-label="Sunny, the hero of Crestbound">
-                  <img className="sunny-hero" src="/sunny-home-pixel.svg" width="192" height="288" alt="Sunny, Crestbound's pixel-art hero" />
-                </div>
-                <div className="title-card">
-                  <h1>Crestbound</h1>
-                  <p className="tagline"><span aria-hidden="true">✦</span> A Daily Skyline Run <span aria-hidden="true">✦</span></p>
-                </div>
+              <div className="home-cover">
+                <img src="/crestbound-home-hero.svg" width="1672" height="940" alt="Sunny runs across the golden-hour skyline beneath the Crestbound title and A Daily Skyline Run tagline" />
               </div>
               <div className="home-dashboard">
-                <div className="daily-course"><span>{isPractice ? 'PRACTICE COURSE' : 'TODAY\'S COURSE'}</span><b>{course.name}</b><em>{isPractice ? 'No leaderboard' : modifier.name}</em></div>
+                <div className="daily-course"><span>{isPractice ? 'PRACTICE RUN' : 'TODAY\'S RUN'}</span><b>{course.name}</b></div>
                 <button className="play-button" type="button" onClick={() => void startGame(true)}>{isPractice ? 'Start Practice' : 'Play Today\'s Run'} <span aria-hidden="true">▶</span></button>
-                <div className="home-community">
-                  <div className="daily-glance"><span>{community.players} {community.players === 1 ? 'SUNCRESTER' : 'SUNCRESTERS'} TODAY</span><b>{entries[0] ? `#1 ${entries[0].name} · ${formatTime(entries[0].timeMs / 1000)}` : 'BE THE FIRST FINISHER'}</b></div>
-                  <div className="community-progress"><div><span>COMMUNITY LIGHT</span><b>{community.lights.toLocaleString()} / {community.goal.toLocaleString()}</b></div><progress value={Math.min(community.lights, community.goal)} max={community.goal} /><small>{streak > 0 ? `${streak} ${streak === 1 ? 'day' : 'days'} personal streak` : 'Start your streak today'}</small></div>
-                </div>
+                <div className="daily-glance"><span>{community.players} {community.players === 1 ? 'SUNCRESTER HAS' : 'SUNCRESTERS HAVE'} RUN TODAY</span><b>{entries[0] ? `FASTEST: ${entries[0].name} · ${formatTime(entries[0].timeMs / 1000)}` : 'BE THE FIRST FINISHER'}</b></div>
                 <div className="home-links"><button type="button" onClick={() => { setHomePanel('leaderboard'); track('leaderboard_open'); }}>Leaderboard</button><button type="button" onClick={() => setHomePanel('courses')}>{isPractice ? 'Change Course' : 'Practice Courses'}</button><button type="button" onClick={() => setHomePanel('help')}>How to Play</button></div>
-                <p className="install-tip">FULL-SCREEN TEST: SHARE → ADD TO HOME SCREEN</p>
               </div>
             </div>
             {homePanel === 'leaderboard' && <aside className="leaderboard home-panel" aria-label="Crestbound leaderboard">
