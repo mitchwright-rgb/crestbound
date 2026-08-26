@@ -22,8 +22,19 @@ const pixelifySans = Pixelify_Sans({
 
 export const metadata: Metadata = {
   metadataBase: new URL('https://sunny-crestbound.suncrest-7012.chatgpt.site'),
+  applicationName: 'Crestbound',
   title: 'Crestbound | Suncrest Games',
   description: 'Guide Sunny across the skyline, recover the lost light, and master the daily run.',
+  manifest: '/manifest.webmanifest',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'Crestbound',
+  },
+  icons: {
+    icon: '/favicon.svg',
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
   openGraph: {
     title: 'Crestbound',
     description: 'Guide Sunny across the skyline. Find the light. Beat today’s time.',
@@ -38,7 +49,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: '#071316',
+  width: 'device-width', initialScale: 1, maximumScale: 1, userScalable: false, viewportFit: 'cover', themeColor: '#071316',
 };
 
 export default function RootLayout({

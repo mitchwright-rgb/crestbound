@@ -2,10 +2,12 @@
 
 :root { --gold: #f2b52b; --gold-light: #f5d263; --teal: #18a7a2; --teal-light: #78d7d2; --ink: #071316; --cream: #fff8e9; --coral: #ef6f52; }
 * { box-sizing: border-box; }
-html, body { min-height: 100%; margin: 0; }
+html, body { width: 100%; min-width: 100%; min-height: 100%; margin: 0; background: #071316; overscroll-behavior: none; }
+html { color-scheme: dark; }
 button, input { font: inherit; }
 button:focus-visible, input:focus-visible, canvas:focus-visible { outline: 4px solid var(--teal-light); outline-offset: 3px; }
 body { overflow: hidden; color: var(--cream); background: #071316; font-family: var(--font-playful), system-ui, sans-serif; image-rendering: pixelated; }
+body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; background: #071316; }
 .shell { width: 100vw; min-height: 100svh; display: grid; place-items: center; padding: 0; background: #071316; }
 .game-frame { position: relative; width: 100vw; height: 100svh; max-height: none; overflow: hidden; isolation: isolate; border: 0; background: #071316; box-shadow: none; }
 .game-frame::before { position: absolute; z-index: 3; inset: 0; content: ''; pointer-events: none; background: radial-gradient(ellipse at center, transparent 52%, rgb(1 7 9 / 38%) 100%); }
@@ -85,6 +87,7 @@ body { overflow: hidden; color: var(--cream); background: #071316; font-family: 
 .home-links { display: flex; gap: 18px; margin-top: 14px; }
 .home-links button { min-height: 30px; padding: 0 0 3px; border: 0; border-bottom: 2px solid #416d70; color: var(--teal-light); background: transparent; font-size: 9px; cursor: pointer; text-transform: uppercase; }
 .home-links button:hover { color: var(--gold-light); border-color: var(--gold); }
+.install-tip { display: none; margin: 12px 0 0; color: #789b9c; font-family: var(--font-pixel), monospace; font-size: 8px; line-height: 1.4; }
 .home-panel { position: absolute; z-index: 30; left: 50%; top: 50%; width: min(520px, calc(100% - 34px)); transform: translate(-50%, -50%); }
 .title-screen:has(.home-panel)::after { position: absolute; z-index: 25; inset: 0; content: ''; background: rgb(1 7 9 / 74%); backdrop-filter: blur(3px); }
 .home-panel { z-index: 31; }
@@ -94,6 +97,8 @@ body { overflow: hidden; color: var(--cream); background: #071316; font-family: 
 .how-to > div { display: grid; grid-template-columns: auto 1fr; gap: 12px 18px; align-items: center; margin-bottom: 20px; }
 .how-to b { color: var(--teal-light); font-size: 10px; }.how-to span { color: #d7e8e5; font-size: 15px; }
 .how-to > p:not(.kicker) { color: #8eb0af; font-size: 13px; line-height: 1.45; }
+.how-to .app-tip { margin: 12px 0 0; padding: 10px 12px; border: 2px solid #31575a; color: #b9d7d5; background: #092329; }
+.how-to .app-tip b { color: var(--gold-light); }
 .how-to .panel-close { margin: 15px -25px -25px; width: calc(100% + 50px); }
 .course-picker { padding: 24px; border: 4px solid #171b1c; outline: 3px solid var(--gold); color: var(--cream); background: #071b20; box-shadow: 8px 8px 0 #171b1c; }
 .course-picker h2 { margin: 5px 0 8px; color: var(--gold-light); font-family: var(--font-pixel), monospace; font-size: clamp(24px, 5vw, 38px); text-transform: uppercase; }
@@ -129,6 +134,14 @@ body { overflow: hidden; color: var(--cream); background: #071316; font-family: 
   .rotate-prompt span { color: var(--gold); font-size: 72px; line-height: 1; transform: rotate(-18deg); }
   .rotate-prompt strong { font-family: var(--font-pixel), monospace; color: var(--gold-light); font-size: clamp(20px, 7vw, 34px); text-transform: uppercase; }
   .rotate-prompt small { max-width: 280px; color: #a7c7c5; font-size: 16px; line-height: 1.35; }
+}
+
+@media (pointer: coarse) {
+  .install-tip { display: block; }
+}
+
+@media (display-mode: standalone) {
+  .install-tip { display: none; }
 }
 
 @media (max-height: 560px) and (orientation: landscape) {
@@ -212,9 +225,10 @@ body { overflow: hidden; color: var(--cream); background: #071316; font-family: 
   .hud-actions { grid-column: 2; gap: 5px; }
   .hud-actions button { min-width: 44px; min-height: 44px; border-width: 2px; box-shadow: 3px 3px 0 rgb(2 7 8 / 45%); font-size: 9px; }
   .route-meter { grid-column: 1 / -1; width: min(48vw, 420px); height: 6px; justify-self: center; margin: -2px 0 0; border-width: 1px; outline: 0; box-shadow: 2px 2px 0 rgb(0 0 0 / 38%); }
-  .touch-controls { bottom: max(7px, env(safe-area-inset-bottom)); }
-  .touch-controls button { width: 46px; height: 46px; border-width: 3px; outline-width: 1px; box-shadow: 3px 3px 0 #020707; opacity: .82; font-size: 18px; }
-  .touch-controls .dash-control, .touch-controls .jump-control { width: 56px; height: 56px; font-size: 9px; }
+  .touch-controls { left: max(16px, env(safe-area-inset-left)); right: max(16px, env(safe-area-inset-right)); bottom: max(9px, env(safe-area-inset-bottom)); }
+  .touch-controls > div { gap: 11px; }
+  .touch-controls button { width: 58px; height: 58px; border-width: 3px; outline-width: 1px; box-shadow: 3px 3px 0 #020707; opacity: .88; font-size: 21px; }
+  .touch-controls .dash-control, .touch-controls .jump-control { width: 70px; height: 70px; font-size: 10px; }
   .touch-controls .dash-control.ready { color: #071316; background: repeating-linear-gradient(0deg, var(--teal-light) 0 5px, #62c8c5 5px 6px); }
   .touch-controls button:active { opacity: 1; }
   .game-modal { max-height: calc(100svh - max(16px, env(safe-area-inset-top)) - max(16px, env(safe-area-inset-bottom))); overflow-y: auto; overscroll-behavior: contain; }

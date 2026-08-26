@@ -282,7 +282,13 @@ export default function Home() {
     if (learned) track('dash_learned');
   }
 
-  async function startGame() {
+  async function startGame(tryImmersive = false) {
+    if (tryImmersive && window.matchMedia('(pointer: coarse)').matches && !window.matchMedia('(display-mode: standalone)').matches && !document.fullscreenElement) {
+      const immersiveRequest = document.documentElement.requestFullscreen?.({ navigationUI: 'hide' });
+      void immersiveRequest?.catch(() => {
+        /* iPhone Safari uses Add to Home Screen for standalone play. */
+      });
+    }
     const replaying = screenRef.current === 'over' || screenRef.current === 'won';
     resetRef.current?.();
     setSubmitState('idle'); setRank(null); runIdRef.current = null;
@@ -844,10 +850,11 @@ export default function Home() {
                 <h1>Crestbound</h1>
                 <p className="tagline">Run the skyline. Find the light. Beat Suncrest&apos;s time.</p>
                 <div className="daily-course"><span>{isPractice ? 'PRACTICE COURSE' : 'TODAY\'S COURSE'}</span><b>{course.name}</b><em>{isPractice ? 'No leaderboard' : modifier.name}</em></div>
-                <button className="play-button" type="button" onClick={() => void startGame()}>{isPractice ? 'Start Practice' : 'Play Today\'s Run'} <span aria-hidden="true">▶</span></button>
+                <button className="play-button" type="button" onClick={() => void startGame(true)}>{isPractice ? 'Start Practice' : 'Play Today\'s Run'} <span aria-hidden="true">▶</span></button>
                 <div className="daily-glance"><span>{community.players} {community.players === 1 ? 'SUNCRESTER' : 'SUNCRESTERS'} TODAY</span><b>{entries[0] ? `#1 ${entries[0].name} · ${formatTime(entries[0].timeMs / 1000)}` : 'BE THE FIRST FINISHER'}</b></div>
                 <div className="community-progress"><div><span>COMMUNITY LIGHT</span><b>{community.lights.toLocaleString()} / {community.goal.toLocaleString()}</b></div><progress value={Math.min(community.lights, community.goal)} max={community.goal} /><small>{streak > 0 ? `${streak} ${streak === 1 ? 'day' : 'days'} personal streak` : 'Start your streak today'}</small></div>
                 <div className="home-links"><button type="button" onClick={() => { setHomePanel('leaderboard'); track('leaderboard_open'); }}>Leaderboard</button><button type="button" onClick={() => setHomePanel('courses')}>{isPractice ? 'Change Course' : 'Practice Courses'}</button><button type="button" onClick={() => setHomePanel('help')}>How to Play</button></div>
+                <p className="install-tip">FULL-SCREEN TEST: SHARE → ADD TO HOME SCREEN</p>
               </div>
             </div>
             {homePanel === 'leaderboard' && <aside className="leaderboard home-panel" aria-label="Crestbound leaderboard">
@@ -870,6 +877,7 @@ export default function Home() {
               <p className="kicker">READY, SUNNY?</p><h2>How to Play</h2>
               <div><b>RUN</b><span>Arrow keys / A D / touch arrows</span><b>JUMP</b><span>Space / touch JUMP · tap twice</span><b>DASH</b><span>Shift or X / touch DASH · recharges</span></div>
               <p>Touch controls appear automatically. Turn your phone sideways for the full course.</p>
+              <p className="app-tip"><b>FULL-SCREEN TEST</b> On iPhone, tap Share, then Add to Home Screen. Crestbound will open without Safari&apos;s bars.</p>
               <button className="panel-close" type="button" onClick={() => setHomePanel('none')}>Got It</button>
             </aside>}
             {homePanel === 'courses' && <aside className="course-picker home-panel" aria-label="Choose a Crestbound practice course">
