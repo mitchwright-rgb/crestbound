@@ -550,7 +550,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto auto;
     align-content: start;
-    gap: 14px;
+    gap: 18px;
     padding: 24px 18px max(34px, calc(env(safe-area-inset-bottom) + 18px));
     border-top-width: 5px;
   }
@@ -558,6 +558,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .home-dashboard .daily-course span { font-size: 13px; }
   .home-dashboard .daily-course b { font-size: 18px; }
   .home-dashboard .play-button { min-height: 70px; padding: 14px; font-size: 15px; }
+  .home-dashboard .play-button { margin-bottom: 8px; }
   .home-dashboard .daily-glance { min-height: 74px; gap: 7px; padding: 11px 14px; font-size: 13px; }
   .home-dashboard .daily-glance .community-progress > div { font-size: 11px; }
   .home-dashboard .daily-glance .community-progress progress { height: 12px; }
