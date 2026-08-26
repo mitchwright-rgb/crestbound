@@ -1,9 +1,10 @@
 'use client';
 
 import { FormEvent, PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { collectLightPower, gravityForModifier, resolveDamage, tailwindAcceleration } from './game-rules';
 
 type Screen = 'title' | 'playing' | 'paused' | 'won' | 'over';
-type Hud = { sparks: number; total: number; lives: number; time: number; best: number | null; checkpoint: number; progress: number; dashReady: boolean };
+type Hud = { sparks: number; total: number; lives: number; time: number; best: number | null; checkpoint: number; progress: number; dashReady: boolean; shield: number };
 type Platform = { x: number; y: number; w: number; h: number; moving?: boolean; phase?: number; baseY?: number };
 type Spark = { x: number; y: number; taken?: boolean; secret?: boolean; storm?: boolean };
 type Enemy = { x: number; y: number; minX: number; maxX: number; speed: number; dir: number; alive: boolean };
@@ -158,7 +159,7 @@ export default function Home() {
   const [waitingForLandscape, setWaitingForLandscape] = useState(false);
   const [muted, setMuted] = useState(false);
   const mutedRef = useRef(false);
-  const [hud, setHud] = useState<Hud>({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: null, checkpoint: 0, progress: 0, dashReady: true });
+  const [hud, setHud] = useState<Hud>({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: null, checkpoint: 0, progress: 0, dashReady: true, shield: 0 });
   const audioRef = useRef<AudioContext | null>(null);
   const musicRef = useRef<{ timer: ReturnType<typeof setInterval>; gain: GainNode; step: number } | null>(null);
   const runIdRef = useRef<string | null>(null);
@@ -458,6 +459,8 @@ export default function Home() {
     let animation = 0;
     let screenShake = 0;
     let stormShield = 0;
+    let powerToast = 0;
+    let powerToastMessage = '';
     let checkpointToast = 0;
     let checkpointLifeAwarded = false;
     let runEnded = false;
@@ -473,14 +476,17 @@ export default function Home() {
     };
     const hurt = () => {
       if (runEnded || player.invuln > 0) return;
-      if (stormShield > 0) {
-        stormShield = 0;
+      const damage = resolveDamage(lives, stormShield);
+      if (damage.absorbed) {
+        stormShield = damage.shieldSeconds;
         player.invuln = .7;
         screenShake = .1;
+        powerToast = 1.8;
+        powerToastMessage = 'SHIELD SAVED YOU';
         tone('checkpoint');
         return;
       }
-      lives = Math.max(0, lives - 1);
+      lives = damage.lives;
       screenShake = .24;
       tone('hit');
       setHud((current) => ({ ...current, lives }));
@@ -495,9 +501,9 @@ export default function Home() {
       player.x = checkpoints[0]; player.y = 620 - player.h; player.vx = 0; player.vy = 0; player.grounded = true; player.invuln = 1.25; player.jumps = 0;
       sparks = sparkSeed.map((item) => ({ ...item }));
       enemies = enemySeed.map((item) => ({ ...item }));
-      lives = 3; collected = 0; elapsed = 0; cameraX = 0; checkpointIndex = 0; jumpBuffer = 0; coyote = 0; previousJump = false; previousDash = false; trace = []; traceTimer = 0; stormShield = 0; checkpointToast = 0; checkpointLifeAwarded = false; runEnded = false;
+      lives = 3; collected = 0; elapsed = 0; cameraX = 0; checkpointIndex = 0; jumpBuffer = 0; coyote = 0; previousJump = false; previousDash = false; trace = []; traceTimer = 0; stormShield = 0; powerToast = 0; powerToastMessage = ''; checkpointToast = 0; checkpointLifeAwarded = false; runEnded = false;
       const storedBest = window.localStorage.getItem(`crestbound-best-${course.id}`);
-      setHud({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: storedBest ? Number(storedBest) : null, checkpoint: 0, progress: 0, dashReady: true });
+      setHud({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: storedBest ? Number(storedBest) : null, checkpoint: 0, progress: 0, dashReady: true, shield: 0 });
     };
     resetRef.current = reset;
 
@@ -530,6 +536,7 @@ export default function Home() {
       if (traceTimer >= .12) { trace.push({ t: elapsed, x: player.x, y: player.y }); traceTimer = 0; }
       player.invuln = Math.max(0, player.invuln - dt);
       stormShield = Math.max(0, stormShield - dt);
+      powerToast = Math.max(0, powerToast - dt);
       checkpointToast = Math.max(0, checkpointToast - dt);
       player.dashCooldown = Math.max(0, player.dashCooldown - dt);
       player.dashTime = Math.max(0, player.dashTime - dt);
@@ -556,8 +563,8 @@ export default function Home() {
       }
       previousJump = input.jump;
       previousDash = input.dash;
-      if (modifier.id === 'tailwind' && direction > 0) player.vx += 85 * dt;
-      if (player.dashTime <= 0) player.vy += (modifier.id === 'moonstep' ? 1500 : 1850) * dt;
+      player.vx += tailwindAcceleration(modifier.id, direction) * dt;
+      if (player.dashTime <= 0) player.vy += gravityForModifier(modifier.id) * dt;
       player.vy = Math.min(player.vy, 980);
       screenShake = Math.max(0, screenShake - dt);
 
@@ -610,10 +617,13 @@ export default function Home() {
         if (dx * dx + dy * dy < 2200) {
           spark.taken = true;
           collected += 1;
-          if (spark.storm) {
-            player.dashCooldown = 0;
-            stormShield = 5;
-          } else player.dashCooldown = Math.max(0, player.dashCooldown - .35);
+          const lightPower = collectLightPower(Boolean(spark.storm), player.dashCooldown);
+          player.dashCooldown = lightPower.dashCooldown;
+          if (lightPower.shieldSeconds > 0) {
+            stormShield = lightPower.shieldSeconds;
+            powerToast = 2.1;
+            powerToastMessage = 'STORM SHIELD  5 SEC';
+          }
           tone('spark');
         }
       });
@@ -636,14 +646,14 @@ export default function Home() {
           window.localStorage.setItem(`crestbound-ghost-${course.id}`, JSON.stringify(trace));
           ghost = trace;
         }
-        setHud({ sparks: collected, total: sparks.length, lives, time: elapsed, best: Math.min(best, elapsed), checkpoint: checkpointIndex, progress: player.x, dashReady: player.dashCooldown <= 0 });
+        setHud({ sparks: collected, total: sparks.length, lives, time: elapsed, best: Math.min(best, elapsed), checkpoint: checkpointIndex, progress: player.x, dashReady: player.dashCooldown <= 0, shield: stormShield });
         if (!isPractice) recordStreak(); tone('win'); setGameScreen('won');
       }
       cameraX += (Math.max(0, Math.min(WORLD_W - VIEW_W, player.x - 390)) - cameraX) * Math.min(1, dt * 5.5);
       if (elapsed - lastHud > 0.08) {
         lastHud = elapsed;
         const stored = window.localStorage.getItem(`crestbound-best-${course.id}`);
-        setHud({ sparks: collected, total: sparks.length, lives, time: elapsed, best: stored ? Number(stored) : null, checkpoint: checkpointIndex, progress: player.x, dashReady: player.dashCooldown <= 0 });
+        setHud({ sparks: collected, total: sparks.length, lives, time: elapsed, best: stored ? Number(stored) : null, checkpoint: checkpointIndex, progress: player.x, dashReady: player.dashCooldown <= 0, shield: stormShield });
       }
     }
 
@@ -897,6 +907,12 @@ export default function Home() {
         ctx.fillStyle = checkpointLifeAwarded ? '#f5d263' : '#fff8e9';
         ctx.font = 'bold 22px monospace'; ctx.textAlign = 'center'; ctx.fillText(message, 640, 149); ctx.textAlign = 'start';
       }
+      if (powerToast > 0) {
+        const y = checkpointToast > 0 ? 184 : 112;
+        ctx.fillStyle = 'rgba(3, 19, 23, .94)'; ctx.fillRect(430, y, 420, 58);
+        ctx.fillStyle = '#78d7d2'; ctx.fillRect(430, y, 420, 6);
+        ctx.fillStyle = '#fff8e9'; ctx.font = 'bold 22px monospace'; ctx.textAlign = 'center'; ctx.fillText(powerToastMessage, 640, y + 37); ctx.textAlign = 'start';
+      }
     }
 
     function loop(now: number) {
@@ -926,6 +942,7 @@ export default function Home() {
               <span><b>{'◆'.repeat(hud.lives)}</b><small>LIVES</small></span>
               <span><b>{hud.sparks}/{hud.total}</b><small>LIGHT</small></span>
               <span><b>{formatTime(hud.time)}</b><small>TIME</small></span>
+              {hud.shield > 0 && <span className="shield-status"><b>{hud.shield.toFixed(1)}</b><small>SHIELD</small></span>}
             </div>
             <div className="hud-actions">
               <button type="button" onClick={toggleSound} aria-label={muted ? 'Turn sound on' : 'Mute sound'}>{muted ? '♪ OFF' : '♪ ON'}</button>
