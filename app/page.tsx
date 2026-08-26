@@ -105,14 +105,14 @@ function buildCourse(index: number, modifierId: string) {
       platforms.push({ x: x + 165, y: 455 + (section % 2) * 35, w: 240, h: 24 });
       if (section % 3 !== 1) platforms.push({ x: x + 455, y: 355 - (section % 2) * 35, w: 175, h: 24, moving: section % 5 === 0, phase: section * .6, baseY: 355 - (section % 2) * 35 });
       if (width < 600) platforms.push({ x: x + width + 25, y: 535, w: 145, h: 24 });
-      if (section % 2 === 0) spikeZones.push({ x: x + 315, y: 596, w: section % 4 === 0 ? 150 : 100 });
+      if (section > 0 && section % 2 === 0) spikeZones.push({ x: x + 315, y: 596, w: section % 4 === 0 ? 150 : 100 });
     }
   }
 
   const aerial = platforms.filter((platform) => platform.y < 600).map((platform, sparkIndex) => ({ x: platform.x + platform.w / 2, y: platform.y - 48, secret: sparkIndex % 7 === 0 || (modifierId === 'sparkstorm' && sparkIndex % 4 === 0) }));
   const groundLight = Array.from({ length: 20 }, (_, section) => ({ x: section * 760 + 105, y: 555, secret: false }));
   const ground = platforms.filter((platform) => platform.y >= 600 && platform.w >= 430);
-  const enemySeed = ground.filter((_, groundIndex) => index === 2 || groundIndex % 2 === 0).map((platform, enemyIndex) => ({
+  const enemySeed = ground.filter((_, groundIndex) => groundIndex > 0 && (index === 2 || groundIndex % 2 === 0)).map((platform, enemyIndex) => ({
     x: platform.x + Math.min(platform.w - 80, 260 + enemyIndex % 3 * 70), y: 570, minX: platform.x + 60, maxX: platform.x + platform.w - 60,
     speed: (index === 2 ? 155 : 115) + enemyIndex % 4 * 18, dir: enemyIndex % 2 ? -1 : 1, alive: true,
   }));
@@ -365,7 +365,7 @@ export default function Home() {
     const spriteSheet = new Image();
     spriteSheet.src = '/sunny-pixel-master.svg';
     const keys = new Set<string>();
-    const player = { x: 120, y: 520, w: 46, h: 82, vx: 0, vy: 0, grounded: false, jumps: 0, dashTime: 0, dashCooldown: 0, facing: 1, invuln: 0 };
+    const player = { x: 120, y: 538, w: 46, h: 82, vx: 0, vy: 0, grounded: true, jumps: 0, dashTime: 0, dashCooldown: 0, facing: 1, invuln: 1.25 };
     let sparks = sparkSeed.map((item) => ({ ...item }));
     let enemies = enemySeed.map((item) => ({ ...item }));
     let lives = 3;
@@ -389,7 +389,7 @@ export default function Home() {
     const tone = sound;
     const overlap = (ax: number, ay: number, aw: number, ah: number, bx: number, by: number, bw: number, bh: number) => ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
     const resetPosition = () => {
-      player.x = checkpoints[checkpointIndex]; player.y = 520; player.vx = 0; player.vy = 0; player.invuln = 1.5;
+      player.x = checkpoints[checkpointIndex]; player.y = 620 - player.h; player.vx = 0; player.vy = 0; player.grounded = true; player.jumps = 0; player.invuln = 1.5;
     };
     const hurt = () => {
       if (player.invuln > 0) return;
@@ -401,7 +401,7 @@ export default function Home() {
       } else resetPosition();
     };
     const reset = () => {
-      player.x = 120; player.y = 520; player.vx = 0; player.vy = 0; player.invuln = 0; player.jumps = 0;
+      player.x = 120; player.y = 620 - player.h; player.vx = 0; player.vy = 0; player.grounded = true; player.invuln = 1.25; player.jumps = 0;
       sparks = sparkSeed.map((item) => ({ ...item }));
       enemies = enemySeed.map((item) => ({ ...item }));
       lives = 3; collected = 0; elapsed = 0; cameraX = 0; checkpointIndex = 0; jumpBuffer = 0; coyote = 0; previousJump = false; previousDash = false; trace = []; traceTimer = 0;
