@@ -877,6 +877,13 @@ export default function Home() {
                 <div className="daily-glance"><span>{community.players} {community.players === 1 ? 'SUNCRESTER HAS' : 'SUNCRESTERS HAVE'} RUN TODAY</span><b>{entries[0] ? `FASTEST: ${entries[0].name} · ${formatTime(entries[0].timeMs / 1000)}` : 'BE THE FIRST FINISHER'}</b></div>
                 <div className="home-links"><button type="button" onClick={() => { setHomePanel('leaderboard'); track('leaderboard_open'); }}>Leaderboard</button><button type="button" onClick={() => setHomePanel('courses')}>{isPractice ? 'Change Course' : 'Practice Courses'}</button><button type="button" onClick={() => setHomePanel('help')}>How to Play</button></div>
               </div>
+              <div className="home-world-footer" aria-hidden="true">
+                <span className="world-sun" />
+                <div className="world-clouds"><i /><i /><i /><i /></div>
+                <div className="world-city world-city-back"><i /><i /><i /><i /><i /><i /><i /></div>
+                <div className="world-city world-city-front"><i /><i /><i /><i /><i /><i /></div>
+                <div className="world-roofs"><i /><i /><i /></div>
+              </div>
             </div>
             {homePanel === 'leaderboard' && <aside className="leaderboard home-panel" aria-label="Crestbound leaderboard">
               <div className="board-heading"><span>TOP RUNS</span><small>{board === 'daily' ? 'TODAY' : board === 'weekly' ? 'THIS WEEK' : 'ALL TIME'}</small></div>
