@@ -2,13 +2,15 @@
 
 /* eslint-disable @next/next/no-img-element -- game sprites are rendered directly into canvas */
 
-import { useEffect, useRef, useState } from 'react';
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
 
 type Screen = 'title' | 'playing' | 'paused' | 'won' | 'over';
 type Hud = { sparks: number; total: number; lives: number; time: number; best: number | null; checkpoint: number };
 type Platform = { x: number; y: number; w: number; h: number; moving?: boolean; phase?: number; baseY?: number };
 type Spark = { x: number; y: number; taken?: boolean; secret?: boolean };
 type Enemy = { x: number; y: number; minX: number; maxX: number; speed: number; dir: number; alive: boolean };
+type Board = 'daily' | 'weekly' | 'all';
+type BoardEntry = { rank: number; name: string; timeMs: number; sparks: number };
 
 const WORLD_W = 7800;
 const VIEW_W = 1280;
@@ -55,6 +57,13 @@ function formatTime(seconds: number) {
   return `${minutes}:${remainder}`;
 }
 
+function medalFor(seconds: number) {
+  if (seconds < 55) return 'GOLD';
+  if (seconds < 75) return 'SILVER';
+  if (seconds < 100) return 'BRONZE';
+  return 'FINISHER';
+}
+
 export default function Home() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const screenRef = useRef<Screen>('title');
@@ -65,12 +74,78 @@ export default function Home() {
   const mutedRef = useRef(false);
   const [hud, setHud] = useState<Hud>({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: null, checkpoint: 0 });
   const audioRef = useRef<AudioContext | null>(null);
+  const musicRef = useRef<{ timer: ReturnType<typeof setInterval>; gain: GainNode; step: number } | null>(null);
+  const runIdRef = useRef<string | null>(null);
+  const [board, setBoard] = useState<Board>('daily');
+  const [entries, setEntries] = useState<BoardEntry[]>([]);
+  const [boardStatus, setBoardStatus] = useState<'loading' | 'ready' | 'offline'>('loading');
+  const [nickname, setNickname] = useState('');
+  const [submitState, setSubmitState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [rank, setRank] = useState<number | null>(null);
+  const [streak, setStreak] = useState(0);
 
   useEffect(() => { mutedRef.current = muted; }, [muted]);
   useEffect(() => {
     const stored = window.localStorage.getItem('crestbound-best');
     if (stored) setHud((current) => ({ ...current, best: Number(stored) }));
+    setNickname(window.localStorage.getItem('crestbound-nickname') ?? '');
+    setStreak(Number(window.localStorage.getItem('crestbound-streak')) || 0);
   }, []);
+
+  const loadBoard = useCallback(async (nextBoard: Board) => {
+    setBoardStatus('loading');
+    try {
+      const response = await fetch(`/api/leaderboard?board=${nextBoard}`, { cache: 'no-store' });
+      if (!response.ok) throw new Error('Leaderboard unavailable');
+      const data = await response.json() as { entries?: BoardEntry[] };
+      setEntries(data.entries ?? []);
+      setBoardStatus('ready');
+    } catch {
+      setEntries([]);
+      setBoardStatus('offline');
+    }
+  }, []);
+
+  useEffect(() => { void loadBoard(board); }, [board, loadBoard]);
+
+  function stopMusic() {
+    const music = musicRef.current;
+    if (!music) return;
+    clearInterval(music.timer);
+    music.gain.gain.setTargetAtTime(0.0001, music.gain.context.currentTime, .025);
+    musicRef.current = null;
+  }
+
+  function startMusic() {
+    if (mutedRef.current || musicRef.current || !('AudioContext' in window)) return;
+    const context = audioRef.current ?? new AudioContext();
+    audioRef.current = context;
+    void context.resume();
+    const master = context.createGain();
+    master.gain.value = .034;
+    master.connect(context.destination);
+    const melody = [659, 0, 784, 0, 880, 784, 659, 0, 587, 0, 659, 784, 523, 0, 587, 0, 659, 784, 988, 0, 880, 784, 659, 587, 523, 0, 440, 523, 587, 0, 494, 0];
+    const bass = [131, 165, 110, 147, 131, 196, 165, 147];
+    const playNote = (frequency: number, length: number, volume: number, type: OscillatorType) => {
+      if (!frequency) return;
+      const now = context.currentTime;
+      const osc = context.createOscillator();
+      const gain = context.createGain();
+      osc.type = type; osc.frequency.value = frequency;
+      gain.gain.setValueAtTime(volume, now);
+      gain.gain.setValueAtTime(volume, now + length * .62);
+      gain.gain.linearRampToValueAtTime(.0001, now + length);
+      osc.connect(gain).connect(master); osc.start(now); osc.stop(now + length + .02);
+    };
+    const music = { timer: 0 as unknown as ReturnType<typeof setInterval>, gain: master, step: 0 };
+    const tick = () => {
+      const step = music.step++;
+      playNote(melody[step % melody.length], .105, .72, 'square');
+      if (step % 4 === 0) playNote(bass[(step / 4) % bass.length], .38, .6, 'triangle');
+      if (step % 8 === 6) playNote(98, .035, .18, 'square');
+    };
+    tick(); music.timer = setInterval(tick, 120); musicRef.current = music;
+  }
 
   function sound(kind: 'jump' | 'dash' | 'spark' | 'hit' | 'checkpoint' | 'win') {
     if (mutedRef.current || !('AudioContext' in window)) return;
@@ -96,19 +171,60 @@ export default function Home() {
   }
 
   function setGameScreen(next: Screen) {
+    if (next !== 'playing') stopMusic();
     screenRef.current = next;
     setScreen(next);
   }
 
-  function startGame() {
+  async function startGame() {
     resetRef.current?.();
+    setSubmitState('idle'); setRank(null); runIdRef.current = null;
+    try {
+      const response = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'start' }) });
+      if (response.ok) runIdRef.current = ((await response.json()) as { runId: string }).runId;
+    } catch { /* Offline play remains available. */ }
     setGameScreen('playing');
+    startMusic();
     requestAnimationFrame(() => canvasRef.current?.focus());
   }
 
   function togglePause() {
     if (screenRef.current === 'playing') setGameScreen('paused');
-    else if (screenRef.current === 'paused') setGameScreen('playing');
+    else if (screenRef.current === 'paused') { setGameScreen('playing'); startMusic(); }
+  }
+
+  function toggleSound() {
+    setMuted((value) => {
+      const next = !value;
+      mutedRef.current = next;
+      if (next) stopMusic(); else if (screenRef.current === 'playing') startMusic();
+      return next;
+    });
+  }
+
+  function recordStreak() {
+    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+    const last = window.localStorage.getItem('crestbound-last-day');
+    if (last === today) return;
+    const yesterday = new Date(`${today}T12:00:00`); yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayKey = yesterday.toLocaleDateString('en-CA');
+    const next = last === yesterdayKey ? (Number(window.localStorage.getItem('crestbound-streak')) || 0) + 1 : 1;
+    window.localStorage.setItem('crestbound-last-day', today);
+    window.localStorage.setItem('crestbound-streak', String(next)); setStreak(next);
+  }
+
+  async function submitRun(event: FormEvent) {
+    event.preventDefault();
+    if (!runIdRef.current || nickname.trim().length < 2) { setSubmitState('error'); return; }
+    setSubmitState('saving');
+    const cleanName = nickname.trim().toUpperCase();
+    window.localStorage.setItem('crestbound-nickname', cleanName); setNickname(cleanName);
+    try {
+      const response = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'finish', runId: runIdRef.current, name: cleanName, scoreMs: Math.round(hud.time * 1000), sparks: hud.sparks }) });
+      const data = await response.json() as { rank?: number; error?: string };
+      if (!response.ok) throw new Error(data.error);
+      setRank(data.rank ?? null); setSubmitState('saved'); setBoard('daily'); void loadBoard('daily');
+    } catch { setSubmitState('error'); }
   }
 
   function press(control: keyof typeof inputRef.current, active: boolean) {
@@ -122,11 +238,8 @@ export default function Home() {
     const context = canvas.getContext('2d');
     if (!context) return;
 
-    const sprites = Array.from({ length: 8 }, (_, index) => {
-      const image = new Image();
-      image.src = `/sunny-frame-${index}.png`;
-      return image;
-    });
+    const spriteSheet = new Image();
+    spriteSheet.src = '/sunny-pixel-master.svg';
     const keys = new Set<string>();
     const player = { x: 120, y: 510, w: 50, h: 88, vx: 0, vy: 0, grounded: false, jumps: 0, dashTime: 0, dashCooldown: 0, facing: 1, invuln: 0 };
     let sparks = sparkSeed.map((item) => ({ ...item }));
@@ -170,7 +283,7 @@ export default function Home() {
       if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(event.code)) event.preventDefault();
       keys.add(event.code);
       if (event.code === 'KeyP' || event.code === 'Escape') togglePause();
-      if (event.code === 'KeyM') setMuted((value) => !value);
+      if (event.code === 'KeyM') toggleSound();
       if ((event.code === 'Space' || event.code === 'ArrowUp' || event.code === 'KeyW') && !event.repeat) jumpBuffer = 0.14;
     }
     function keyUp(event: KeyboardEvent) { keys.delete(event.code); }
@@ -263,7 +376,8 @@ export default function Home() {
       if (player.x > 7535) {
         const best = Number(window.localStorage.getItem('crestbound-best')) || Infinity;
         if (elapsed < best) window.localStorage.setItem('crestbound-best', String(elapsed));
-        tone('win'); setGameScreen('won');
+        setHud({ sparks: collected, total: sparks.length, lives, time: elapsed, best: Math.min(best, elapsed), checkpoint: checkpointIndex });
+        recordStreak(); tone('win'); setGameScreen('won');
       }
       cameraX += (Math.max(0, Math.min(WORLD_W - VIEW_W, player.x - 390)) - cameraX) * Math.min(1, dt * 5.5);
       if (elapsed - lastHud > 0.08) {
@@ -273,37 +387,33 @@ export default function Home() {
       }
     }
 
-    function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, radius: number) {
-      ctx.beginPath(); ctx.roundRect(x, y, w, h, radius); ctx.fill();
-    }
-
     function draw() {
       const ctx = context;
-      const gradient = ctx.createLinearGradient(0, 0, 0, VIEW_H);
-      gradient.addColorStop(0, '#071b25'); gradient.addColorStop(.56, '#15434a'); gradient.addColorStop(1, '#0a2022');
-      ctx.fillStyle = gradient; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+      ctx.setTransform(.25, 0, 0, .25, 0, 0);
+      ctx.imageSmoothingEnabled = false;
+      ctx.fillStyle = '#071820'; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
+      ctx.fillStyle = '#0c2830'; ctx.fillRect(0, 252, VIEW_W, 468);
       ctx.save();
-      for (let index = 0; index < 70; index += 1) {
+      for (let index = 0; index < 54; index += 1) {
         const x = ((index * 193 - cameraX * .08) % 1500 + 1500) % 1500 - 100;
         const y = 45 + ((index * 83) % 290);
-        const glow = index % 9 === 0 ? 2.7 : 1.2;
         ctx.fillStyle = index % 9 === 0 ? '#f5d263' : '#9ac5c4';
-        ctx.globalAlpha = index % 9 === 0 ? .9 : .45;
-        ctx.beginPath(); ctx.arc(x, y, glow, 0, Math.PI * 2); ctx.fill();
+        const size = index % 9 === 0 ? 8 : 4;
+        ctx.fillRect(Math.floor(x / 4) * 4, Math.floor(y / 4) * 4, size, size);
       }
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = '#f2b52b'; ctx.shadowColor = '#f2b52b'; ctx.shadowBlur = 45; ctx.beginPath(); ctx.arc(1060 - cameraX * .03, 125, 68, 0, Math.PI * 2); ctx.fill(); ctx.shadowBlur = 0;
+      const moonX = Math.floor((1060 - cameraX * .03) / 8) * 8;
+      ctx.fillStyle = '#d18c18'; ctx.fillRect(moonX - 48, 72, 96, 112);
+      ctx.fillStyle = '#f5d263'; ctx.fillRect(moonX - 64, 88, 128, 80); ctx.fillRect(moonX - 48, 72, 96, 112);
       for (let layer = 0; layer < 2; layer += 1) {
         const parallax = layer ? .32 : .17;
         const baseY = layer ? 505 : 430;
-        ctx.fillStyle = layer ? '#102f34' : '#173c42';
+        const building = layer ? '#102f34' : '#173c42';
         for (let index = -1; index < 18; index += 1) {
           const x = index * 120 - ((cameraX * parallax) % 120);
-          const h = 80 + ((index * 47 + layer * 31) % 150);
-          ctx.fillRect(x, baseY - h, 92, h + 220);
+          const h = 80 + Math.abs((index * 47 + layer * 31) % 150);
+          ctx.fillStyle = building; ctx.fillRect(Math.floor(x / 8) * 8, baseY - h, 96, h + 220);
           ctx.fillStyle = layer ? '#2c5558' : '#315c60';
-          for (let wx = 15; wx < 80; wx += 25) for (let wy = baseY - h + 18; wy < baseY - 12; wy += 28) ctx.fillRect(x + wx, wy, 7, 10);
-          ctx.fillStyle = layer ? '#102f34' : '#173c42';
+          for (let wx = 16; wx < 80; wx += 24) for (let wy = baseY - h + 16; wy < baseY - 12; wy += 28) ctx.fillRect(Math.floor(x / 8) * 8 + wx, wy, 8, 12);
         }
       }
       ctx.restore();
@@ -311,10 +421,13 @@ export default function Home() {
       ctx.save(); ctx.translate(-cameraX, 0);
       const activePlatforms = platforms.map((platform) => platform.moving ? { ...platform, y: (platform.baseY ?? platform.y) + Math.sin(elapsed * 1.45 + (platform.phase ?? 0)) * 72 } : platform);
       activePlatforms.forEach((platform) => {
-        ctx.fillStyle = '#0e292c'; roundedRect(ctx, platform.x, platform.y, platform.w, platform.h, 8);
-        ctx.fillStyle = '#d99a1d'; roundedRect(ctx, platform.x, platform.y, platform.w, Math.min(14, platform.h), 6);
-        ctx.fillStyle = '#f4ca4f'; ctx.fillRect(platform.x + 8, platform.y + 3, platform.w - 16, 3);
-        if (platform.h > 40) { ctx.strokeStyle = '#1b4245'; ctx.lineWidth = 3; for (let x = platform.x + 28; x < platform.x + platform.w; x += 46) { ctx.beginPath(); ctx.moveTo(x, platform.y + 25); ctx.lineTo(x - 15, platform.y + platform.h); ctx.stroke(); } }
+        const px = Math.floor(platform.x / 4) * 4; const py = Math.floor(platform.y / 4) * 4;
+        ctx.fillStyle = '#08191c'; ctx.fillRect(px, py, platform.w, platform.h);
+        ctx.fillStyle = '#b96f14'; ctx.fillRect(px, py, platform.w, 20);
+        ctx.fillStyle = '#f2b52b'; ctx.fillRect(px, py, platform.w, 8);
+        for (let x = px; x < px + platform.w; x += 32) for (let y = py + 24; y < py + platform.h; y += 24) {
+          ctx.fillStyle = ((x + y) / 8) % 2 ? '#12363a' : '#17454a'; ctx.fillRect(x, y, 24, 16);
+        }
       });
       spikeZones.forEach((spike) => {
         ctx.fillStyle = '#f06f52';
@@ -322,26 +435,27 @@ export default function Home() {
       });
       checkpoints.slice(1).forEach((x, index) => {
         const active = checkpointIndex > index;
-        ctx.strokeStyle = active ? '#f5d263' : '#527b7c'; ctx.lineWidth = 7; ctx.beginPath(); ctx.arc(x, 536, 32, 0, Math.PI * 2); ctx.stroke();
-        ctx.fillStyle = active ? '#f5d263' : '#234d50'; ctx.beginPath(); ctx.arc(x, 536, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = active ? '#f5d263' : '#527b7c'; ctx.fillRect(x - 4, 486, 8, 86); ctx.fillRect(x, 486, 42, 8);
+        ctx.fillStyle = active ? '#ef6f52' : '#234d50'; ctx.fillRect(x + 8, 494, 30, 22);
       });
       sparks.forEach((spark, index) => {
         if (spark.taken) return;
-        const pulse = 1 + Math.sin(elapsed * 4 + index) * .12;
-        ctx.save(); ctx.translate(spark.x, spark.y); ctx.scale(pulse, pulse); ctx.rotate(elapsed * .9 + index);
-        ctx.shadowColor = spark.secret ? '#78d7d2' : '#f5d263'; ctx.shadowBlur = 18;
-        ctx.strokeStyle = spark.secret ? '#78d7d2' : '#f5d263'; ctx.lineWidth = 5; ctx.beginPath(); ctx.ellipse(0, 0, 15, 25, .7, 0, Math.PI * 2); ctx.stroke();
-        ctx.rotate(1.6); ctx.beginPath(); ctx.ellipse(0, 0, 10, 22, .7, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+        const bob = Math.round(Math.sin(elapsed * 5 + index) * 4 / 4) * 4;
+        ctx.save(); ctx.translate(spark.x, spark.y + bob); const color = spark.secret ? '#78d7d2' : '#f5d263';
+        ctx.fillStyle = '#071316'; ctx.fillRect(-12, -20, 24, 40); ctx.fillRect(-20, -12, 40, 24);
+        ctx.fillStyle = color; ctx.fillRect(-8, -20, 16, 40); ctx.fillRect(-20, -8, 40, 16);
+        ctx.fillStyle = '#fff8e9'; ctx.fillRect(-4, -8, 8, 16); ctx.restore();
       });
       enemies.forEach((enemy) => {
         if (!enemy.alive) return;
-        ctx.save(); ctx.translate(enemy.x, enemy.y); ctx.shadowColor = '#ef6f52'; ctx.shadowBlur = 18;
-        ctx.fillStyle = '#172528'; ctx.strokeStyle = '#ef6f52'; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(0, 0, 25, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = '#ef6f52'; ctx.fillRect(enemy.dir > 0 ? 4 : -15, -5, 11, 7); ctx.restore();
+        const ex = Math.floor(enemy.x / 4) * 4; const ey = Math.floor(enemy.y / 4) * 4;
+        ctx.fillStyle = '#ef6f52'; ctx.fillRect(ex - 28, ey - 20, 56, 40); ctx.fillRect(ex - 20, ey - 28, 40, 56);
+        ctx.fillStyle = '#071316'; ctx.fillRect(ex - 16, ey - 8, 12, 12); ctx.fillRect(ex + 8, ey - 8, 12, 12);
+        ctx.fillStyle = '#fff8e9'; ctx.fillRect(ex - 12, ey - 8, 4, 4); ctx.fillRect(ex + 12, ey - 8, 4, 4);
       });
-      ctx.save(); ctx.translate(7545, 505); ctx.strokeStyle = '#f5d263'; ctx.shadowColor = '#f5d263'; ctx.shadowBlur = 25;
-      for (let ring = 0; ring < 5; ring += 1) { ctx.lineWidth = 6 - ring * .7; ctx.beginPath(); ctx.ellipse(Math.sin(ring) * 6, 40, 45 + ring * 8, 90 + ring * 6, ring * .28 + elapsed * .12, 0, Math.PI * 2); ctx.stroke(); }
-      ctx.restore();
+      ctx.fillStyle = '#b96f14'; ctx.fillRect(7484, 440, 120, 180); ctx.fillStyle = '#f5d263'; ctx.fillRect(7496, 452, 96, 168);
+      ctx.fillStyle = Math.floor(elapsed * 5) % 2 ? '#18a7a2' : '#78d7d2'; ctx.fillRect(7512, 468, 64, 152);
+      ctx.fillStyle = '#071820'; ctx.fillRect(7528, 484, 32, 136);
 
       let spriteIndex = 0;
       if (player.invuln > 0 && Math.floor(elapsed * 12) % 2 === 0) ctx.globalAlpha = .35;
@@ -350,17 +464,13 @@ export default function Home() {
       else if (player.invuln > .9) spriteIndex = 6;
       else if (!player.grounded) spriteIndex = player.vy < 0 ? 3 : 4;
       else if (Math.abs(player.vx) > 80) spriteIndex = Math.floor(elapsed * 10) % 2 ? 1 : 2;
-      const sprite = sprites[spriteIndex];
-      if (sprite.complete && sprite.naturalWidth) {
-        const drawH = spriteIndex === 5 ? 100 : 126;
-        const drawW = drawH * (sprite.naturalWidth / sprite.naturalHeight);
+      if (spriteSheet.complete && spriteSheet.naturalWidth) {
+        const drawH = spriteIndex === 5 ? 112 : 132;
+        const drawW = drawH * (32 / 48);
         ctx.save(); ctx.translate(player.x + player.w / 2, player.y + player.h); ctx.scale(player.facing, 1);
-        ctx.shadowColor = 'rgb(0 0 0 / 35%)'; ctx.shadowBlur = 10; ctx.drawImage(sprite, -drawW / 2, -drawH, drawW, drawH); ctx.restore();
-      } else { ctx.fillStyle = '#f5d263'; roundedRect(ctx, player.x, player.y, player.w, player.h, 20); }
+        ctx.drawImage(spriteSheet, spriteIndex * 32, 0, 32, 48, -drawW / 2, -drawH, drawW, drawH); ctx.restore();
+      } else { ctx.fillStyle = '#f5d263'; ctx.fillRect(player.x, player.y, player.w, player.h); }
       ctx.globalAlpha = 1; ctx.restore();
-
-      const vignette = ctx.createRadialGradient(VIEW_W / 2, VIEW_H / 2, 260, VIEW_W / 2, VIEW_H / 2, 780);
-      vignette.addColorStop(0, 'transparent'); vignette.addColorStop(1, 'rgb(0 0 0 / 38%)'); ctx.fillStyle = vignette; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
     }
 
     function loop(now: number) {
@@ -372,14 +482,14 @@ export default function Home() {
     }
     animation = requestAnimationFrame(loop);
     return () => {
-      cancelAnimationFrame(animation); window.removeEventListener('keydown', keyDown); window.removeEventListener('keyup', keyUp); resetRef.current = null;
+      cancelAnimationFrame(animation); stopMusic(); window.removeEventListener('keydown', keyDown); window.removeEventListener('keyup', keyUp); resetRef.current = null;
     };
   }, []);
 
   return (
     <main className="shell">
       <section className="game-frame" aria-label="Sunny Crestbound platform game">
-        <canvas ref={canvasRef} className="game-canvas" width={VIEW_W} height={VIEW_H} tabIndex={0} aria-label="Platform game. Use arrows or A and D to move, Space to jump, and Shift to dash." />
+        <canvas ref={canvasRef} className="game-canvas" width={320} height={180} tabIndex={0} aria-label="Platform game. Use arrows or A and D to move, Space to jump, and Shift to dash." />
 
         {screen !== 'title' && (
           <header className="hud">
@@ -390,30 +500,53 @@ export default function Home() {
               <span><b>{formatTime(hud.time)}</b><small>TIME</small></span>
             </div>
             <div className="hud-actions">
-              <button type="button" onClick={() => setMuted((value) => !value)} aria-label={muted ? 'Turn sound on' : 'Mute sound'}>{muted ? '🔇' : '🔊'}</button>
+              <button type="button" onClick={toggleSound} aria-label={muted ? 'Turn sound on' : 'Mute sound'}>{muted ? 'MUTE' : '♪ ON'}</button>
               <button type="button" onClick={togglePause} aria-label={screen === 'paused' ? 'Resume game' : 'Pause game'}>{screen === 'paused' ? '▶' : 'Ⅱ'}</button>
             </div>
           </header>
         )}
 
         {screen === 'title' && (
-          <div className="title-card">
-            <p className="kicker">SUNCREST GAMES</p>
-            <h1>Sunny: <span>Crestbound</span></h1>
-            <p>The city&apos;s light has fractured across the skyline. Run it down before the dark closes in.</p>
-            <button type="button" onClick={startGame}>Start Run <span aria-hidden="true">→</span></button>
-            <div className="control-hint"><span>← → / A D</span> Move <span>SPACE</span> Double jump <span>SHIFT / X</span> Dash</div>
-            <p className="controller-note">Keyboard, gamepad, and touch supported.</p>
+          <div className="title-screen">
+            <div className="title-card">
+              <p className="kicker">SUNCREST GAMES // DAILY RUN</p>
+              <h1>Sunny: <span>Crestbound</span></h1>
+              <p>Same course. One shot at the fastest route. Find the four secret sparks and beat today&apos;s board.</p>
+              <div className="title-meta"><span>🔥 {streak} DAY STREAK</span><span>◆ 4 SECRET SPARKS</span><span>♪ ORIGINAL CHIPTUNE</span></div>
+              <button type="button" onClick={() => void startGame()}>Start Daily Run <span aria-hidden="true">→</span></button>
+              <div className="control-hint"><span>← → / A D</span> Move <span>SPACE</span> Double jump <span>SHIFT / X</span> Dash</div>
+              <p className="controller-note">Keyboard, gamepad, and touch supported. Music starts after you press Start.</p>
+            </div>
+            <aside className="leaderboard" aria-label="Crestbound leaderboard">
+              <div className="board-heading"><span>TOP RUNS</span><small>{board === 'daily' ? 'TODAY' : board === 'weekly' ? 'THIS WEEK' : 'ALL TIME'}</small></div>
+              <div className="board-tabs">
+                {(['daily', 'weekly', 'all'] as Board[]).map((item) => <button className={board === item ? 'active' : ''} type="button" key={item} onClick={() => setBoard(item)}>{item === 'daily' ? 'TODAY' : item === 'weekly' ? 'WEEK' : 'ALL'}</button>)}
+              </div>
+              <ol className="board-list">
+                {boardStatus === 'loading' && <li className="board-message">LOADING RUNS...</li>}
+                {boardStatus === 'offline' && <li className="board-message">BOARD COMES ONLINE WHEN PUBLISHED.</li>}
+                {boardStatus === 'ready' && entries.length === 0 && <li className="board-message">NO FINISHERS YET. CLAIM #1.</li>}
+                {boardStatus === 'ready' && entries.slice(0, 7).map((entry) => <li key={`${entry.rank}-${entry.name}`}><b>#{entry.rank}</b><span>{entry.name}</span><time>{formatTime(entry.timeMs / 1000)}</time><small>{entry.sparks}◆</small></li>)}
+              </ol>
+              <p>FASTEST VERIFIED TIME WINS. NICKNAMES ONLY.</p>
+            </aside>
           </div>
         )}
 
         {screen === 'paused' && <div className="game-modal"><p>RUN PAUSED</p><h2>Catch your breath.</h2><button type="button" onClick={togglePause}>Resume</button><button className="secondary" type="button" onClick={() => setGameScreen('title')}>Quit Run</button></div>}
-        {screen === 'over' && <div className="game-modal"><p>LIGHT LOST</p><h2>That route got you.</h2><p>Use the high paths, save your dash, and hit enemies from above.</p><button type="button" onClick={startGame}>Run It Back</button></div>}
+        {screen === 'over' && <div className="game-modal"><p>LIGHT LOST</p><h2>That route got you.</h2><p>Use the high paths, save your dash, and hit enemies from above.</p><button type="button" onClick={() => void startGame()}>Run It Back</button></div>}
         {screen === 'won' && (
           <div className="game-modal win-modal">
-            <p>LIGHT RESTORED</p><h2>Skyline cleared.</h2>
+            <p>LIGHT RESTORED // {medalFor(hud.time)} MEDAL</p><h2>Skyline cleared.</h2>
             <div className="result-grid"><span><b>{formatTime(hud.time)}</b><small>FINISH</small></span><span><b>{hud.sparks}/{hud.total}</b><small>LIGHT</small></span><span><b>{hud.best ? formatTime(hud.best) : '—'}</b><small>BEST</small></span></div>
-            <button type="button" onClick={startGame}>Beat Your Time</button>
+            {submitState !== 'saved' ? <form className="score-form" onSubmit={submitRun}>
+              <label htmlFor="nickname">POST TO TODAY&apos;S BOARD</label>
+              <div><input id="nickname" value={nickname} onChange={(event) => setNickname(event.target.value)} minLength={2} maxLength={12} pattern="[A-Za-z0-9 _-]{2,12}" placeholder="NICKNAME" autoComplete="nickname" /><button type="submit" disabled={submitState === 'saving' || !runIdRef.current}>{submitState === 'saving' ? 'SAVING...' : 'POST RUN'}</button></div>
+              <small>Use a nickname, not your real name.{!runIdRef.current ? ' Online posting is unavailable for this run.' : ''}</small>
+              {submitState === 'error' && <em>COULDN&apos;T POST. CHECK YOUR NICKNAME OR TRY AGAIN.</em>}
+            </form> : <div className="rank-callout">RUN POSTED {rank ? `// TODAY #${rank}` : '// TO TODAY'}</div>}
+            <button type="button" onClick={() => void startGame()}>Beat Your Time</button>
+            <button className="secondary" type="button" onClick={() => { setGameScreen('title'); void loadBoard('daily'); }}>View Leaderboard</button>
           </div>
         )}
 

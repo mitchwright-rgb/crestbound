@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="128" viewBox="0 0 256 128" shape-rendering="crispEdges">
+  <title>Crestbound vector pixel environment master</title>
+  <rect width="256" height="128" fill="#071820"/>
+  <!-- skyline tiles -->
+  <g id="skyline">
+    <rect x="4" y="36" width="28" height="56" fill="#173c42"/><rect x="36" y="20" width="36" height="72" fill="#102f34"/>
+    <g fill="#315c60"><rect x="10" y="44" width="4" height="6"/><rect x="22" y="44" width="4" height="6"/><rect x="10" y="58" width="4" height="6"/><rect x="22" y="58" width="4" height="6"/></g>
+    <g fill="#2c5558"><rect x="44" y="28" width="4" height="6"/><rect x="58" y="28" width="4" height="6"/><rect x="44" y="44" width="4" height="6"/><rect x="58" y="44" width="4" height="6"/></g>
+  </g>
+  <!-- platform tile -->
+  <g id="platform" transform="translate(4 96)"><rect width="76" height="28" fill="#08191c"/><rect width="76" height="8" fill="#b96f14"/><rect width="76" height="4" fill="#f2b52b"/><g fill="#17454a"><rect x="4" y="12" width="12" height="8"/><rect x="36" y="12" width="12" height="8"/><rect x="20" y="20" width="12" height="8"/><rect x="52" y="20" width="12" height="8"/></g></g>
+  <!-- spark -->
+  <g id="spark" transform="translate(100 32)"><rect x="-4" y="-12" width="8" height="24" fill="#f5d263"/><rect x="-12" y="-4" width="24" height="8" fill="#f5d263"/><rect x="-2" y="-4" width="4" height="8" fill="#fff8e9"/></g>
+  <!-- secret spark -->
+  <g id="secret-spark" transform="translate(132 32)"><rect x="-4" y="-12" width="8" height="24" fill="#78d7d2"/><rect x="-12" y="-4" width="24" height="8" fill="#78d7d2"/><rect x="-2" y="-4" width="4" height="8" fill="#fff8e9"/></g>
+  <!-- enemy -->
+  <g id="enemy" transform="translate(176 34)"><rect x="-14" y="-10" width="28" height="20" fill="#ef6f52"/><rect x="-10" y="-14" width="20" height="28" fill="#ef6f52"/><rect x="-8" y="-4" width="6" height="6" fill="#071316"/><rect x="4" y="-4" width="6" height="6" fill="#071316"/><rect x="-6" y="-4" width="2" height="2" fill="#fff8e9"/><rect x="6" y="-4" width="2" height="2" fill="#fff8e9"/></g>
+  <!-- checkpoint -->
+  <g id="checkpoint" transform="translate(208 12)"><rect x="0" y="0" width="4" height="44" fill="#f5d263"/><rect x="4" y="0" width="20" height="4" fill="#f5d263"/><rect x="4" y="4" width="16" height="12" fill="#ef6f52"/></g>
+  <!-- portal -->
+  <g id="portal" transform="translate(92 64)"><rect width="52" height="60" fill="#b96f14"/><rect x="4" y="4" width="44" height="56" fill="#f5d263"/><rect x="10" y="10" width="32" height="50" fill="#18a7a2"/><rect x="18" y="16" width="16" height="44" fill="#071820"/></g>
+  <!-- spikes -->
+  <g id="spikes" fill="#ef6f52" transform="translate(156 104)"><path d="M0 16 8 0l8 16L24 0l8 16L40 0l8 16Z"/></g>
+</svg>
