@@ -544,28 +544,72 @@ export default function Home() {
       const shakeX = screenShake > 0 ? ((Math.floor(elapsed * 60) % 3) - 1) * 4 : 0;
       ctx.setTransform(.25, 0, 0, .25, shakeX * .25, 0);
       ctx.imageSmoothingEnabled = false;
-      const zone = Math.min(3, Math.floor((cameraX + 240) / 1900));
-      const skyTop = ['#071820', '#081724', '#10152a', '#18182d'][zone];
-      const skyLow = ['#0c2830', '#102d38', '#18313c', '#3a2933'][zone];
-      ctx.fillStyle = skyTop; ctx.fillRect(-8, 0, VIEW_W + 16, VIEW_H);
-      ctx.fillStyle = skyLow; ctx.fillRect(-8, 252, VIEW_W + 16, 468);
-      ctx.fillStyle = ['#12343b', '#173744', '#233b45', '#51363a'][zone]; ctx.fillRect(-8, 360, VIEW_W + 16, 360);
+      const atmosphere = [
+        { skyTop: '#4f2942', skyMid: '#bd5140', skyLow: '#f19a52', haze: '#f6c46a', far: '#78434d', near: '#3d3442', window: '#ffd77a', rail: '#f5d263', edge: '#b85b28', blockA: '#4b3540', blockB: '#603c42', support: '#302b35' },
+        { skyTop: '#2386c8', skyMid: '#53b7df', skyLow: '#9ddff0', haze: '#dcf4ef', far: '#72afbd', near: '#347583', window: '#eafffa', rail: '#f5d263', edge: '#c57c25', blockA: '#286372', blockB: '#337988', support: '#1b4e5a' },
+        { skyTop: '#040d19', skyMid: '#081a29', skyLow: '#102c3a', haze: '#163947', far: '#102b39', near: '#071c28', window: '#e8b94d', rail: '#dba42d', edge: '#715020', blockA: '#0b2934', blockB: '#123944', support: '#061923' },
+      ][activeCourseIndex];
+      ctx.fillStyle = atmosphere.skyTop; ctx.fillRect(-8, 0, VIEW_W + 16, VIEW_H);
+      ctx.fillStyle = atmosphere.skyMid; ctx.fillRect(-8, 176, VIEW_W + 16, 544);
+      ctx.fillStyle = atmosphere.skyLow; ctx.fillRect(-8, 318, VIEW_W + 16, 402);
+      ctx.fillStyle = atmosphere.haze; ctx.fillRect(-8, 394, VIEW_W + 16, 326);
       ctx.save();
-      for (let index = 0; index < 54; index += 1) {
-        const x = ((index * 193 - cameraX * .08) % 1500 + 1500) % 1500 - 100;
-        const y = 45 + ((index * 83) % 290);
-        ctx.fillStyle = index % 9 === 0 ? '#f5d263' : '#9ac5c4';
-        const size = index % 9 === 0 ? 8 : 4;
-        ctx.fillRect(Math.floor(x / 4) * 4, Math.floor(y / 4) * 4, size, size);
+
+      if (activeCourseIndex === 0) {
+        // Goldline: a low, oversized sun and warm bands make the whole route feel like golden hour.
+        const sunX = Math.floor((1030 - cameraX * .025) / 8) * 8;
+        ctx.fillStyle = '#df6d3d'; ctx.fillRect(sunX - 76, 176, 152, 120);
+        ctx.fillStyle = '#ffd978'; ctx.fillRect(sunX - 60, 160, 120, 152); ctx.fillRect(sunX - 76, 184, 152, 104);
+        ctx.fillStyle = '#fff0a8'; ctx.fillRect(sunX - 48, 168, 96, 16);
+        for (let index = 0; index < 7; index += 1) {
+          const x = ((index * 271 - cameraX * .07) % 1660 + 1660) % 1660 - 180;
+          const y = 94 + (index % 4) * 58;
+          ctx.fillStyle = index % 2 ? '#e67a4b' : '#f7b467';
+          ctx.fillRect(x, y, 170, 12); ctx.fillRect(x + 34, y - 8, 94, 8);
+        }
+        ctx.fillStyle = '#f5d263';
+        for (let index = 0; index < 9; index += 1) ctx.fillRect(((index * 173 - cameraX * .18) % 1500 + 1500) % 1500 - 80, 400 + (index % 3) * 14, 76, 5);
+      } else if (activeCourseIndex === 1) {
+        // Crosswind: bright blue sky, high sun, and large block clouds keep the aerial route open and clear.
+        const sunX = Math.floor((1120 - cameraX * .018) / 8) * 8;
+        ctx.fillStyle = '#fff4ad'; ctx.fillRect(sunX - 36, 58, 72, 72); ctx.fillRect(sunX - 48, 70, 96, 48);
+        for (let index = 0; index < 8; index += 1) {
+          const x = ((index * 263 - cameraX * .12) % 1760 + 1760) % 1760 - 230;
+          const y = 104 + (index % 4) * 66;
+          const width = 112 + (index % 3) * 36;
+          ctx.fillStyle = '#d7f0ee'; ctx.fillRect(x + 12, y + 16, width, 28);
+          ctx.fillStyle = '#fffdf2'; ctx.fillRect(x + 32, y, width - 42, 36); ctx.fillRect(x, y + 20, width + 32, 24);
+        }
+        ctx.fillStyle = '#e9fbf8';
+        for (let index = 0; index < 7; index += 1) {
+          const x = ((index * 229 - cameraX * .06) % 1560 + 1560) % 1560 - 100;
+          const y = 58 + (index % 3) * 72;
+          ctx.fillRect(x, y, 12, 4); ctx.fillRect(x + 12, y - 4, 12, 4);
+        }
+      } else {
+        // Night Shift: a veiled moon, sparse stars, and layered storm clouds set up the rain.
+        for (let index = 0; index < 34; index += 1) {
+          const x = ((index * 193 - cameraX * .06) % 1500 + 1500) % 1500 - 100;
+          const y = 38 + ((index * 83) % 250);
+          ctx.fillStyle = index % 8 === 0 ? '#f5d263' : '#5d8894';
+          ctx.fillRect(Math.floor(x / 4) * 4, Math.floor(y / 4) * 4, index % 8 === 0 ? 6 : 3, index % 8 === 0 ? 6 : 3);
+        }
+        const moonX = Math.floor((1080 - cameraX * .025) / 8) * 8;
+        ctx.fillStyle = '#a8c4c7'; ctx.fillRect(moonX - 42, 76, 84, 100);
+        ctx.fillStyle = '#d8e1d9'; ctx.fillRect(moonX - 54, 90, 108, 72); ctx.fillRect(moonX - 38, 72, 76, 108);
+        ctx.fillStyle = '#102433'; ctx.fillRect(moonX - 86, 126, 170, 28); ctx.fillRect(moonX - 36, 112, 116, 20);
+        for (let index = 0; index < 7; index += 1) {
+          const x = ((index * 286 - cameraX * .11) % 1840 + 1840) % 1840 - 250;
+          const y = 104 + (index % 3) * 82;
+          ctx.fillStyle = index % 2 ? '#0b1f2c' : '#102b38';
+          ctx.fillRect(x, y, 218, 28); ctx.fillRect(x + 42, y - 14, 126, 18);
+        }
       }
-      const moonX = Math.floor((1060 - cameraX * .03) / 8) * 8;
-      ctx.fillStyle = '#d18c18'; ctx.fillRect(moonX - 48, 72, 96, 112);
-      ctx.fillStyle = '#f5d263'; ctx.fillRect(moonX - 64, 88, 128, 80); ctx.fillRect(moonX - 48, 72, 96, 112);
-      ctx.fillStyle = '#e2aa2f'; ctx.fillRect(moonX - 34, 92, 18, 16); ctx.fillRect(moonX + 18, 132, 24, 16); ctx.fillRect(moonX - 12, 156, 16, 12);
+
       for (let layer = 0; layer < 2; layer += 1) {
         const parallax = layer ? .32 : .17;
         const baseY = layer ? 505 : 430;
-        const building = layer ? '#102f34' : '#173c42';
+        const building = layer ? atmosphere.near : atmosphere.far;
         for (let index = -1; index < 18; index += 1) {
           const x = index * 120 - ((cameraX * parallax) % 120);
           const h = 80 + Math.abs((index * 47 + layer * 31) % 150);
@@ -574,36 +618,51 @@ export default function Home() {
           if (index % 3 === 0) { ctx.fillRect(buildingX + 44, baseY - h - 28, 8, 28); ctx.fillRect(buildingX + 34, baseY - h - 28, 28, 5); }
           for (let wx = 16; wx < 80; wx += 24) for (let wy = baseY - h + 16; wy < baseY - 12; wy += 28) {
             const lit = (index + wx + wy + layer) % 4 !== 0;
-            ctx.fillStyle = lit ? (layer ? '#2c5558' : '#315c60') : (zone > 1 ? '#d18c18' : '#214246');
+            ctx.fillStyle = lit ? (activeCourseIndex === 2 ? atmosphere.window : activeCourseIndex === 0 ? '#e78c52' : '#bde4e8') : building;
             ctx.fillRect(buildingX + wx, wy, 8, 12);
           }
         }
       }
-      ctx.fillStyle = '#78d7d2';
+      ctx.fillStyle = activeCourseIndex === 0 ? '#ffd77a' : activeCourseIndex === 1 ? '#dff7f2' : '#78d7d2';
       for (let index = 0; index < 16; index += 1) { const x = ((index * 101 - cameraX * .52) % 1440 + 1440) % 1440 - 80; ctx.fillRect(x, 520 + (index % 3) * 10, 10, 4); }
-      ctx.fillStyle = '#071b20'; ctx.fillRect(-8, 574, VIEW_W + 16, 10);
-      ctx.fillStyle = '#183c40';
+      ctx.fillStyle = activeCourseIndex === 0 ? '#2c2834' : activeCourseIndex === 1 ? '#1c5664' : '#061720'; ctx.fillRect(-8, 574, VIEW_W + 16, 10);
+      ctx.fillStyle = atmosphere.near;
       for (let x = -80 - ((cameraX * .64) % 96); x < VIEW_W + 96; x += 96) { ctx.fillRect(x, 548, 8, 36); ctx.fillRect(x + 8, 552, 64, 4); }
-      ctx.fillStyle = zone > 1 ? '#d18c18' : '#18a7a2';
+      ctx.fillStyle = activeCourseIndex === 0 ? '#f5d263' : activeCourseIndex === 1 ? '#fff8e9' : '#18a7a2';
       for (let index = 0; index < 8; index += 1) { const x = ((index * 227 - cameraX * .38) % 1700 + 1700) % 1700 - 100; ctx.fillRect(x, 535 + (index % 2) * 12, 20, 4); }
       ctx.restore();
+
+      if (activeCourseIndex === 2) {
+        ctx.globalAlpha = .62;
+        for (let index = 0; index < 96; index += 1) {
+          const x = ((index * 97 + elapsed * 290 - cameraX * .04) % 1460 + 1460) % 1460 - 90;
+          const y = ((index * 53 + elapsed * 460) % 820) - 90;
+          ctx.fillStyle = index % 5 === 0 ? '#78d7d2' : '#457583';
+          ctx.fillRect(Math.floor(x / 4) * 4, Math.floor(y / 4) * 4, index % 5 === 0 ? 4 : 3, index % 5 === 0 ? 22 : 14);
+        }
+        ctx.globalAlpha = 1;
+      }
 
       ctx.save(); ctx.translate(-cameraX, 0);
       const activePlatforms = platforms.map((platform) => platform.moving ? { ...platform, y: (platform.baseY ?? platform.y) + Math.sin(elapsed * 1.45 + (platform.phase ?? 0)) * 72 } : platform);
       activePlatforms.forEach((platform) => {
         const px = Math.floor(platform.x / 4) * 4; const py = Math.floor(platform.y / 4) * 4;
         ctx.fillStyle = '#08191c'; ctx.fillRect(px, py, platform.w, platform.h);
-        ctx.fillStyle = '#b96f14'; ctx.fillRect(px, py, platform.w, 20);
-        ctx.fillStyle = '#f2b52b'; ctx.fillRect(px, py, platform.w, 8);
+        ctx.fillStyle = atmosphere.edge; ctx.fillRect(px, py, platform.w, 20);
+        ctx.fillStyle = atmosphere.rail; ctx.fillRect(px, py, platform.w, 8);
         ctx.fillStyle = '#fff0a8'; ctx.fillRect(px + 8, py + 2, Math.max(0, platform.w - 16), 2);
         ctx.fillStyle = '#071316'; for (let x = px + 18; x < px + platform.w - 8; x += 48) ctx.fillRect(x, py + 12, 5, 5);
-        ctx.fillStyle = '#6f4213'; ctx.fillRect(px, py + 20, platform.w, 4);
+        ctx.fillStyle = atmosphere.edge; ctx.fillRect(px, py + 20, platform.w, 4);
         for (let x = px; x < px + platform.w; x += 32) for (let y = py + 24; y < py + platform.h; y += 24) {
-          ctx.fillStyle = ((x + y) / 8) % 2 ? '#12363a' : '#17454a'; ctx.fillRect(x, y, 24, 16);
+          ctx.fillStyle = ((x + y) / 8) % 2 ? atmosphere.blockA : atmosphere.blockB; ctx.fillRect(x, y, 24, 16);
         }
         if (platform.h > 32) {
-          ctx.fillStyle = '#09272b';
+          ctx.fillStyle = atmosphere.support;
           for (let x = px + 12; x < px + platform.w - 20; x += 96) { ctx.fillRect(x, py + 34, 8, platform.h - 34); ctx.fillRect(x + 8, py + 38, 36, 6); }
+        }
+        if (activeCourseIndex === 2) {
+          ctx.fillStyle = '#78d7d2';
+          for (let x = px + 12; x < px + platform.w - 20; x += 74) ctx.fillRect(x, py + 5, Math.min(28, px + platform.w - x - 8), 3);
         }
       });
       const drawSign = (x: number, y: number, text: string, accent: string) => {
@@ -685,6 +744,17 @@ export default function Home() {
         ctx.drawImage(spriteSheet, spriteIndex * 32, 0, 32, 48, -drawW / 2, -drawH, drawW, drawH); ctx.restore();
       } else { ctx.fillStyle = '#f5d263'; ctx.fillRect(player.x, player.y, player.w, player.h); }
       ctx.globalAlpha = 1; ctx.restore();
+      if (activeCourseIndex === 2) {
+        ctx.globalAlpha = .4;
+        for (let index = 0; index < 24; index += 1) {
+          const x = ((index * 181 + elapsed * 430) % 1420) - 70;
+          const y = ((index * 109 + elapsed * 610) % 820) - 80;
+          ctx.fillStyle = index % 4 === 0 ? '#a7e4df' : '#5d91a0';
+          ctx.fillRect(Math.floor(x / 4) * 4, Math.floor(y / 4) * 4, 4, 28);
+          ctx.fillRect(Math.floor(x / 4) * 4 + 4, Math.floor(y / 4) * 4 + 24, 4, 8);
+        }
+        ctx.globalAlpha = 1;
+      }
     }
 
     function loop(now: number) {
