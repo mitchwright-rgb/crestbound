@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Fredoka, Pacifico, Silkscreen } from 'next/font/google';
+import { Fredoka, Pixelify_Sans, Silkscreen } from 'next/font/google';
 import './globals.css';
 
 const fredoka = Fredoka({
@@ -14,10 +14,10 @@ const silkscreen = Silkscreen({
   weight: ['400', '700'],
 });
 
-const pacifico = Pacifico({
-  variable: '--font-script',
+const pixelifySans = Pixelify_Sans({
+  variable: '--font-title-pixel',
   subsets: ['latin'],
-  weight: '400',
+  weight: ['500', '600', '700'],
 });
 
 export const metadata: Metadata = {
@@ -49,7 +49,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${fredoka.variable} ${silkscreen.variable} ${pacifico.variable} antialiased`}
+        className={`${fredoka.variable} ${silkscreen.variable} ${pixelifySans.variable} antialiased`}
       >
         {children}
       </body>

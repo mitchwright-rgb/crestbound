@@ -39,10 +39,11 @@
     <path fill="#F5D263" d="M16 174h16v4h8v12h-4v8h-8v4H16l-4-6v-14z"/>
     <rect x="16" y="180" width="6" height="14" fill="#FFE58A"/>
   </g>
-  <g id="right-arm-and-wave">
-    <path fill="#1E1E1E" d="M128 154h14v8h8v-22h6v-18h10v10h4v-18h10v22h6v-10h6v34h-6v12h-10v8h-18v-6h-10v-6h-12v-6h-8z"/>
-    <path fill="#E2AA2F" d="M130 160h12v6h10v6h20v-6h10v-10h6v-20h-2v10h-8v-22h-4v22h-8v-14h-4v20h-8v12h-6v4h-10v-6h-8z"/>
-    <path fill="#F5D263" d="M156 148h6v-16h4v20h8v-28h4v28h8v-16h2v20h-6v10h-10v6h-16l-8-8h8z"/>
+  <g id="right-arm-and-fist">
+    <path fill="#1E1E1E" d="M126 154h16v8h10v-8h6v-8h22v6h8v22h-6v8h-24v-4h-12v-8h-12v-6h-8z"/>
+    <path fill="#E2AA2F" d="M130 160h10v6h10v6h12v4h16v-6h4v-14h-6v-4h-14v4h-6v10h-8v-4h-10v-4h-8z"/>
+    <path fill="#F5D263" d="M160 152h16v4h6v14h-6v6h-14v-4h-8v-10h4v-8h2z"/>
+    <rect x="164" y="156" width="10" height="4" fill="#FFE58A"/>
   </g>
   <g id="legs">
     <path fill="#1E1E1E" d="M78 226h20v30h-6v12H70v-12h4v-30zm34 0h20v34h6v10h-24v-10h-6v-34z"/>
