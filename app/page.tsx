@@ -586,11 +586,10 @@ export default function Home() {
           <div className="title-screen">
             <div className="home-hero">
               <div className="sunny-lockup" aria-label="Sunny, the hero of Crestbound">
-                <img className="sunny-hero" src="/sunny-home-hero-v2.png" width="1024" height="1536" alt="Sunny, Crestbound's cheerful golden hero" />
+                <img className="sunny-hero" src="/sunny-home-pixel.svg" width="192" height="288" alt="Sunny, Crestbound's pixel-art hero" />
                 <span>SUNNY</span>
               </div>
               <div className="title-card">
-                <p className="kicker">A SUNCREST GAME</p>
                 <h1>Crestbound</h1>
                 <p className="tagline">Run the skyline. Find the light. Beat today&apos;s time.</p>
                 <button className="play-button" type="button" onClick={() => void startGame()}>Play Today&apos;s Run <span aria-hidden="true">▶</span></button>

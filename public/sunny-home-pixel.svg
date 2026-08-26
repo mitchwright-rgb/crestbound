@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="192" height="288" viewBox="0 0 192 288" shape-rendering="crispEdges">
+  <title>Sunny, the pixel-art hero of Crestbound</title>
+  <g id="crest-curls">
+    <path fill="#1E1E1E" d="M102 30V18h8V10h12V4h24v6h-20v6h28v8h-36v10z"/>
+    <path fill="#E2AA2F" d="M108 28V20h8v-8h12V8h14v2h-16v8h24v4h-34v10z"/>
+    <path fill="#1E1E1E" d="M116 36V28h12v-6h30v6h10v10h-42v6z"/>
+    <path fill="#F5B92B" d="M122 36v-6h12v-4h22v4h8v4h-36v8z"/>
+    <path fill="#1E1E1E" d="M124 46v-8h18v4h20v6h10v12h-10v-6h-28v4h-10z"/>
+    <path fill="#E2AA2F" d="M130 46v-4h10v4h20v4h8v6h-6v-4h-30v4h-4z"/>
+  </g>
+  <g id="head">
+    <path fill="#1E1E1E" d="M42 28h70v6h22v10h12v10h10v16h6v42h-6v16h-10v10h-14v10H54v-6H40v-8H30v-12h-8v-18h-4V68h6V52h8V40h10z"/>
+    <path fill="#F5D263" d="M44 34h66v6h20v8h12v10h8v16h6v34h-6v16h-10v8h-12v8H56v-4H44v-8H34v-12h-6V98h-4V70h6V54h8V42h6z"/>
+    <path fill="#FFE58A" d="M44 40h54v4H54v4H42v8h-6v14h-4v22h-4V70h6V54h8V44h2z"/>
+    <path fill="#E2AA2F" d="M146 64h6v46h-6v14h-10v10h-18v6H80v-4h42v-6h14v-10h8V102h6V74h-4z"/>
+  </g>
+  <g id="face">
+    <path fill="#1E1E1E" d="M46 64h28v6h8v34h-6v8H48v-6h-8V72h6z"/>
+    <path fill="#FFF8E9" d="M50 68h20v4h6v28h-4v6H52v-4h-6V76h4z"/>
+    <path fill="#1E1E1E" d="M58 72h14v6h4v20h-4v8H58v-6h-4V80h4z"/>
+    <rect x="60" y="76" width="6" height="10" fill="#FFF8E9"/>
+    <path fill="#1E1E1E" d="M96 62h28v6h8v34h-6v8H98v-6h-8V70h6z"/>
+    <path fill="#FFF8E9" d="M100 66h20v4h6v28h-4v6h-20v-4h-6V74h4z"/>
+    <path fill="#1E1E1E" d="M108 70h14v6h4v20h-4v8h-14v-6h-4V78h4z"/>
+    <rect x="110" y="74" width="6" height="10" fill="#FFF8E9"/>
+    <path fill="#A96F12" d="M48 54h18v4H48zm54-2h18v4h-18z"/>
+    <path fill="#1E1E1E" d="M66 114h48v8h-6v10h-10v6H82v-4h-8v-6h-6z"/>
+    <path fill="#EF6F52" d="M84 130h20v4h-20z"/>
+    <rect x="38" y="110" width="6" height="6" fill="#E89B22"/><rect x="46" y="116" width="4" height="4" fill="#E89B22"/><rect x="132" y="108" width="6" height="6" fill="#E89B22"/><rect x="140" y="114" width="4" height="4" fill="#E89B22"/>
+  </g>
+  <g id="body">
+    <path fill="#1E1E1E" d="M70 142h54v8h10v16h6v38h-6v16h-10v10H76v-6H66v-10h-6v-48h4v-16h6z"/>
+    <path fill="#E2AA2F" d="M74 148h46v6h8v16h6v30h-6v16h-8v8H80v-6H72v-10h-6v-38h4v-16h4z"/>
+    <path fill="#F5B92B" d="M76 152h18v66H82v-6h-8v-14h-4v-28h4z"/>
+  </g>
+  <g id="left-arm">
+    <path fill="#1E1E1E" d="M68 154H54v8H44v10H30v-4H14v8H8v24h6v8h22v-6h10v-8h10v-10h8v-12h8z"/>
+    <path fill="#E2AA2F" d="M66 160H56v8H46v10H34v8h-6v10h-12v-4h-2v-12h4v-6h10v4h8v-4h8v-8h10v-8h12z"/>
+    <path fill="#F5D263" d="M16 174h16v4h8v12h-4v8h-8v4H16l-4-6v-14z"/>
+    <rect x="16" y="180" width="6" height="14" fill="#FFE58A"/>
+  </g>
+  <g id="right-arm-and-wave">
+    <path fill="#1E1E1E" d="M128 154h14v8h8v-22h6v-18h10v10h4v-18h10v22h6v-10h6v34h-6v12h-10v8h-18v-6h-10v-6h-12v-6h-8z"/>
+    <path fill="#E2AA2F" d="M130 160h12v6h10v6h20v-6h10v-10h6v-20h-2v10h-8v-22h-4v22h-8v-14h-4v20h-8v12h-6v4h-10v-6h-8z"/>
+    <path fill="#F5D263" d="M156 148h6v-16h4v20h8v-28h4v28h8v-16h2v20h-6v10h-10v6h-16l-8-8h8z"/>
+  </g>
+  <g id="legs">
+    <path fill="#1E1E1E" d="M78 226h20v30h-6v12H70v-12h4v-30zm34 0h20v34h6v10h-24v-10h-6v-34z"/>
+    <path fill="#E2AA2F" d="M82 230h12v24h-6v10H76v-8h4zm34 0h12v28h6v8h-16v-8h-6v-28z"/>
+    <rect x="72" y="258" width="22" height="10" fill="#12B5B0"/><rect x="116" y="258" width="22" height="10" fill="#12B5B0"/>
+  </g>
+  <g id="sneakers">
+    <path fill="#1E1E1E" d="M64 262h28v6h12v16H52v-12h6v-6h6zm50 2h26v4h10v6h18v10h-58v-14h4z"/>
+    <path fill="#FFF8E9" d="M66 266h22v6h10v8H58v-6h6zm50 2h20v4h10v6h14v2h-44z"/>
+    <path fill="#E2AA2F" d="M54 280h48v4H54zm58 0h54v4h-54z"/>
+    <rect x="68" y="268" width="18" height="4" fill="#F5D263"/><rect x="120" y="270" width="18" height="4" fill="#F5D263"/>
+  </g>
+</svg>

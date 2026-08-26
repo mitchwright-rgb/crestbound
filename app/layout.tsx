@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Fredoka, Lobster_Two, Silkscreen } from 'next/font/google';
+import { Fredoka, Pacifico, Silkscreen } from 'next/font/google';
 import './globals.css';
 
 const fredoka = Fredoka({
@@ -14,10 +14,10 @@ const silkscreen = Silkscreen({
   weight: ['400', '700'],
 });
 
-const lobsterTwo = Lobster_Two({
+const pacifico = Pacifico({
   variable: '--font-script',
   subsets: ['latin'],
-  weight: ['400', '700'],
+  weight: '400',
 });
 
 export const metadata: Metadata = {
@@ -49,7 +49,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${fredoka.variable} ${silkscreen.variable} ${lobsterTwo.variable} antialiased`}
+        className={`${fredoka.variable} ${silkscreen.variable} ${pacifico.variable} antialiased`}
       >
         {children}
       </body>
