@@ -8,8 +8,8 @@ button, input { font: inherit; }
 button:focus-visible, input:focus-visible, canvas:focus-visible { outline: 4px solid var(--teal-light); outline-offset: 3px; }
 body { overflow: hidden; color: var(--cream); background: #071316; font-family: var(--font-playful), system-ui, sans-serif; image-rendering: pixelated; }
 body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; background: #071316; }
-.shell { width: 100vw; min-height: 100svh; display: grid; place-items: center; padding: 0; background: #071316; }
-.game-frame { position: relative; width: 100vw; height: 100svh; max-height: none; overflow: hidden; isolation: isolate; border: 0; background: #071316; box-shadow: none; }
+.shell { width: 100%; max-width: 100%; min-height: 100svh; display: grid; place-items: center; overflow: hidden; padding: 0; background: #071316; }
+.game-frame { position: relative; width: 100%; max-width: 100%; height: 100svh; max-height: none; overflow: hidden; isolation: isolate; border: 0; background: #071316; box-shadow: none; touch-action: none; }
 .game-frame::before { position: absolute; z-index: 3; inset: 0; content: ''; pointer-events: none; background: radial-gradient(ellipse at center, transparent 52%, rgb(1 7 9 / 38%) 100%); }
 .game-frame::after { position: absolute; z-index: 40; inset: 0; content: ''; pointer-events: none; background: repeating-linear-gradient(0deg, rgb(255 255 255 / 0%) 0 3px, rgb(1 10 12 / 9%) 3px 4px); mix-blend-mode: multiply; }
 .game-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; object-fit: contain; outline: none; background: #071316; image-rendering: pixelated; image-rendering: crisp-edges; }
@@ -226,20 +226,56 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .hud-actions button { min-width: 44px; min-height: 44px; border-width: 2px; box-shadow: 3px 3px 0 rgb(2 7 8 / 45%); font-size: 9px; }
   .route-meter { grid-column: 1 / -1; width: min(48vw, 420px); height: 6px; justify-self: center; margin: -2px 0 0; border-width: 1px; outline: 0; box-shadow: 2px 2px 0 rgb(0 0 0 / 38%); }
   .touch-controls { left: max(16px, env(safe-area-inset-left)); right: max(16px, env(safe-area-inset-right)); bottom: max(9px, env(safe-area-inset-bottom)); }
-  .touch-controls > div { gap: 11px; }
-  .touch-controls button { width: 58px; height: 58px; border-width: 3px; outline-width: 1px; box-shadow: 3px 3px 0 #020707; opacity: .88; font-size: 21px; }
-  .touch-controls .dash-control, .touch-controls .jump-control { width: 70px; height: 70px; font-size: 10px; }
+  .touch-controls > div { gap: 12px; }
+  .touch-controls button { width: 68px; height: 68px; border-width: 3px; outline-width: 1px; box-shadow: 3px 3px 0 #020707; opacity: .9; font-size: 24px; }
+  .touch-controls .dash-control, .touch-controls .jump-control { width: 82px; height: 82px; font-size: 11px; }
   .touch-controls .dash-control.ready { color: #071316; background: repeating-linear-gradient(0deg, var(--teal-light) 0 5px, #62c8c5 5px 6px); }
   .touch-controls button:active { opacity: 1; }
-  .game-modal { max-height: calc(100svh - max(16px, env(safe-area-inset-top)) - max(16px, env(safe-area-inset-bottom))); overflow-y: auto; overscroll-behavior: contain; }
-  .game-modal > p:first-child { font-size: 11px; }
-  .game-modal .secondary { min-height: 44px; font-size: 11px; }
-  .result-grid small { font-size: 10px; }
-  .score-form label { font-size: 11px; }
-  .score-form small, .score-form em { font-size: 10px; line-height: 1.35; }
-  .score-form button { min-height: 44px; font-size: 12px; }
+  .game-modal { width: min(620px, calc(100% - max(24px, env(safe-area-inset-left)) - max(24px, env(safe-area-inset-right)))); max-height: calc(100dvh - max(12px, env(safe-area-inset-top)) - max(12px, env(safe-area-inset-bottom))); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; padding: 12px 18px; }
+  .game-modal > p:first-child { font-size: 9px; }
+  .game-modal h2 { margin: 5px 0 8px; font-size: clamp(24px, 8vh, 32px); }
+  .game-modal > p:not(:first-child) { margin: 0 auto 10px; font-size: 12px; line-height: 1.25; }
+  .game-modal > button { min-height: 42px; padding-block: 8px; font-size: 11px; }
+  .game-modal .secondary { min-height: 40px; margin-top: 8px; font-size: 10px; }
+  .result-grid { gap: 5px; margin: 7px 0; }
+  .result-grid span { gap: 2px; padding: 6px 5px; }
+  .result-grid b { font-size: 15px; }
+  .result-grid small { font-size: 8px; }
+  .score-form { margin-bottom: 7px; padding: 6px 8px; }
+  .score-form label { margin-bottom: 4px; font-size: 9px; }
+  .score-form input { height: 38px; }
+  .score-form small, .score-form em { margin-top: 4px; font-size: 8px; line-height: 1.25; }
+  .score-form button { min-height: 38px; font-size: 10px; }
+  .rank-callout { margin-bottom: 8px; padding: 8px; font-size: 11px; }
   .dash-coach { bottom: 82px; width: min(420px, calc(100% - 170px)); padding: 9px 12px; }
   .dash-coach b { font-size: 12px; }
   .dash-coach span { font-size: 14px; }
   .dash-coach button { min-width: 92px; min-height: 38px; font-size: 10px; }
+}
+
+/* Phone portrait is a fixed app screen, not a horizontally movable webpage. */
+@media (max-width: 700px) and (orientation: portrait) {
+  html, body, .shell, .game-frame, .title-screen { width: 100%; max-width: 100%; overflow-x: hidden; }
+  .title-screen { height: 100dvh; min-height: 0; overflow-y: hidden; padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)); }
+  .title-screen::before { inset: 6px; }
+  .home-hero { width: 100%; max-width: 100%; height: 100%; max-height: 100%; min-width: 0; align-content: center; gap: 4px; overflow: hidden; padding: 8px 12px 10px; }
+  .sunny-lockup { min-width: 0; }
+  .sunny-hero { width: min(20vw, 78px); }
+  .sunny-lockup > span { min-height: 24px; margin-top: -2px; padding: 5px 9px 4px; font-size: 7px; }
+  .title-card { width: 100%; max-width: 100%; min-width: 0; }
+  .title-card h1 { max-width: 100%; font-size: clamp(38px, 11.5vw, 48px); letter-spacing: -.055em; white-space: nowrap; }
+  .title-card .tagline { margin: 5px auto 7px; font-size: clamp(12px, 3.4vw, 14px); line-height: 1.15; }
+  .daily-course { width: 100%; max-width: 100%; gap: 3px 9px; margin: 0 auto 7px; padding: 6px 8px; }
+  .daily-course span { font-size: 8px; line-height: 1.25; }
+  .daily-course b { font-size: 10px; line-height: 1.25; }
+  .daily-course em { font-size: 9px; line-height: 1.25; }
+  .title-card .play-button { width: 100%; min-height: 46px; padding: 8px 10px; font-size: 9px; }
+  .daily-glance { width: 100%; justify-content: center; gap: 4px 9px; margin-top: 7px; padding: 5px 7px; font-size: 9px; line-height: 1.25; }
+  .community-progress { width: 100%; margin-top: 6px; }
+  .community-progress > div, .community-progress small { font-size: 8px; line-height: 1.25; }
+  .community-progress progress { height: 9px; margin: 4px 0 1px; }
+  .home-links { width: 100%; flex-wrap: nowrap; justify-content: space-between; gap: 10px; margin-top: 6px; }
+  .home-links button { min-width: 0; min-height: 34px; flex: 1 1 0; font-size: 8px; line-height: 1.25; }
+  .install-tip { max-width: 100%; margin: 5px 0 0; font-size: 7px; line-height: 1.25; }
+  .home-panel { max-width: calc(100% - 18px); max-height: calc(100dvh - 18px); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
 }
