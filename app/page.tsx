@@ -2,10 +2,10 @@
 
 /* eslint-disable @next/next/no-img-element -- game sprites are rendered directly into canvas */
 
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { FormEvent, PointerEvent as ReactPointerEvent, useCallback, useEffect, useRef, useState } from 'react';
 
 type Screen = 'title' | 'playing' | 'paused' | 'won' | 'over';
-type Hud = { sparks: number; total: number; lives: number; time: number; best: number | null; checkpoint: number };
+type Hud = { sparks: number; total: number; lives: number; time: number; best: number | null; checkpoint: number; progress: number };
 type Platform = { x: number; y: number; w: number; h: number; moving?: boolean; phase?: number; baseY?: number };
 type Spark = { x: number; y: number; taken?: boolean; secret?: boolean };
 type Enemy = { x: number; y: number; minX: number; maxX: number; speed: number; dir: number; alive: boolean };
@@ -72,7 +72,7 @@ export default function Home() {
   const [screen, setScreen] = useState<Screen>('title');
   const [muted, setMuted] = useState(false);
   const mutedRef = useRef(false);
-  const [hud, setHud] = useState<Hud>({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: null, checkpoint: 0 });
+  const [hud, setHud] = useState<Hud>({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: null, checkpoint: 0, progress: 0 });
   const audioRef = useRef<AudioContext | null>(null);
   const musicRef = useRef<{ timer: ReturnType<typeof setInterval>; gain: GainNode; step: number } | null>(null);
   const runIdRef = useRef<string | null>(null);
@@ -232,6 +232,30 @@ export default function Home() {
     if (active) canvasRef.current?.focus();
   }
 
+  function beginPress(control: keyof typeof inputRef.current, event: ReactPointerEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    press(control, true);
+  }
+
+  function endPress(control: keyof typeof inputRef.current, event: ReactPointerEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    press(control, false);
+  }
+
+  useEffect(() => {
+    const clearTouchInput = () => { inputRef.current = { left: false, right: false, jump: false, dash: false }; };
+    window.addEventListener('blur', clearTouchInput);
+    window.addEventListener('pointercancel', clearTouchInput);
+    document.addEventListener('visibilitychange', clearTouchInput);
+    return () => {
+      window.removeEventListener('blur', clearTouchInput);
+      window.removeEventListener('pointercancel', clearTouchInput);
+      document.removeEventListener('visibilitychange', clearTouchInput);
+    };
+  }, []);
+
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -241,7 +265,7 @@ export default function Home() {
     const spriteSheet = new Image();
     spriteSheet.src = '/sunny-pixel-master.svg';
     const keys = new Set<string>();
-    const player = { x: 120, y: 510, w: 50, h: 88, vx: 0, vy: 0, grounded: false, jumps: 0, dashTime: 0, dashCooldown: 0, facing: 1, invuln: 0 };
+    const player = { x: 120, y: 520, w: 46, h: 82, vx: 0, vy: 0, grounded: false, jumps: 0, dashTime: 0, dashCooldown: 0, facing: 1, invuln: 0 };
     let sparks = sparkSeed.map((item) => ({ ...item }));
     let enemies = enemySeed.map((item) => ({ ...item }));
     let lives = 3;
@@ -256,26 +280,28 @@ export default function Home() {
     let last = performance.now();
     let lastHud = 0;
     let animation = 0;
+    let screenShake = 0;
 
     const tone = sound;
     const overlap = (ax: number, ay: number, aw: number, ah: number, bx: number, by: number, bw: number, bh: number) => ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
     const resetPosition = () => {
-      player.x = checkpoints[checkpointIndex]; player.y = 500; player.vx = 0; player.vy = 0; player.invuln = 1.5;
+      player.x = checkpoints[checkpointIndex]; player.y = 520; player.vx = 0; player.vy = 0; player.invuln = 1.5;
     };
     const hurt = () => {
       if (player.invuln > 0) return;
       lives -= 1;
+      screenShake = .24;
       tone('hit');
       if (lives <= 0) {
         setGameScreen('over');
       } else resetPosition();
     };
     const reset = () => {
-      player.x = 120; player.y = 500; player.vx = 0; player.vy = 0; player.invuln = 0; player.jumps = 0;
+      player.x = 120; player.y = 520; player.vx = 0; player.vy = 0; player.invuln = 0; player.jumps = 0;
       sparks = sparkSeed.map((item) => ({ ...item }));
       enemies = enemySeed.map((item) => ({ ...item }));
       lives = 3; collected = 0; elapsed = 0; cameraX = 0; checkpointIndex = 0; jumpBuffer = 0; coyote = 0; previousJump = false; previousDash = false;
-      setHud((current) => ({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: current.best, checkpoint: 0 }));
+      setHud((current) => ({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: current.best, checkpoint: 0, progress: 0 }));
     };
     resetRef.current = reset;
 
@@ -287,8 +313,10 @@ export default function Home() {
       if ((event.code === 'Space' || event.code === 'ArrowUp' || event.code === 'KeyW') && !event.repeat) jumpBuffer = 0.14;
     }
     function keyUp(event: KeyboardEvent) { keys.delete(event.code); }
+    function clearKeys() { keys.clear(); }
     window.addEventListener('keydown', keyDown, { passive: false });
     window.addEventListener('keyup', keyUp);
+    window.addEventListener('blur', clearKeys);
 
     function inputState() {
       const pad = navigator.getGamepads?.()[0];
@@ -310,6 +338,7 @@ export default function Home() {
       const input = inputState();
       const direction = Number(input.right) - Number(input.left);
       if (direction) player.facing = direction;
+      if (direction && player.vx && Math.sign(player.vx) !== direction) player.vx *= .38;
       const acceleration = player.grounded ? 2200 : 1450;
       player.vx += direction * acceleration * dt;
       if (!direction) player.vx *= Math.pow(player.grounded ? 0.0008 : 0.08, dt);
@@ -322,32 +351,41 @@ export default function Home() {
       }
       if (!input.jump && player.vy < -260) player.vy += 1450 * dt;
       if (input.dash && !previousDash && player.dashCooldown <= 0) {
-        player.dashTime = 0.17; player.dashCooldown = 0.82; player.vx = player.facing * 900; player.vy *= 0.18; tone('dash');
+        player.dashTime = 0.17; player.dashCooldown = 0.82; player.vx = player.facing * 900; player.vy *= 0.18; screenShake = .08; tone('dash');
       }
       previousJump = input.jump;
       previousDash = input.dash;
       if (player.dashTime <= 0) player.vy += 1850 * dt;
       player.vy = Math.min(player.vy, 980);
+      screenShake = Math.max(0, screenShake - dt);
 
       const activePlatforms = platforms.map((platform) => {
         if (!platform.moving) return platform;
         return { ...platform, y: (platform.baseY ?? platform.y) + Math.sin(elapsed * 1.45 + (platform.phase ?? 0)) * 72 };
       });
+      const previousX = player.x;
       player.x += player.vx * dt;
       for (const platform of activePlatforms) {
-        if (!overlap(player.x, player.y, player.w, player.h, platform.x, platform.y, platform.w, platform.h)) continue;
-        if (player.vx > 0) player.x = platform.x - player.w;
-        else if (player.vx < 0) player.x = platform.x + platform.w;
-        player.vx *= -0.05;
+        const verticallyInside = player.y + 8 < platform.y + platform.h && player.y + player.h - 8 > platform.y;
+        if (!verticallyInside) continue;
+        const crossedLeftEdge = player.vx > 0 && previousX + player.w <= platform.x + 2 && player.x + player.w > platform.x;
+        const crossedRightEdge = player.vx < 0 && previousX >= platform.x + platform.w - 2 && player.x < platform.x + platform.w;
+        if (crossedLeftEdge) { player.x = platform.x - player.w; player.vx = 0; }
+        else if (crossedRightEdge) { player.x = platform.x + platform.w; player.vx = 0; }
       }
-      const previousBottom = player.y + player.h;
+      const previousY = player.y;
+      const previousBottom = previousY + player.h;
       player.y += player.vy * dt;
       player.grounded = false;
       for (const platform of activePlatforms) {
-        if (!overlap(player.x, player.y, player.w, player.h, platform.x, platform.y, platform.w, platform.h)) continue;
-        if (player.vy >= 0 && previousBottom <= platform.y + 18) {
+        const horizontallyInside = player.x + player.w - 7 > platform.x && player.x + 7 < platform.x + platform.w;
+        if (!horizontallyInside) continue;
+        const newBottom = player.y + player.h;
+        const landed = player.vy >= 0 && previousBottom <= platform.y + 4 && newBottom >= platform.y;
+        const hitCeiling = player.vy < 0 && previousY >= platform.y + platform.h - 4 && player.y <= platform.y + platform.h;
+        if (landed) {
           player.y = platform.y - player.h; player.vy = 0; player.grounded = true; player.jumps = 0;
-        } else if (player.vy < 0) { player.y = platform.y + platform.h; player.vy = 20; }
+        } else if (hitCeiling) { player.y = platform.y + platform.h; player.vy = 20; }
       }
       player.x = Math.max(0, Math.min(WORLD_W - player.w, player.x));
       if (player.y > 800) hurt();
@@ -376,23 +414,28 @@ export default function Home() {
       if (player.x > 7535) {
         const best = Number(window.localStorage.getItem('crestbound-best')) || Infinity;
         if (elapsed < best) window.localStorage.setItem('crestbound-best', String(elapsed));
-        setHud({ sparks: collected, total: sparks.length, lives, time: elapsed, best: Math.min(best, elapsed), checkpoint: checkpointIndex });
+        setHud({ sparks: collected, total: sparks.length, lives, time: elapsed, best: Math.min(best, elapsed), checkpoint: checkpointIndex, progress: player.x });
         recordStreak(); tone('win'); setGameScreen('won');
       }
       cameraX += (Math.max(0, Math.min(WORLD_W - VIEW_W, player.x - 390)) - cameraX) * Math.min(1, dt * 5.5);
       if (elapsed - lastHud > 0.08) {
         lastHud = elapsed;
         const stored = window.localStorage.getItem('crestbound-best');
-        setHud({ sparks: collected, total: sparks.length, lives, time: elapsed, best: stored ? Number(stored) : null, checkpoint: checkpointIndex });
+        setHud({ sparks: collected, total: sparks.length, lives, time: elapsed, best: stored ? Number(stored) : null, checkpoint: checkpointIndex, progress: player.x });
       }
     }
 
     function draw() {
       const ctx = context;
-      ctx.setTransform(.25, 0, 0, .25, 0, 0);
+      const shakeX = screenShake > 0 ? ((Math.floor(elapsed * 60) % 3) - 1) * 4 : 0;
+      ctx.setTransform(.25, 0, 0, .25, shakeX * .25, 0);
       ctx.imageSmoothingEnabled = false;
-      ctx.fillStyle = '#071820'; ctx.fillRect(0, 0, VIEW_W, VIEW_H);
-      ctx.fillStyle = '#0c2830'; ctx.fillRect(0, 252, VIEW_W, 468);
+      const zone = Math.min(3, Math.floor((cameraX + 240) / 1900));
+      const skyTop = ['#071820', '#081724', '#10152a', '#18182d'][zone];
+      const skyLow = ['#0c2830', '#102d38', '#18313c', '#3a2933'][zone];
+      ctx.fillStyle = skyTop; ctx.fillRect(-8, 0, VIEW_W + 16, VIEW_H);
+      ctx.fillStyle = skyLow; ctx.fillRect(-8, 252, VIEW_W + 16, 468);
+      ctx.fillStyle = ['#12343b', '#173744', '#233b45', '#51363a'][zone]; ctx.fillRect(-8, 360, VIEW_W + 16, 360);
       ctx.save();
       for (let index = 0; index < 54; index += 1) {
         const x = ((index * 193 - cameraX * .08) % 1500 + 1500) % 1500 - 100;
@@ -404,6 +447,7 @@ export default function Home() {
       const moonX = Math.floor((1060 - cameraX * .03) / 8) * 8;
       ctx.fillStyle = '#d18c18'; ctx.fillRect(moonX - 48, 72, 96, 112);
       ctx.fillStyle = '#f5d263'; ctx.fillRect(moonX - 64, 88, 128, 80); ctx.fillRect(moonX - 48, 72, 96, 112);
+      ctx.fillStyle = '#e2aa2f'; ctx.fillRect(moonX - 34, 92, 18, 16); ctx.fillRect(moonX + 18, 132, 24, 16); ctx.fillRect(moonX - 12, 156, 16, 12);
       for (let layer = 0; layer < 2; layer += 1) {
         const parallax = layer ? .32 : .17;
         const baseY = layer ? 505 : 430;
@@ -411,11 +455,18 @@ export default function Home() {
         for (let index = -1; index < 18; index += 1) {
           const x = index * 120 - ((cameraX * parallax) % 120);
           const h = 80 + Math.abs((index * 47 + layer * 31) % 150);
-          ctx.fillStyle = building; ctx.fillRect(Math.floor(x / 8) * 8, baseY - h, 96, h + 220);
-          ctx.fillStyle = layer ? '#2c5558' : '#315c60';
-          for (let wx = 16; wx < 80; wx += 24) for (let wy = baseY - h + 16; wy < baseY - 12; wy += 28) ctx.fillRect(Math.floor(x / 8) * 8 + wx, wy, 8, 12);
+          const buildingX = Math.floor(x / 8) * 8;
+          ctx.fillStyle = building; ctx.fillRect(buildingX, baseY - h, 96, h + 220);
+          if (index % 3 === 0) { ctx.fillRect(buildingX + 44, baseY - h - 28, 8, 28); ctx.fillRect(buildingX + 34, baseY - h - 28, 28, 5); }
+          for (let wx = 16; wx < 80; wx += 24) for (let wy = baseY - h + 16; wy < baseY - 12; wy += 28) {
+            const lit = (index + wx + wy + layer) % 4 !== 0;
+            ctx.fillStyle = lit ? (layer ? '#2c5558' : '#315c60') : (zone > 1 ? '#d18c18' : '#214246');
+            ctx.fillRect(buildingX + wx, wy, 8, 12);
+          }
         }
       }
+      ctx.fillStyle = '#78d7d2';
+      for (let index = 0; index < 16; index += 1) { const x = ((index * 101 - cameraX * .52) % 1440 + 1440) % 1440 - 80; ctx.fillRect(x, 520 + (index % 3) * 10, 10, 4); }
       ctx.restore();
 
       ctx.save(); ctx.translate(-cameraX, 0);
@@ -425,10 +476,21 @@ export default function Home() {
         ctx.fillStyle = '#08191c'; ctx.fillRect(px, py, platform.w, platform.h);
         ctx.fillStyle = '#b96f14'; ctx.fillRect(px, py, platform.w, 20);
         ctx.fillStyle = '#f2b52b'; ctx.fillRect(px, py, platform.w, 8);
+        ctx.fillStyle = '#fff0a8'; ctx.fillRect(px + 8, py + 2, Math.max(0, platform.w - 16), 2);
+        ctx.fillStyle = '#071316'; for (let x = px + 18; x < px + platform.w - 8; x += 48) ctx.fillRect(x, py + 12, 5, 5);
         for (let x = px; x < px + platform.w; x += 32) for (let y = py + 24; y < py + platform.h; y += 24) {
           ctx.fillStyle = ((x + y) / 8) % 2 ? '#12363a' : '#17454a'; ctx.fillRect(x, y, 24, 16);
         }
       });
+      const drawSign = (x: number, y: number, text: string, accent: string) => {
+        ctx.fillStyle = '#071316'; ctx.fillRect(x - 6, y - 6, 150, 48);
+        ctx.fillStyle = accent; ctx.fillRect(x, y, 138, 36);
+        ctx.fillStyle = '#071316'; ctx.fillRect(x + 5, y + 5, 128, 26);
+        ctx.fillStyle = accent; ctx.font = 'bold 18px monospace'; ctx.fillText(text, x + 12, y + 24);
+      };
+      drawSign(760, 535, 'KEEP GOING', '#78d7d2');
+      drawSign(3720, 545, 'HALFWAY', '#f5d263');
+      drawSign(7060, 540, 'FINAL PUSH', '#ef6f52');
       spikeZones.forEach((spike) => {
         ctx.fillStyle = '#f06f52';
         for (let x = spike.x; x < spike.x + spike.w; x += 24) { ctx.beginPath(); ctx.moveTo(x, spike.y + 24); ctx.lineTo(x + 12, spike.y); ctx.lineTo(x + 24, spike.y + 24); ctx.closePath(); ctx.fill(); }
@@ -444,7 +506,9 @@ export default function Home() {
         ctx.save(); ctx.translate(spark.x, spark.y + bob); const color = spark.secret ? '#78d7d2' : '#f5d263';
         ctx.fillStyle = '#071316'; ctx.fillRect(-12, -20, 24, 40); ctx.fillRect(-20, -12, 40, 24);
         ctx.fillStyle = color; ctx.fillRect(-8, -20, 16, 40); ctx.fillRect(-20, -8, 40, 16);
-        ctx.fillStyle = '#fff8e9'; ctx.fillRect(-4, -8, 8, 16); ctx.restore();
+        ctx.fillStyle = '#fff8e9'; ctx.fillRect(-4, -8, 8, 16);
+        if (Math.floor(elapsed * 6 + index) % 3 === 0) { ctx.fillRect(-24, -20, 4, 4); ctx.fillRect(20, 16, 4, 4); }
+        ctx.restore();
       });
       enemies.forEach((enemy) => {
         if (!enemy.alive) return;
@@ -453,6 +517,7 @@ export default function Home() {
         ctx.fillStyle = '#071316'; ctx.fillRect(ex - 16, ey - 8, 12, 12); ctx.fillRect(ex + 8, ey - 8, 12, 12);
         ctx.fillStyle = '#fff8e9'; ctx.fillRect(ex - 12, ey - 8, 4, 4); ctx.fillRect(ex + 12, ey - 8, 4, 4);
       });
+      ctx.fillStyle = '#071316'; ctx.fillRect(7500, 414, 88, 24); ctx.fillStyle = '#f5d263'; ctx.font = 'bold 16px monospace'; ctx.fillText('EXIT', 7520, 432);
       ctx.fillStyle = '#b96f14'; ctx.fillRect(7484, 440, 120, 180); ctx.fillStyle = '#f5d263'; ctx.fillRect(7496, 452, 96, 168);
       ctx.fillStyle = Math.floor(elapsed * 5) % 2 ? '#18a7a2' : '#78d7d2'; ctx.fillRect(7512, 468, 64, 152);
       ctx.fillStyle = '#071820'; ctx.fillRect(7528, 484, 32, 136);
@@ -465,8 +530,16 @@ export default function Home() {
       else if (!player.grounded) spriteIndex = player.vy < 0 ? 3 : 4;
       else if (Math.abs(player.vx) > 80) spriteIndex = Math.floor(elapsed * 10) % 2 ? 1 : 2;
       if (spriteSheet.complete && spriteSheet.naturalWidth) {
-        const drawH = spriteIndex === 5 ? 112 : 132;
+        const drawH = spriteIndex === 5 ? 106 : 116;
         const drawW = drawH * (32 / 48);
+        if (player.dashTime > 0) {
+          for (let trail = 3; trail > 0; trail -= 1) {
+            ctx.globalAlpha = .1 + trail * .08;
+            ctx.save(); ctx.translate(player.x + player.w / 2 - player.facing * trail * 30, player.y + player.h); ctx.scale(player.facing, 1);
+            ctx.drawImage(spriteSheet, 160, 0, 32, 48, -drawW / 2, -drawH, drawW, drawH); ctx.restore();
+          }
+          ctx.globalAlpha = 1;
+        }
         ctx.save(); ctx.translate(player.x + player.w / 2, player.y + player.h); ctx.scale(player.facing, 1);
         ctx.drawImage(spriteSheet, spriteIndex * 32, 0, 32, 48, -drawW / 2, -drawH, drawW, drawH); ctx.restore();
       } else { ctx.fillStyle = '#f5d263'; ctx.fillRect(player.x, player.y, player.w, player.h); }
@@ -482,7 +555,7 @@ export default function Home() {
     }
     animation = requestAnimationFrame(loop);
     return () => {
-      cancelAnimationFrame(animation); stopMusic(); window.removeEventListener('keydown', keyDown); window.removeEventListener('keyup', keyUp); resetRef.current = null;
+      cancelAnimationFrame(animation); stopMusic(); window.removeEventListener('keydown', keyDown); window.removeEventListener('keyup', keyUp); window.removeEventListener('blur', clearKeys); resetRef.current = null;
     };
   }, []);
 
@@ -503,6 +576,7 @@ export default function Home() {
               <button type="button" onClick={toggleSound} aria-label={muted ? 'Turn sound on' : 'Mute sound'}>{muted ? 'MUTE' : '♪ ON'}</button>
               <button type="button" onClick={togglePause} aria-label={screen === 'paused' ? 'Resume game' : 'Pause game'}>{screen === 'paused' ? '▶' : 'Ⅱ'}</button>
             </div>
+            <div className="route-meter" aria-label={`${Math.round(hud.progress / (WORLD_W - 265) * 100)} percent through the course`}><span style={{ width: `${Math.min(100, hud.progress / (WORLD_W - 265) * 100)}%` }} /></div>
           </header>
         )}
 
@@ -552,8 +626,8 @@ export default function Home() {
 
         {screen === 'playing' && (
           <div className="touch-controls" aria-label="Touch controls">
-            <div><button type="button" aria-label="Move left" onPointerDown={() => press('left', true)} onPointerUp={() => press('left', false)} onPointerCancel={() => press('left', false)}>←</button><button type="button" aria-label="Move right" onPointerDown={() => press('right', true)} onPointerUp={() => press('right', false)} onPointerCancel={() => press('right', false)}>→</button></div>
-            <div><button className="dash-control" type="button" aria-label="Dash" onPointerDown={() => press('dash', true)} onPointerUp={() => press('dash', false)} onPointerCancel={() => press('dash', false)}>DASH</button><button className="jump-control" type="button" aria-label="Jump" onPointerDown={() => press('jump', true)} onPointerUp={() => press('jump', false)} onPointerCancel={() => press('jump', false)}>JUMP</button></div>
+            <div><button type="button" aria-label="Move left" onPointerDown={(event) => beginPress('left', event)} onPointerUp={(event) => endPress('left', event)} onPointerCancel={(event) => endPress('left', event)} onLostPointerCapture={() => press('left', false)}>←</button><button type="button" aria-label="Move right" onPointerDown={(event) => beginPress('right', event)} onPointerUp={(event) => endPress('right', event)} onPointerCancel={(event) => endPress('right', event)} onLostPointerCapture={() => press('right', false)}>→</button></div>
+            <div><button className="dash-control" type="button" aria-label="Dash" onPointerDown={(event) => beginPress('dash', event)} onPointerUp={(event) => endPress('dash', event)} onPointerCancel={(event) => endPress('dash', event)} onLostPointerCapture={() => press('dash', false)}>DASH</button><button className="jump-control" type="button" aria-label="Jump" onPointerDown={(event) => beginPress('jump', event)} onPointerUp={(event) => endPress('jump', event)} onPointerCancel={(event) => endPress('jump', event)} onLostPointerCapture={() => press('jump', false)}>JUMP</button></div>
           </div>
         )}
       </section>

@@ -1,79 +1,41 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="256" height="48" viewBox="0 0 256 48" shape-rendering="crispEdges">
+  <title>Sunny vector pixel animation master</title>
   <defs>
-    <g id="sunny-head">
-      <path fill="#1E1E1E" d="M6 7h17v2h3v3h2v8h-2v3h-3v2H9v-2H6v-3H4v-9h2z"/>
-      <path fill="#F5D263" d="M7 9h15v2h3v3h1v5h-2v3h-3v1H10v-2H7v-3H6v-6h1z"/>
-      <path fill="#E2AA2F" d="M22 4h8v3h-9zM23 8h8v3h-8zM24 12h7v3h-6z"/>
-      <rect x="10" y="13" width="3" height="5" fill="#1E1E1E"/><rect x="19" y="12" width="3" height="5" fill="#1E1E1E"/>
-      <rect x="10" y="13" width="1" height="1" fill="#FFF8E9"/><rect x="19" y="12" width="1" height="1" fill="#FFF8E9"/>
-      <path fill="#1E1E1E" d="M13 19h7v2h-2v2h-3v-1h-2z"/><rect x="16" y="21" width="3" height="1" fill="#C87108"/>
-      <rect x="8" y="19" width="1" height="1" fill="#C87108"/><rect x="10" y="20" width="1" height="1" fill="#C87108"/><rect x="22" y="18" width="1" height="1" fill="#C87108"/>
+    <!-- Faithful vector redraw of the approved tiny Sunny: round head, three crest curls, freckles and oversized sneakers. -->
+    <g id="head">
+      <path fill="#1E1E1E" d="M18 5h3V3h3V1h6v2h-5v2h6v3h-8v2h7v3h-9V9h-3z"/>
+      <path fill="#E2AA2F" d="M20 5h2V4h3V3h3v1h-4v2h5v1h-7v2h6v1h-7V8h-3z"/>
+      <path fill="#1E1E1E" d="M9 5h12v2h4v3h2v3h1v7h-2v3h-3v2H9v-2H6v-3H4v-9h2V8h3z"/>
+      <path fill="#F5D263" d="M9 7h11v2h4v3h2v7h-2v2h-3v2H10v-2H8v-3H6v-6h2V9h1z"/>
+      <rect x="9" y="12" width="6" height="8" fill="#FFF8E9"/><rect x="18" y="12" width="6" height="8" fill="#FFF8E9"/>
+      <rect x="11" y="13" width="4" height="6" fill="#1E1E1E"/><rect x="18" y="13" width="4" height="6" fill="#1E1E1E"/>
+      <rect x="12" y="13" width="1" height="2" fill="#FFF8E9"/><rect x="19" y="13" width="1" height="2" fill="#FFF8E9"/>
+      <path fill="#1E1E1E" d="M12 20h10v2h-2v2h-6v-1h-2z"/><rect x="16" y="22" width="4" height="1" fill="#EF6F52"/>
+      <rect x="8" y="19" width="2" height="2" fill="#E29B24"/><rect x="10" y="21" width="1" height="1" fill="#E29B24"/><rect x="23" y="20" width="2" height="2" fill="#E29B24"/>
     </g>
-    <g id="sunny-body">
-      <path fill="#1E1E1E" d="M10 24h12v2h2v10h-2v3H10v-2H8V27h2z"/>
-      <path fill="#E2AA2F" d="M11 26h10v2h1v7h-2v2h-8v-2h-2v-7h1z"/>
-      <rect x="12" y="27" width="2" height="8" fill="#F5D263"/>
+    <g id="body">
+      <path fill="#1E1E1E" d="M11 24h10v2h2v10h-2v3H11v-2H9V27h2z"/>
+      <path fill="#E2AA2F" d="M12 26h8v2h1v7h-2v2h-6v-2h-2v-7h1z"/>
+      <rect x="13" y="27" width="2" height="8" fill="#F5D263"/>
     </g>
-    <g id="hand"><rect x="0" y="0" width="5" height="5" fill="#1E1E1E"/><rect x="1" y="1" width="3" height="3" fill="#F5D263"/></g>
-    <g id="shoe"><path fill="#1E1E1E" d="M0 1h3v1h5v4H0z"/><path fill="#FFF8E9" d="M1 2h2v1h4v2H1z"/><rect x="1" y="1" width="3" height="1" fill="#12B5B0"/><rect x="0" y="5" width="8" height="1" fill="#E2AA2F"/></g>
+    <g id="hand"><rect width="5" height="5" fill="#1E1E1E"/><rect x="1" y="1" width="3" height="3" fill="#F5D263"/><rect x="4" y="1" width="1" height="2" fill="#F5D263"/></g>
+    <g id="shoe"><path fill="#1E1E1E" d="M1 0h4v2h4v5H0V2h1z"/><path fill="#FFF8E9" d="M2 1h2v2h4v3H1V3h1z"/><rect x="1" y="1" width="4" height="2" fill="#12B5B0"/><rect x="0" y="6" width="9" height="1" fill="#E2AA2F"/></g>
   </defs>
 
-  <g transform="translate(0 0)">
-    <use href="#sunny-head"/><use href="#sunny-body"/>
-    <rect x="5" y="27" width="4" height="2" fill="#E2AA2F"/><use href="#hand" transform="translate(2 27)"/>
-    <rect x="23" y="27" width="4" height="2" fill="#E2AA2F"/><use href="#hand" transform="translate(26 27)"/>
-    <rect x="11" y="38" width="3" height="4" fill="#E2AA2F"/><rect x="19" y="38" width="3" height="4" fill="#E2AA2F"/>
-    <use href="#shoe" transform="translate(6 41)"/><use href="#shoe" transform="translate(18 41)"/>
-  </g>
-  <g transform="translate(32 0)">
-    <use href="#sunny-head" transform="translate(1 0)"/><use href="#sunny-body"/>
-    <rect x="4" y="28" width="7" height="2" fill="#E2AA2F"/><use href="#hand" transform="translate(1 27)"/>
-    <rect x="22" y="25" width="6" height="2" fill="#E2AA2F"/><use href="#hand" transform="translate(27 23)"/>
-    <rect x="10" y="38" width="8" height="3" fill="#E2AA2F"/><rect x="20" y="37" width="3" height="5" fill="#E2AA2F"/>
-    <use href="#shoe" transform="translate(3 39)"/><use href="#shoe" transform="translate(20 41)"/>
-  </g>
-  <g transform="translate(64 0)">
-    <use href="#sunny-head"/><use href="#sunny-body"/>
-    <rect x="5" y="25" width="6" height="2" fill="#E2AA2F"/><use href="#hand" transform="translate(1 23)"/>
-    <rect x="22" y="29" width="7" height="2" fill="#E2AA2F"/><use href="#hand" transform="translate(27 28)"/>
-    <rect x="10" y="37" width="3" height="5" fill="#E2AA2F"/><rect x="17" y="38" width="9" height="3" fill="#E2AA2F"/>
-    <use href="#shoe" transform="translate(5 41)"/><use href="#shoe" transform="translate(24 38) scale(-1 1)"/>
-  </g>
-  <g transform="translate(96 -2)">
-    <use href="#sunny-head"/><use href="#sunny-body"/>
-    <rect x="6" y="28" width="5" height="2" fill="#E2AA2F"/><use href="#hand" transform="translate(2 28)"/>
-    <rect x="22" y="22" width="3" height="8" fill="#E2AA2F"/><use href="#hand" transform="translate(21 18)"/>
-    <rect x="10" y="37" width="4" height="6" fill="#E2AA2F"/><rect x="20" y="37" width="3" height="6" fill="#E2AA2F"/>
-    <use href="#shoe" transform="translate(5 42)"/><use href="#shoe" transform="translate(20 42)"/>
-  </g>
-  <g transform="translate(128 0)">
-    <use href="#sunny-head"/><use href="#sunny-body" transform="translate(0 -1)"/>
-    <rect x="3" y="26" width="8" height="2" fill="#E2AA2F"/><use href="#hand" transform="translate(0 24)"/>
-    <rect x="22" y="25" width="8" height="2" fill="#E2AA2F"/><use href="#hand" transform="translate(28 23)"/>
-    <rect x="9" y="36" width="5" height="6" fill="#E2AA2F"/><rect x="21" y="36" width="5" height="6" fill="#E2AA2F"/>
-    <use href="#shoe" transform="translate(3 40)"/><use href="#shoe" transform="translate(28 40) scale(-1 1)"/>
-  </g>
-  <g transform="translate(160 3)">
-    <g transform="translate(2 4)"><use href="#sunny-head"/></g><g transform="translate(1 2)"><use href="#sunny-body"/></g>
-    <rect x="2" y="31" width="10" height="3" fill="#E2AA2F"/><use href="#hand" transform="translate(0 29)"/>
-    <rect x="22" y="31" width="8" height="3" fill="#E2AA2F"/><use href="#hand" transform="translate(28 29)"/>
-    <rect x="8" y="39" width="8" height="3" fill="#E2AA2F"/><rect x="20" y="39" width="7" height="3" fill="#E2AA2F"/>
-    <use href="#shoe" transform="translate(2 40)"/><use href="#shoe" transform="translate(30 40) scale(-1 1)"/>
-    <rect x="0" y="16" width="5" height="2" fill="#F5D263"/><rect x="1" y="20" width="7" height="2" fill="#F5D263"/>
-  </g>
-  <g transform="translate(192 1)">
-    <use href="#sunny-head" transform="translate(0 2)"/><use href="#sunny-body" transform="translate(0 2)"/>
-    <rect x="5" y="31" width="5" height="2" fill="#E2AA2F"/><use href="#hand" transform="translate(2 30)"/>
-    <rect x="22" y="31" width="5" height="2" fill="#E2AA2F"/><use href="#hand" transform="translate(26 30)"/>
-    <rect x="9" y="40" width="6" height="3" fill="#E2AA2F"/><rect x="20" y="40" width="6" height="3" fill="#E2AA2F"/>
-    <use href="#shoe" transform="translate(3 42)"/><use href="#shoe" transform="translate(29 42) scale(-1 1)"/>
-    <rect x="27" y="12" width="4" height="2" fill="#F06F52"/><rect x="29" y="9" width="2" height="7" fill="#F06F52"/>
-  </g>
-  <g transform="translate(224 -1)">
-    <use href="#sunny-head"/><use href="#sunny-body"/>
-    <rect x="5" y="22" width="4" height="9" fill="#E2AA2F"/><use href="#hand" transform="translate(3 18)"/>
-    <rect x="23" y="18" width="3" height="12" fill="#E2AA2F"/><use href="#hand" transform="translate(22 14)"/>
-    <rect x="11" y="38" width="3" height="4" fill="#E2AA2F"/><rect x="19" y="38" width="3" height="4" fill="#E2AA2F"/>
-    <use href="#shoe" transform="translate(6 41)"/><use href="#shoe" transform="translate(18 41)"/>
-  </g>
+  <!-- idle -->
+  <g><use href="#head"/><use href="#body"/><rect x="6" y="27" width="4" height="2" fill="#E2AA2F"/><use href="#hand" x="2" y="27"/><rect x="22" y="27" width="4" height="2" fill="#E2AA2F"/><use href="#hand" x="26" y="27"/><rect x="11" y="38" width="3" height="4" fill="#E2AA2F"/><rect x="19" y="38" width="3" height="4" fill="#E2AA2F"/><use href="#shoe" x="5" y="41"/><use href="#shoe" x="18" y="41"/></g>
+  <!-- run A -->
+  <g transform="translate(32)"><use href="#head" x="1"/><use href="#body"/><rect x="5" y="27" width="7" height="2" fill="#E2AA2F"/><use href="#hand" x="1" y="26"/><rect x="21" y="25" width="7" height="2" fill="#E2AA2F"/><use href="#hand" x="27" y="23"/><rect x="10" y="37" width="8" height="3" fill="#E2AA2F"/><rect x="20" y="37" width="3" height="5" fill="#E2AA2F"/><use href="#shoe" x="2" y="38"/><use href="#shoe" x="19" y="41"/></g>
+  <!-- run B -->
+  <g transform="translate(64)"><use href="#head"/><use href="#body"/><rect x="5" y="25" width="7" height="2" fill="#E2AA2F"/><use href="#hand" x="1" y="23"/><rect x="21" y="29" width="7" height="2" fill="#E2AA2F"/><use href="#hand" x="27" y="28"/><rect x="10" y="37" width="3" height="5" fill="#E2AA2F"/><rect x="18" y="38" width="8" height="3" fill="#E2AA2F"/><use href="#shoe" x="4" y="41"/><use href="#shoe" transform="translate(31 38) scale(-1 1)"/></g>
+  <!-- jump -->
+  <g transform="translate(96 -1)"><use href="#head"/><use href="#body"/><rect x="5" y="28" width="6" height="2" fill="#E2AA2F"/><use href="#hand" x="1" y="28"/><rect x="21" y="23" width="3" height="7" fill="#E2AA2F"/><use href="#hand" x="20" y="19"/><rect x="9" y="37" width="5" height="5" fill="#E2AA2F"/><rect x="20" y="37" width="4" height="5" fill="#E2AA2F"/><use href="#shoe" x="3" y="41"/><use href="#shoe" x="20" y="41"/></g>
+  <!-- fall -->
+  <g transform="translate(128)"><use href="#head"/><use href="#body" y="-1"/><rect x="3" y="26" width="8" height="2" fill="#E2AA2F"/><use href="#hand" y="24"/><rect x="21" y="26" width="8" height="2" fill="#E2AA2F"/><use href="#hand" x="28" y="24"/><rect x="9" y="36" width="5" height="6" fill="#E2AA2F"/><rect x="20" y="36" width="5" height="6" fill="#E2AA2F"/><use href="#shoe" x="2" y="40"/><use href="#shoe" transform="translate(32 40) scale(-1 1)"/></g>
+  <!-- dash -->
+  <g transform="translate(160 2)"><use href="#head" x="2" y="2"/><use href="#body" x="1"/><rect x="2" y="30" width="10" height="3" fill="#E2AA2F"/><use href="#hand" y="28"/><rect x="21" y="30" width="8" height="3" fill="#E2AA2F"/><use href="#hand" x="28" y="28"/><rect x="8" y="38" width="8" height="3" fill="#E2AA2F"/><rect x="20" y="38" width="7" height="3" fill="#E2AA2F"/><use href="#shoe" x="1" y="39"/><use href="#shoe" transform="translate(33 39) scale(-1 1)"/><rect x="0" y="14" width="7" height="2" fill="#78D7D2"/><rect x="1" y="19" width="9" height="2" fill="#18A7A2"/></g>
+  <!-- hit -->
+  <g transform="translate(192 1)"><use href="#head" y="2"/><use href="#body" y="2"/><rect x="5" y="31" width="6" height="2" fill="#E2AA2F"/><use href="#hand" x="1" y="30"/><rect x="21" y="31" width="6" height="2" fill="#E2AA2F"/><use href="#hand" x="26" y="30"/><rect x="9" y="40" width="5" height="3" fill="#E2AA2F"/><rect x="20" y="40" width="5" height="3" fill="#E2AA2F"/><use href="#shoe" x="2" y="41"/><use href="#shoe" transform="translate(33 41) scale(-1 1)"/><rect x="28" y="9" width="3" height="9" fill="#EF6F52"/><rect x="25" y="12" width="7" height="3" fill="#EF6F52"/></g>
+  <!-- win -->
+  <g transform="translate(224 -1)"><use href="#head"/><use href="#body"/><rect x="6" y="22" width="3" height="9" fill="#E2AA2F"/><use href="#hand" x="4" y="18"/><rect x="22" y="18" width="3" height="12" fill="#E2AA2F"/><use href="#hand" x="21" y="14"/><rect x="11" y="38" width="3" height="4" fill="#E2AA2F"/><rect x="19" y="38" width="3" height="4" fill="#E2AA2F"/><use href="#shoe" x="5" y="41"/><use href="#shoe" x="18" y="41"/></g>
 </svg>

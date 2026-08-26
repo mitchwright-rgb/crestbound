@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     description: 'Run the skyline. Recover the lost light.',
     url: 'https://sunny-crestbound.suncrest-7012.chatgpt.site',
     siteName: 'Suncrest Games',
-    images: [{ url: '/og-pixel.png', width: 1600, height: 900, alt: 'Sunny: Crestbound daily pixel platformer' }],
+    images: [{ url: '/og-pixel.png', width: 1664, height: 936, alt: 'Sunny: Crestbound daily pixel platformer' }],
     type: 'website',
   },
   twitter: {
