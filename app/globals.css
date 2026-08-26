@@ -539,19 +539,18 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .home-dashboard .home-links button:hover { border-color: var(--gold); color: var(--gold-light); }
 @media (max-width: 700px) and (orientation: portrait) {
   .title-screen { height: 100svh; overflow-x: hidden; overflow-y: auto; overscroll-behavior-y: contain; -webkit-overflow-scrolling: touch; padding: 0; }
-  .home-hero { height: auto; min-height: 100%; display: grid; grid-template-rows: auto auto; overflow: visible; }
-  .home-cover { width: 100%; height: auto; }
+  .home-hero { height: auto; min-height: 100%; max-height: none; display: flex; flex-direction: column; overflow: visible; }
+  .home-cover { width: 100%; height: auto; aspect-ratio: 1 / 1; flex: 0 0 auto; }
   .home-cover picture, .home-cover img { width: 100%; height: auto; }
   .home-cover img { object-fit: contain; object-position: center; }
   .home-dashboard {
     position: static;
     height: auto;
     min-height: 0;
-    display: grid;
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto auto;
-    align-content: start;
-    gap: 18px;
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    gap: 22px;
     padding: 24px 18px max(34px, calc(env(safe-area-inset-bottom) + 18px));
     border-top-width: 5px;
   }
@@ -559,12 +558,12 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .home-dashboard .daily-course span { font-size: 13px; }
   .home-dashboard .daily-course b { font-size: 18px; }
   .home-dashboard .play-button { min-height: 70px; padding: 14px; font-size: 15px; }
-  .home-dashboard .play-button { margin-bottom: 8px; }
+  .home-dashboard .play-button { margin-bottom: 4px; }
   .home-dashboard .daily-glance { min-height: 74px; gap: 7px; padding: 11px 14px; font-size: 13px; }
   .home-dashboard .daily-glance .community-progress > div { font-size: 11px; }
   .home-dashboard .daily-glance .community-progress progress { height: 12px; }
   .home-dashboard .daily-glance .community-progress small { font-size: 10px; }
-  .home-dashboard .home-links { grid-column: auto; gap: 8px; }
+  .home-dashboard .home-links { flex: 0 0 auto; grid-column: auto; gap: 8px; }
   .home-dashboard .home-links button { min-height: 58px; padding: 8px 5px; font-size: 11px; }
 }
 
