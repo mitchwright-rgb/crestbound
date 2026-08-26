@@ -2,7 +2,7 @@
 
 /* eslint-disable @next/next/no-img-element -- game sprites are rendered directly into canvas */
 
-import { FormEvent, PointerEvent as ReactPointerEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { FormEvent, PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 type Screen = 'title' | 'playing' | 'paused' | 'won' | 'over';
 type Hud = { sparks: number; total: number; lives: number; time: number; best: number | null; checkpoint: number; progress: number; dashReady: boolean };
@@ -11,7 +11,7 @@ type Spark = { x: number; y: number; taken?: boolean; secret?: boolean };
 type Enemy = { x: number; y: number; minX: number; maxX: number; speed: number; dir: number; alive: boolean };
 type Board = 'daily' | 'weekly' | 'all';
 type BoardEntry = { rank: number; name: string; timeMs: number; sparks: number; points?: number; runs?: number };
-type HomePanel = 'none' | 'leaderboard' | 'help';
+type HomePanel = 'none' | 'leaderboard' | 'help' | 'courses';
 
 type Community = { players: number; lights: number; goal: number; nearby: BoardEntry[]; playerRank: number | null; recent: string[] };
 
@@ -23,11 +23,11 @@ const VIEW_H = 720;
 
 const localDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(new Date());
 const daySerial = Math.floor(new Date(`${localDay}T12:00:00Z`).getTime() / 86400000);
-const courseIndex = ((daySerial % 3) + 3) % 3;
+const dailyCourseIndex = ((daySerial % 3) + 3) % 3;
 const courseSpecs = [
-  { id: 'goldline', name: 'Goldline Rooftops', short: 'GOLDLINE', accent: '#f5d263' },
-  { id: 'crosswind', name: 'Crosswind Heights', short: 'CROSSWIND', accent: '#78d7d2' },
-  { id: 'nightshift', name: 'Night Shift', short: 'NIGHT SHIFT', accent: '#ef6f52' },
+  { id: 'goldline', name: 'Goldline Rooftops', short: 'GOLDLINE', accent: '#f5d263', description: 'Balanced rooftops, branching high paths, and precision shortcuts.' },
+  { id: 'crosswind', name: 'Crosswind Heights', short: 'CROSSWIND', accent: '#78d7d2', description: 'Long aerial chains, moving platforms, and dash-heavy gaps.' },
+  { id: 'nightshift', name: 'Night Shift', short: 'NIGHT SHIFT', accent: '#ef6f52', description: 'Low tunnels, hazard lanes, and an enemy-heavy sprint.' },
 ] as const;
 const modifierSpecs = [
   { id: 'clear', name: 'Clear Skies' },
@@ -35,8 +35,8 @@ const modifierSpecs = [
   { id: 'moonstep', name: 'Moonstep' },
   { id: 'sparkstorm', name: 'Spark Storm' },
 ] as const;
-const course = courseSpecs[courseIndex];
-const modifier = modifierSpecs[((daySerial + courseIndex) % modifierSpecs.length + modifierSpecs.length) % modifierSpecs.length];
+const dailyCourse = courseSpecs[dailyCourseIndex];
+const dailyModifier = modifierSpecs[((daySerial + dailyCourseIndex) % modifierSpecs.length + modifierSpecs.length) % modifierSpecs.length];
 
 const basePlatforms: Platform[] = [
   { x: 0, y: 620, w: 860, h: 120 }, { x: 240, y: 500, w: 210, h: 24 }, { x: 560, y: 410, w: 180, h: 24 },
@@ -71,25 +71,53 @@ const baseEnemySeed: Enemy[] = [
   { x: 6690, y: 570, minX: 6250, maxX: 7100, speed: 185, dir: 1, alive: true },
 ];
 
-function elevate(y: number, index: number, copy: number) {
-  if (y >= 600 || courseIndex === 0) return y;
-  const shifts = courseIndex === 1 ? [-24, 16, -42, 26] : [-54, -10, 24, -34];
-  return Math.max(250, Math.min(555, y + shifts[(index + copy) % shifts.length]));
-}
+function buildCourse(index: number, modifierId: string) {
+  if (index === 0) {
+    const platforms = [0, 1].flatMap((copy) => basePlatforms.map((platform, platformIndex) => {
+      const shift = copy === 0 || platform.y >= 600 ? 0 : [24, -42, 36, -28][platformIndex % 4];
+      const y = Math.max(280, Math.min(555, platform.y + shift));
+      const xShift = copy === 0 || platform.y >= 600 ? 0 : [-30, 48, 0, 72][platformIndex % 4];
+      return { ...platform, x: platform.x + copy * COURSE_OFFSET + xShift, y, baseY: platform.moving ? y : platform.baseY };
+    }));
+    return {
+      platforms,
+      spikeZones: [0, 1].flatMap((copy) => baseSpikeZones.map((spike, spikeIndex) => ({ ...spike, x: spike.x + copy * COURSE_OFFSET + (copy ? spikeIndex % 2 * 70 : 0) }))),
+      sparkSeed: [0, 1].flatMap((copy) => baseSparkSeed.map((spark, sparkIndex) => ({ ...spark, x: spark.x + copy * COURSE_OFFSET + (copy ? (sparkIndex % 3 - 1) * 38 : 0), secret: spark.secret || (modifierId === 'sparkstorm' && sparkIndex % 6 === 0) }))),
+      enemySeed: [0, 1].flatMap((copy) => baseEnemySeed.map((enemy) => ({ ...enemy, x: enemy.x + copy * COURSE_OFFSET, minX: enemy.minX + copy * COURSE_OFFSET, maxX: enemy.maxX + copy * COURSE_OFFSET, speed: enemy.speed + copy * 18 }))),
+      checkpoints: [120, 2180, 4780, 7720, 9780, 12380],
+    };
+  }
 
-const platforms: Platform[] = [0, 1].flatMap((copy) => basePlatforms.map((platform, index) => {
-  const y = elevate(platform.y, index, copy);
-  const moving = platform.moving || (y < 600 && (index + courseIndex * 2 + copy) % 9 === 0);
-  return { ...platform, x: platform.x + copy * COURSE_OFFSET, y, moving, baseY: moving ? y : platform.baseY };
-}));
-const spikeZones = [0, 1].flatMap((copy) => baseSpikeZones.map((spike) => ({ ...spike, x: spike.x + copy * COURSE_OFFSET })));
-const sparkSeed: Spark[] = [0, 1].flatMap((copy) => baseSparkSeed.map((spark, index) => ({
-  ...spark, x: spark.x + copy * COURSE_OFFSET, y: elevate(spark.y, index, copy), secret: spark.secret || (modifier.id === 'sparkstorm' && index % 6 === 0),
-})));
-const enemySeed: Enemy[] = [0, 1].flatMap((copy) => baseEnemySeed.map((enemy) => ({
-  ...enemy, x: enemy.x + copy * COURSE_OFFSET, minX: enemy.minX + copy * COURSE_OFFSET, maxX: enemy.maxX + copy * COURSE_OFFSET, speed: enemy.speed + courseIndex * 14 + copy * 12,
-})));
-const checkpoints = [120, 2180, 4780, 7720, 9780, 12380];
+  const platforms: Platform[] = [];
+  const spikeZones: Array<{ x: number; y: number; w: number }> = [];
+  for (let section = 0; section < 20; section += 1) {
+    const x = section * 760;
+    if (index === 1) {
+      const width = section === 19 ? 960 : [520, 440, 610, 390][section % 4];
+      platforms.push({ x, y: 620, w: width, h: 120 });
+      platforms.push({ x: x + Math.max(250, width - 40), y: 510 - (section % 2) * 35, w: 170, h: 24, moving: section % 3 === 1, phase: section * .7, baseY: 510 - (section % 2) * 35 });
+      platforms.push({ x: x + 120 + (section % 3) * 45, y: 375 - (section % 2) * 55, w: 180, h: 24, moving: section % 4 === 2, phase: section, baseY: 375 - (section % 2) * 55 });
+      if (section % 2 === 0) platforms.push({ x: x + 500, y: 300 + (section % 3) * 35, w: 150, h: 24, moving: true, phase: section * .45, baseY: 300 + (section % 3) * 35 });
+      if (section % 4 === 2) spikeZones.push({ x: x + 120, y: 596, w: 110 });
+    } else {
+      const width = section === 19 ? 960 : [700, 520, 650, 440][section % 4];
+      platforms.push({ x, y: 620, w: width, h: 120 });
+      platforms.push({ x: x + 165, y: 455 + (section % 2) * 35, w: 240, h: 24 });
+      if (section % 3 !== 1) platforms.push({ x: x + 455, y: 355 - (section % 2) * 35, w: 175, h: 24, moving: section % 5 === 0, phase: section * .6, baseY: 355 - (section % 2) * 35 });
+      if (width < 600) platforms.push({ x: x + width + 25, y: 535, w: 145, h: 24 });
+      if (section % 2 === 0) spikeZones.push({ x: x + 315, y: 596, w: section % 4 === 0 ? 150 : 100 });
+    }
+  }
+
+  const aerial = platforms.filter((platform) => platform.y < 600).map((platform, sparkIndex) => ({ x: platform.x + platform.w / 2, y: platform.y - 48, secret: sparkIndex % 7 === 0 || (modifierId === 'sparkstorm' && sparkIndex % 4 === 0) }));
+  const groundLight = Array.from({ length: 20 }, (_, section) => ({ x: section * 760 + 105, y: 555, secret: false }));
+  const ground = platforms.filter((platform) => platform.y >= 600 && platform.w >= 430);
+  const enemySeed = ground.filter((_, groundIndex) => index === 2 || groundIndex % 2 === 0).map((platform, enemyIndex) => ({
+    x: platform.x + Math.min(platform.w - 80, 260 + enemyIndex % 3 * 70), y: 570, minX: platform.x + 60, maxX: platform.x + platform.w - 60,
+    speed: (index === 2 ? 155 : 115) + enemyIndex % 4 * 18, dir: enemyIndex % 2 ? -1 : 1, alive: true,
+  }));
+  return { platforms, spikeZones, sparkSeed: [...aerial, ...groundLight].sort((a, b) => a.x - b.x).slice(0, 60), enemySeed, checkpoints: [120, 2400, 4680, 7720, 10000, 12300] };
+}
 
 function formatTime(seconds: number) {
   const minutes = Math.floor(seconds / 60);
@@ -105,6 +133,13 @@ function medalFor(seconds: number) {
 }
 
 export default function Home() {
+  const [practiceCourseIndex, setPracticeCourseIndex] = useState<number | null>(null);
+  const isPractice = practiceCourseIndex !== null;
+  const activeCourseIndex = practiceCourseIndex ?? dailyCourseIndex;
+  const course = courseSpecs[activeCourseIndex];
+  const modifier = isPractice ? modifierSpecs[0] : dailyModifier;
+  const courseData = useMemo(() => buildCourse(activeCourseIndex, modifier.id), [activeCourseIndex, modifier.id]);
+  const { platforms, spikeZones, sparkSeed, enemySeed, checkpoints } = courseData;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const screenRef = useRef<Screen>('title');
   const inputRef = useRef({ left: false, right: false, jump: false, dash: false });
@@ -134,7 +169,7 @@ export default function Home() {
     let playerId = window.localStorage.getItem('crestbound-player-id');
     if (!playerId) { playerId = crypto.randomUUID(); window.localStorage.setItem('crestbound-player-id', playerId); }
     playerIdRef.current = playerId;
-    const stored = window.localStorage.getItem(`crestbound-best-${course.id}`);
+    const stored = window.localStorage.getItem(`crestbound-best-${dailyCourse.id}`);
     if (stored) setHud((current) => ({ ...current, best: Number(stored) }));
     setNickname(window.localStorage.getItem('crestbound-nickname') ?? '');
     setStreak(Number(window.localStorage.getItem('crestbound-streak')) || 0);
@@ -143,7 +178,7 @@ export default function Home() {
   const loadBoard = useCallback(async (nextBoard: Board) => {
     setBoardStatus('loading');
     try {
-      const params = new URLSearchParams({ board: nextBoard, courseId: course.id, playerId: playerIdRef.current });
+      const params = new URLSearchParams({ board: nextBoard, courseId: dailyCourse.id, playerId: playerIdRef.current });
       const response = await fetch(`/api/leaderboard?${params}`, { cache: 'no-store' });
       if (!response.ok) throw new Error('Leaderboard unavailable');
       const data = await response.json() as { entries?: BoardEntry[]; players?: number; lights?: number; goal?: number; nearby?: BoardEntry[]; playerRank?: number | null; recent?: string[] };
@@ -228,7 +263,7 @@ export default function Home() {
 
   function track(eventName: string) {
     if (!playerIdRef.current) return;
-    void fetch('/api/event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventName, playerId: playerIdRef.current, courseId: course.id }) }).catch(() => undefined);
+    void fetch('/api/event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventName, playerId: playerIdRef.current, courseId: dailyCourse.id }) }).catch(() => undefined);
   }
 
   function dismissDashCoach(learned = false) {
@@ -240,13 +275,15 @@ export default function Home() {
   async function startGame() {
     resetRef.current?.();
     setSubmitState('idle'); setRank(null); runIdRef.current = null;
-    try {
-      const response = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'start', playerId: playerIdRef.current, courseId: course.id, modifierId: modifier.id }) });
-      if (response.ok) runIdRef.current = ((await response.json()) as { runId: string }).runId;
-    } catch { /* Offline play remains available. */ }
+    if (!isPractice) {
+      try {
+        const response = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'start', playerId: playerIdRef.current, courseId: dailyCourse.id, modifierId: dailyModifier.id }) });
+        if (response.ok) runIdRef.current = ((await response.json()) as { runId: string }).runId;
+      } catch { /* Offline play remains available. */ }
+    }
     setGameScreen('playing');
     const needsCoach = !window.localStorage.getItem('crestbound-dash-learned');
-    dashCoachRef.current = needsCoach; setShowDashCoach(needsCoach); track('run_start');
+    dashCoachRef.current = needsCoach; setShowDashCoach(needsCoach); if (!isPractice) track('run_start');
     startMusic();
     requestAnimationFrame(() => canvasRef.current?.focus());
   }
@@ -283,7 +320,7 @@ export default function Home() {
     const cleanName = nickname.trim().toUpperCase();
     window.localStorage.setItem('crestbound-nickname', cleanName); setNickname(cleanName);
     try {
-      const response = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'finish', runId: runIdRef.current, playerId: playerIdRef.current, courseId: course.id, modifierId: modifier.id, name: cleanName, scoreMs: Math.round(hud.time * 1000), sparks: hud.sparks }) });
+      const response = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'finish', runId: runIdRef.current, playerId: playerIdRef.current, courseId: dailyCourse.id, modifierId: dailyModifier.id, name: cleanName, scoreMs: Math.round(hud.time * 1000), sparks: hud.sparks }) });
       const data = await response.json() as { rank?: number; error?: string };
       if (!response.ok) throw new Error(data.error);
       setRank(data.rank ?? null); setSubmitState('saved'); setBoard('daily'); void loadBoard('daily');
@@ -368,7 +405,8 @@ export default function Home() {
       sparks = sparkSeed.map((item) => ({ ...item }));
       enemies = enemySeed.map((item) => ({ ...item }));
       lives = 3; collected = 0; elapsed = 0; cameraX = 0; checkpointIndex = 0; jumpBuffer = 0; coyote = 0; previousJump = false; previousDash = false; trace = []; traceTimer = 0;
-      setHud((current) => ({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: current.best, checkpoint: 0, progress: 0, dashReady: true }));
+      const storedBest = window.localStorage.getItem(`crestbound-best-${course.id}`);
+      setHud({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: storedBest ? Number(storedBest) : null, checkpoint: 0, progress: 0, dashReady: true });
     };
     resetRef.current = reset;
 
@@ -491,7 +529,7 @@ export default function Home() {
           ghost = trace;
         }
         setHud({ sparks: collected, total: sparks.length, lives, time: elapsed, best: Math.min(best, elapsed), checkpoint: checkpointIndex, progress: player.x, dashReady: player.dashCooldown <= 0 });
-        recordStreak(); tone('win'); setGameScreen('won');
+        if (!isPractice) recordStreak(); tone('win'); setGameScreen('won');
       }
       cameraX += (Math.max(0, Math.min(WORLD_W - VIEW_W, player.x - 390)) - cameraX) * Math.min(1, dt * 5.5);
       if (elapsed - lastHud > 0.08) {
@@ -660,7 +698,7 @@ export default function Home() {
     return () => {
       cancelAnimationFrame(animation); stopMusic(); window.removeEventListener('keydown', keyDown); window.removeEventListener('keyup', keyUp); window.removeEventListener('blur', clearKeys); resetRef.current = null;
     };
-  }, []);
+  }, [activeCourseIndex, isPractice]);
 
   return (
     <main className="shell">
@@ -693,11 +731,11 @@ export default function Home() {
               <div className="title-card">
                 <h1>Crestbound</h1>
                 <p className="tagline">Run the skyline. Find the light. Beat Suncrest&apos;s time.</p>
-                <div className="daily-course"><span>TODAY&apos;S COURSE</span><b>{course.name}</b><em>{modifier.name}</em></div>
-                <button className="play-button" type="button" onClick={() => void startGame()}>Play Today&apos;s Run <span aria-hidden="true">▶</span></button>
+                <div className="daily-course"><span>{isPractice ? 'PRACTICE COURSE' : 'TODAY\'S COURSE'}</span><b>{course.name}</b><em>{isPractice ? 'No leaderboard' : modifier.name}</em></div>
+                <button className="play-button" type="button" onClick={() => void startGame()}>{isPractice ? 'Start Practice' : 'Play Today\'s Run'} <span aria-hidden="true">▶</span></button>
                 <div className="daily-glance"><span>{community.players} {community.players === 1 ? 'SUNCRESTER' : 'SUNCRESTERS'} TODAY</span><b>{entries[0] ? `#1 ${entries[0].name} · ${formatTime(entries[0].timeMs / 1000)}` : 'BE THE FIRST FINISHER'}</b></div>
                 <div className="community-progress"><div><span>COMMUNITY LIGHT</span><b>{community.lights.toLocaleString()} / {community.goal.toLocaleString()}</b></div><progress value={Math.min(community.lights, community.goal)} max={community.goal} /><small>{streak > 0 ? `${streak} ${streak === 1 ? 'day' : 'days'} personal streak` : 'Start your streak today'}</small></div>
-                <div className="home-links"><button type="button" onClick={() => { setHomePanel('leaderboard'); track('leaderboard_open'); }}>Leaderboard</button><button type="button" onClick={() => setHomePanel('help')}>How to Play</button></div>
+                <div className="home-links"><button type="button" onClick={() => { setHomePanel('leaderboard'); track('leaderboard_open'); }}>Leaderboard</button><button type="button" onClick={() => setHomePanel('courses')}>{isPractice ? 'Change Course' : 'Practice Courses'}</button><button type="button" onClick={() => setHomePanel('help')}>How to Play</button></div>
               </div>
             </div>
             {homePanel === 'leaderboard' && <aside className="leaderboard home-panel" aria-label="Crestbound leaderboard">
@@ -722,23 +760,30 @@ export default function Home() {
               <p>Touch controls appear automatically. Turn your phone sideways for the full course.</p>
               <button className="panel-close" type="button" onClick={() => setHomePanel('none')}>Got It</button>
             </aside>}
+            {homePanel === 'courses' && <aside className="course-picker home-panel" aria-label="Choose a Crestbound practice course">
+              <p className="kicker">EXPLORE THE SKYLINE</p><h2>Practice Courses</h2>
+              <p>Practice any route now. Practice times stay on this device and do not enter the daily board.</p>
+              <div>{courseSpecs.map((item, index) => <button className={practiceCourseIndex === index ? 'active' : ''} type="button" key={item.id} onClick={() => { setPracticeCourseIndex(index); setHomePanel('none'); }}><b>{item.name}</b><span>{item.description}</span></button>)}</div>
+              {isPractice && <button className="today-course" type="button" onClick={() => { setPracticeCourseIndex(null); setHomePanel('none'); }}>Return to Today&apos;s Course</button>}
+              <button className="panel-close" type="button" onClick={() => setHomePanel('none')}>Close</button>
+            </aside>}
           </div>
         )}
 
         {screen === 'paused' && <div className="game-modal"><p>RUN PAUSED</p><h2>Catch your breath.</h2><button type="button" onClick={togglePause}>Resume</button><button className="secondary" type="button" onClick={() => setGameScreen('title')}>Quit Run</button></div>}
-        {screen === 'over' && <div className="game-modal"><p>LIGHT LOST</p><h2>That route got you.</h2><p>Use the high paths, save your dash, and hit enemies from above.</p><button type="button" onClick={() => void startGame()}>Run It Back</button></div>}
+        {screen === 'over' && <div className="game-modal"><p>LIGHT LOST</p><h2>That route got you.</h2><p>Use the high paths, save your dash, and hit enemies from above.</p><button type="button" onClick={() => void startGame()}>Run It Back</button><button className="secondary" type="button" onClick={() => setGameScreen('title')}>{isPractice ? 'Choose Another Course' : 'Back to Home'}</button></div>}
         {screen === 'won' && (
           <div className="game-modal win-modal">
             <p>LIGHT RESTORED // {medalFor(hud.time)} MEDAL</p><h2>Skyline cleared.</h2>
             <div className="result-grid"><span><b>{formatTime(hud.time)}</b><small>FINISH</small></span><span><b>{hud.sparks}/{hud.total}</b><small>LIGHT</small></span><span><b>{hud.best ? formatTime(hud.best) : '—'}</b><small>BEST</small></span></div>
-            {submitState !== 'saved' ? <form className="score-form" onSubmit={submitRun}>
+            {isPractice ? <div className="rank-callout">PRACTICE COMPLETE // PERSONAL BESTS STAY ON THIS DEVICE</div> : submitState !== 'saved' ? <form className="score-form" onSubmit={submitRun}>
               <label htmlFor="nickname">POST TO TODAY&apos;S BOARD</label>
               <div><input id="nickname" value={nickname} onChange={(event) => setNickname(event.target.value)} minLength={2} maxLength={12} pattern="[A-Za-z0-9 _-]{2,12}" placeholder="NICKNAME" autoComplete="nickname" /><button type="submit" disabled={submitState === 'saving' || !runIdRef.current}>{submitState === 'saving' ? 'SAVING...' : 'POST RUN'}</button></div>
               <small>Use a nickname, not your real name.{!runIdRef.current ? ' Online posting is unavailable for this run.' : ''}</small>
               {submitState === 'error' && <em>COULDN&apos;T POST. CHECK YOUR NICKNAME OR TRY AGAIN.</em>}
             </form> : <div className="rank-callout">RUN POSTED {rank ? `// TODAY #${rank}` : '// TO TODAY'}</div>}
             <button type="button" onClick={() => void startGame()}>Beat Your Time</button>
-            <button className="secondary" type="button" onClick={() => { setGameScreen('title'); void loadBoard('daily'); }}>View Leaderboard</button>
+            <button className="secondary" type="button" onClick={() => { setPracticeCourseIndex(null); setGameScreen('title'); void loadBoard('daily'); }}>{isPractice ? 'Return to Today' : 'View Leaderboard'}</button>
           </div>
         )}
 

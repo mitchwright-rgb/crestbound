@@ -6,6 +6,16 @@ const courses = new Set(['goldline', 'crosswind', 'nightshift']);
 const modifiers = new Set(['clear', 'tailwind', 'moonstep', 'sparkstorm']);
 const validId = (value: unknown) => /^[0-9a-f-]{36}$/i.test(String(value ?? ''));
 
+function scheduledRun() {
+  const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(new Date());
+  const serial = Math.floor(new Date(`${day}T12:00:00Z`).getTime() / 86400000);
+  const courseIndex = ((serial % 3) + 3) % 3;
+  return {
+    courseId: ['goldline', 'crosswind', 'nightshift'][courseIndex],
+    modifierId: ['clear', 'tailwind', 'moonstep', 'sparkstorm'][((serial + courseIndex) % 4 + 4) % 4],
+  };
+}
+
 export async function POST(request: Request) {
   await ensureSchema();
   const db = database();
@@ -14,9 +24,10 @@ export async function POST(request: Request) {
   const playerId = String(body.playerId ?? '');
   const courseId = String(body.courseId ?? '');
   const modifierId = String(body.modifierId ?? '');
+  const scheduled = scheduledRun();
 
   if (body.action === 'start') {
-    if (!validId(playerId) || !courses.has(courseId) || !modifiers.has(modifierId)) return NextResponse.json({ error: 'Invalid player or course.' }, { status: 400 });
+    if (!validId(playerId) || !courses.has(courseId) || !modifiers.has(modifierId) || courseId !== scheduled.courseId || modifierId !== scheduled.modifierId) return NextResponse.json({ error: 'That is not today\'s ranked course.' }, { status: 400 });
     const id = crypto.randomUUID();
     const startedAt = Date.now();
     await db.batch([
@@ -32,7 +43,7 @@ export async function POST(request: Request) {
   const scoreMs = Math.round(Number(body.scoreMs));
   const sparks = Math.round(Number(body.sparks));
   if (!/^[A-Z0-9 _-]{2,12}$/.test(name) || banned.some((word) => name.includes(word))) return NextResponse.json({ error: 'Choose a 2–12 character nickname.' }, { status: 400 });
-  if (!validId(runId) || !validId(playerId) || !courses.has(courseId) || !modifiers.has(modifierId) || !Number.isFinite(scoreMs) || scoreMs < 10000 || scoreMs > 900000 || !Number.isInteger(sparks) || sparks < 0 || sparks > 64) return NextResponse.json({ error: 'That run could not be verified.' }, { status: 400 });
+  if (!validId(runId) || !validId(playerId) || !courses.has(courseId) || !modifiers.has(modifierId) || courseId !== scheduled.courseId || modifierId !== scheduled.modifierId || !Number.isFinite(scoreMs) || scoreMs < 10000 || scoreMs > 900000 || !Number.isInteger(sparks) || sparks < 0 || sparks > 64) return NextResponse.json({ error: 'That run could not be verified.' }, { status: 400 });
 
   const run = await db.prepare(`SELECT r.started_at, r.completed_at, c.player_id, c.course_id, c.modifier_id
     FROM game_runs r JOIN run_context c ON c.run_id = r.id WHERE r.id = ?`).bind(runId).first<{ started_at: number; completed_at: number | null; player_id: string; course_id: string; modifier_id: string }>();
