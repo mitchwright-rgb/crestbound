@@ -536,6 +536,7 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    if (screen !== 'playing') return;
     const controls = touchControlsRef.current;
     if (!controls) return;
     const touchKey = (identifier: number) => -(identifier + 1);
@@ -571,7 +572,7 @@ export default function Home() {
       document.removeEventListener('touchend', endTouches, true);
       document.removeEventListener('touchcancel', endTouches, true);
     };
-  }, []);
+  }, [screen]);
 
   useEffect(() => {
     const portraitPhone = window.matchMedia('(orientation: portrait) and (pointer: coarse)');
