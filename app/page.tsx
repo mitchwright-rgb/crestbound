@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { SoundKind, soundSources, soundVolumes } from './audio-assets';
 import { collectLightPower, gravityForModifier, musicTrackForCourse, resetRunTiming, resolveDamage, tailwindAcceleration } from './game-rules';
 
 type Screen = 'title' | 'playing' | 'paused' | 'won' | 'over';
@@ -160,8 +161,8 @@ export default function Home() {
   const [muted, setMuted] = useState(false);
   const mutedRef = useRef(false);
   const [hud, setHud] = useState<Hud>({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: null, checkpoint: 0, progress: 0, dashReady: true, shield: 0 });
-  const audioRef = useRef<AudioContext | null>(null);
   const musicRef = useRef<HTMLAudioElement | null>(null);
+  const sfxRef = useRef<Map<SoundKind, { clips: HTMLAudioElement[]; next: number }>>(new Map());
   const runIdRef = useRef<string | null>(null);
   const playerIdRef = useRef('');
   const homeTrackedRef = useRef(false);
@@ -178,6 +179,22 @@ export default function Home() {
   const [community, setCommunity] = useState<Community>({ players: 0, lights: 0, goal: 2500, nearby: [], playerRank: null, recent: [] });
 
   useEffect(() => { mutedRef.current = muted; }, [muted]);
+  useEffect(() => {
+    const soundPool = sfxRef.current;
+    for (const [kind, src] of Object.entries(soundSources) as Array<[SoundKind, string]>) {
+      const clips = Array.from({ length: 3 }, () => {
+        const clip = new Audio(src);
+        clip.preload = 'auto';
+        clip.volume = soundVolumes[kind];
+        return clip;
+      });
+      soundPool.set(kind, { clips, next: 0 });
+    }
+    return () => {
+      soundPool.forEach(({ clips }) => clips.forEach((clip) => clip.pause()));
+      soundPool.clear();
+    };
+  }, []);
   useEffect(() => {
     let playerId = window.localStorage.getItem('crestbound-player-id');
     if (!playerId) { playerId = crypto.randomUUID(); window.localStorage.setItem('crestbound-player-id', playerId); }
@@ -236,27 +253,16 @@ export default function Home() {
     void music.play().catch(() => { if (musicRef.current === music) musicRef.current = null; });
   }, [activeCourseIndex]);
 
-  function sound(kind: 'jump' | 'dash' | 'spark' | 'hit' | 'checkpoint' | 'win') {
-    if (mutedRef.current || !('AudioContext' in window)) return;
-    const context = audioRef.current ?? new AudioContext();
-    audioRef.current = context;
-    void context.resume();
-    const map = {
-      jump: [420, 610], dash: [170, 390], spark: [740, 980], hit: [180, 110], checkpoint: [420, 620, 820], win: [523, 659, 784, 1047],
-    } as const;
-    map[kind].forEach((frequency, index) => {
-      const osc = context.createOscillator();
-      const gain = context.createGain();
-      const start = context.currentTime + index * 0.075;
-      osc.type = kind === 'dash' ? 'sawtooth' : 'sine';
-      osc.frequency.setValueAtTime(frequency, start);
-      gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(kind === 'hit' ? 0.035 : 0.055, start + 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.14);
-      osc.connect(gain).connect(context.destination);
-      osc.start(start);
-      osc.stop(start + 0.16);
-    });
+  function sound(kind: SoundKind) {
+    if (mutedRef.current) return;
+    const entry = sfxRef.current.get(kind);
+    if (!entry) return;
+    const clip = entry.clips[entry.next % entry.clips.length];
+    entry.next += 1;
+    clip.pause();
+    clip.currentTime = 0;
+    clip.volume = soundVolumes[kind];
+    void clip.play().catch(() => undefined);
   }
 
   function setGameScreen(next: Screen) {
@@ -457,7 +463,7 @@ export default function Home() {
     const resetPosition = () => {
       player.x = checkpoints[checkpointIndex]; player.y = 620 - player.h; player.vx = 0; player.vy = 0; player.grounded = true; player.jumps = 0; player.invuln = 1.5;
     };
-    const hurt = () => {
+    const hurt = (soundKind: 'hit' | 'fall' = 'hit') => {
       if (runEnded || player.invuln > 0) return;
       const damage = resolveDamage(lives, stormShield);
       if (damage.absorbed) {
@@ -466,12 +472,12 @@ export default function Home() {
         screenShake = .1;
         powerToast = 1.8;
         powerToastMessage = 'SHIELD SAVED YOU';
-        tone('checkpoint');
+        tone(soundKind === 'fall' ? 'fall' : 'checkpoint');
         return;
       }
       lives = damage.lives;
       screenShake = .24;
-      tone('hit');
+      tone(soundKind);
       setHud((current) => ({ ...current, lives }));
       if (lives <= 0) {
         runEnded = true;
@@ -580,7 +586,7 @@ export default function Home() {
         } else if (hitCeiling) { player.y = platform.y + platform.h; player.vy = 20; }
       }
       player.x = Math.max(0, Math.min(WORLD_W - player.w, player.x));
-      if (player.y > 800) hurt();
+      if (player.y > 800) hurt('fall');
       spikeZones.forEach((spike) => { if (overlap(player.x + 7, player.y + 12, player.w - 14, player.h - 12, spike.x, spike.y, spike.w, 28)) hurt(); });
 
       enemies.forEach((enemy) => {
@@ -589,7 +595,7 @@ export default function Home() {
         if (enemy.x <= enemy.minX || enemy.x >= enemy.maxX) enemy.dir *= -1;
         if (!overlap(player.x, player.y, player.w, player.h, enemy.x - 27, enemy.y - 27, 54, 54)) return;
         if (player.dashTime > 0 || (player.vy > 220 && player.y + player.h < enemy.y + 12)) {
-          enemy.alive = false; player.vy = -360; player.dashCooldown = 0; tone('spark');
+          enemy.alive = false; player.vy = -360; player.dashCooldown = 0; tone('light');
         } else hurt();
       });
 
@@ -607,7 +613,7 @@ export default function Home() {
             powerToast = 2.1;
             powerToastMessage = 'STORM SHIELD  5 SEC';
           }
-          tone('spark');
+          tone('light');
         }
       });
 

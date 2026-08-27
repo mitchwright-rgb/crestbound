@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
+import { soundSources } from './audio-assets.ts';
 import { collectLightPower, gravityForModifier, musicTrackForCourse, resetRunTiming, resolveDamage, tailwindAcceleration } from './game-rules.ts';
 
 test('Moonstep lowers gravity while other twists preserve standard gravity', () => {
@@ -43,6 +44,16 @@ test('each route music asset is a playable WAV file', () => {
     assert.equal(audio.subarray(0, 4).toString(), 'RIFF');
     assert.equal(audio.subarray(8, 12).toString(), 'WAVE');
     assert.ok(audio.length > 100_000);
+  }
+});
+
+test('every player action has a playable retro sound effect', () => {
+  assert.deepEqual(Object.keys(soundSources).sort(), ['checkpoint', 'dash', 'fall', 'hit', 'jump', 'light', 'win']);
+  for (const src of Object.values(soundSources)) {
+    const audio = readFileSync(new URL(`../public${src}`, import.meta.url));
+    assert.equal(audio.subarray(0, 4).toString(), 'RIFF');
+    assert.equal(audio.subarray(8, 12).toString(), 'WAVE');
+    assert.ok(audio.length > 5_000);
   }
 });
 
