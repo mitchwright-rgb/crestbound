@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { collectLightPower, gravityForModifier, musicTrackForCourse, resetRunTiming, resolveDamage, tailwindAcceleration } from './game-rules.ts';
 
@@ -33,6 +34,16 @@ test('each route has its own named chiptune arrangement', () => {
   assert.equal(new Set(tracks.map((track) => track.name)).size, 3);
   assert.equal(new Set(tracks.map((track) => track.tempoMs)).size, 3);
   assert.equal(new Set(tracks.map((track) => track.melody.join(','))).size, 3);
+  assert.equal(new Set(tracks.map((track) => track.src)).size, 3);
+});
+
+test('each route music asset is a playable WAV file', () => {
+  for (const track of [0, 1, 2].map(musicTrackForCourse)) {
+    const audio = readFileSync(new URL(`../public${track.src}`, import.meta.url));
+    assert.equal(audio.subarray(0, 4).toString(), 'RIFF');
+    assert.equal(audio.subarray(8, 12).toString(), 'WAVE');
+    assert.ok(audio.length > 100_000);
+  }
 });
 
 test('restarting a run resets both gameplay time and HUD refresh time', () => {

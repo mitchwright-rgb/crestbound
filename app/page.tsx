@@ -161,7 +161,7 @@ export default function Home() {
   const mutedRef = useRef(false);
   const [hud, setHud] = useState<Hud>({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: null, checkpoint: 0, progress: 0, dashReady: true, shield: 0 });
   const audioRef = useRef<AudioContext | null>(null);
-  const musicRef = useRef<{ timer: ReturnType<typeof setInterval>; gain: GainNode; step: number } | null>(null);
+  const musicRef = useRef<HTMLAudioElement | null>(null);
   const runIdRef = useRef<string | null>(null);
   const playerIdRef = useRef('');
   const homeTrackedRef = useRef(false);
@@ -215,39 +215,25 @@ export default function Home() {
   const stopMusic = useCallback(() => {
     const music = musicRef.current;
     if (!music) return;
-    clearInterval(music.timer);
-    music.gain.gain.setTargetAtTime(0.0001, music.gain.context.currentTime, .025);
+    music.pause();
     musicRef.current = null;
   }, []);
 
-  const startMusic = useCallback(() => {
-    if (mutedRef.current || musicRef.current || !('AudioContext' in window)) return;
-    const context = audioRef.current ?? new AudioContext();
-    audioRef.current = context;
-    void context.resume();
-    const master = context.createGain();
-    master.gain.value = .034;
-    master.connect(context.destination);
+  const startMusic = useCallback((audible = true) => {
+    if (mutedRef.current) return;
+    const existing = musicRef.current;
+    if (existing) {
+      existing.volume = audible ? .34 : 0;
+      if (existing.paused) void existing.play().catch(() => undefined);
+      return;
+    }
     const track = musicTrackForCourse(activeCourseIndex);
-    const playNote = (frequency: number, length: number, volume: number, type: OscillatorType) => {
-      if (!frequency) return;
-      const now = context.currentTime;
-      const osc = context.createOscillator();
-      const gain = context.createGain();
-      osc.type = type; osc.frequency.value = frequency;
-      gain.gain.setValueAtTime(volume, now);
-      gain.gain.setValueAtTime(volume, now + length * .62);
-      gain.gain.linearRampToValueAtTime(.0001, now + length);
-      osc.connect(gain).connect(master); osc.start(now); osc.stop(now + length + .02);
-    };
-    const music = { timer: 0 as unknown as ReturnType<typeof setInterval>, gain: master, step: 0 };
-    const tick = () => {
-      const step = music.step++;
-      playNote(track.melody[step % track.melody.length], track.tempoMs / 1000 * .88, .72, track.lead);
-      if (step % 4 === 0) playNote(track.bass[(step / 4) % track.bass.length], track.tempoMs / 1000 * 3.15, .6, track.bassVoice);
-      if (step % 8 === 6) playNote(98, .035, .18, 'square');
-    };
-    tick(); music.timer = setInterval(tick, track.tempoMs); musicRef.current = music;
+    const music = new Audio(track.src);
+    music.loop = true;
+    music.preload = 'auto';
+    music.volume = audible ? .34 : 0;
+    musicRef.current = music;
+    void music.play().catch(() => { if (musicRef.current === music) musicRef.current = null; });
   }, [activeCourseIndex]);
 
   function sound(kind: 'jump' | 'dash' | 'spark' | 'hit' | 'checkpoint' | 'win') {
@@ -298,7 +284,7 @@ export default function Home() {
     track('modifier_learned');
   }
 
-  async function startGame(tryImmersive = false) {
+  function startGame(tryImmersive = false) {
     if (tryImmersive && window.matchMedia('(pointer: coarse)').matches && !window.matchMedia('(display-mode: standalone)').matches && !document.fullscreenElement) {
       const immersiveRequest = document.documentElement.requestFullscreen?.({ navigationUI: 'hide' });
       void immersiveRequest?.catch(() => {
@@ -308,13 +294,13 @@ export default function Home() {
     const replaying = screenRef.current === 'over' || screenRef.current === 'won';
     resetRef.current?.();
     setSubmitState('idle'); setRank(null); runIdRef.current = null;
-    if (!isPractice) {
-      try {
-        const response = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'start', playerId: playerIdRef.current, courseId: dailyCourse.id, modifierId: dailyModifier.id }) });
-        if (response.ok) runIdRef.current = ((await response.json()) as { runId: string }).runId;
-      } catch { /* Offline play remains available. */ }
-    }
     const shouldWaitForLandscape = window.matchMedia('(orientation: portrait) and (pointer: coarse)').matches;
+    startMusic(!shouldWaitForLandscape);
+    if (!isPractice) {
+      void fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'start', playerId: playerIdRef.current, courseId: dailyCourse.id, modifierId: dailyModifier.id }) })
+        .then(async (response) => { if (response.ok) runIdRef.current = ((await response.json()) as { runId: string }).runId; })
+        .catch(() => undefined);
+    }
     waitingForLandscapeRef.current = shouldWaitForLandscape;
     setWaitingForLandscape(shouldWaitForLandscape);
     setGameScreen('playing');
@@ -324,7 +310,6 @@ export default function Home() {
     dashCoachRef.current = needsCoach; setShowDashCoach(needsCoach); if (!isPractice) track('run_start');
     setShowModifierCoach(needsModifierCoach);
     if (replaying && !isPractice) track('replay');
-    if (!shouldWaitForLandscape) startMusic();
     requestAnimationFrame(() => canvasRef.current?.focus());
   }
 
@@ -418,7 +403,7 @@ export default function Home() {
         if (waitingForLandscapeRef.current === shouldWait) return;
         waitingForLandscapeRef.current = shouldWait;
         setWaitingForLandscape(shouldWait);
-        if (shouldWait) stopMusic();
+        if (shouldWait) { if (musicRef.current) musicRef.current.volume = 0; }
         else { startMusic(); requestAnimationFrame(() => canvasRef.current?.focus()); }
       }, 160);
     };

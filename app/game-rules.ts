@@ -2,6 +2,7 @@ export type ModifierId = 'clear' | 'tailwind' | 'moonstep' | 'sparkstorm';
 
 export type MusicTrack = {
   name: string;
+  src: string;
   tempoMs: number;
   melody: readonly number[];
   bass: readonly number[];
@@ -11,17 +12,17 @@ export type MusicTrack = {
 
 const musicTracks: readonly MusicTrack[] = [
   {
-    name: 'Golden Hour Run', tempoMs: 120, lead: 'square', bassVoice: 'triangle',
+    name: 'Golden Hour Run', src: '/audio/goldline-theme.wav', tempoMs: 120, lead: 'square', bassVoice: 'triangle',
     melody: [659, 0, 784, 0, 880, 784, 659, 0, 587, 0, 659, 784, 523, 0, 587, 0, 659, 784, 988, 0, 880, 784, 659, 587, 523, 0, 440, 523, 587, 0, 494, 0],
     bass: [131, 165, 110, 147, 131, 196, 165, 147],
   },
   {
-    name: 'Blue Sky Circuit', tempoMs: 108, lead: 'square', bassVoice: 'sine',
+    name: 'Blue Sky Circuit', src: '/audio/crosswind-theme.wav', tempoMs: 108, lead: 'square', bassVoice: 'sine',
     melody: [784, 988, 1175, 0, 1047, 988, 880, 0, 784, 880, 988, 1175, 1319, 0, 1175, 988, 880, 1047, 1175, 0, 988, 880, 784, 659, 784, 0, 880, 988, 1047, 0, 988, 880],
     bass: [147, 196, 165, 220, 147, 247, 196, 165],
   },
   {
-    name: 'Rainline After Dark', tempoMs: 136, lead: 'triangle', bassVoice: 'square',
+    name: 'Rainline After Dark', src: '/audio/nightshift-theme.wav', tempoMs: 136, lead: 'triangle', bassVoice: 'square',
     melody: [440, 0, 523, 0, 587, 523, 466, 0, 392, 0, 440, 523, 349, 0, 392, 0, 440, 523, 622, 0, 587, 523, 466, 392, 349, 0, 311, 349, 392, 0, 330, 0],
     bass: [110, 131, 98, 117, 110, 147, 131, 98],
   },
