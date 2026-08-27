@@ -2,7 +2,7 @@
 
 import { FormEvent, PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SoundKind, soundSources, soundVolumes } from './audio-assets';
-import { collectLightPower, gravityForModifier, musicTrackForCourse, resetRunTiming, resolveDamage, tailwindAcceleration } from './game-rules';
+import { chicagoDayKey, collectLightPower, formatDailyReset, gravityForModifier, millisecondsUntilNextChicagoDay, musicTrackForCourse, resetRunTiming, resolveDamage, tailwindAcceleration } from './game-rules';
 import { checkNickname } from '@/lib/nickname';
 
 type Screen = 'title' | 'playing' | 'paused' | 'won' | 'over';
@@ -182,6 +182,8 @@ export default function Home() {
   const [showDashCoach, setShowDashCoach] = useState(false);
   const [showModifierCoach, setShowModifierCoach] = useState(false);
   const [community, setCommunity] = useState<Community>({ players: 0, lights: 0, goal: 2500, nearby: [], playerRank: null, recent: [] });
+  const [streak, setStreak] = useState(0);
+  const [dailyReset, setDailyReset] = useState('—');
 
   useEffect(() => { mutedRef.current = muted; }, [muted]);
   useEffect(() => {
@@ -243,8 +245,27 @@ export default function Home() {
       if (stored) setHud((current) => ({ ...current, best: Number(stored) }));
       setNickname(window.localStorage.getItem('crestbound-nickname') ?? '');
     }, 0);
-    if (!homeTrackedRef.current) { homeTrackedRef.current = true; track('home_view'); }
+    if (!homeTrackedRef.current) {
+      homeTrackedRef.current = true;
+      const metadata = { mode: 'ranked', modifierId: dailyModifier.id, orientation: window.matchMedia('(orientation: portrait)').matches ? 'portrait' : 'landscape', device: window.matchMedia('(pointer: coarse)').matches ? 'touch' : 'desktop' };
+      void fetch('/api/event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventName: 'home_view', playerId, courseId: dailyCourse.id, metadata }) }).catch(() => undefined);
+    }
     return () => window.clearTimeout(syncStoredState);
+  }, []);
+
+  useEffect(() => {
+    const initialDay = chicagoDayKey();
+    const syncReturnLoop = () => {
+      if (chicagoDayKey() !== initialDay) {
+        window.location.reload();
+        return;
+      }
+      setStreak(Number(window.localStorage.getItem('crestbound-streak')) || 0);
+      setDailyReset(formatDailyReset(millisecondsUntilNextChicagoDay()));
+    };
+    syncReturnLoop();
+    const timer = window.setInterval(syncReturnLoop, 30_000);
+    return () => window.clearInterval(timer);
   }, []);
 
   const loadBoard = useCallback(async (nextBoard: Board) => {
@@ -321,9 +342,16 @@ export default function Home() {
     });
   }
 
-  function track(eventName: string) {
+  function track(eventName: string, details: Record<string, string | number> = {}) {
     if (!playerIdRef.current) return;
-    void fetch('/api/event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventName, playerId: playerIdRef.current, courseId: dailyCourse.id }) }).catch(() => undefined);
+    const metadata = {
+      mode: isPractice ? 'practice' : 'ranked',
+      modifierId: modifier.id,
+      orientation: window.matchMedia('(orientation: portrait)').matches ? 'portrait' : 'landscape',
+      device: window.matchMedia('(pointer: coarse)').matches ? 'touch' : 'desktop',
+      ...details,
+    };
+    void fetch('/api/event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventName, playerId: playerIdRef.current, courseId: course.id, metadata }) }).catch(() => undefined);
   }
 
   function dismissDashCoach(learned = false) {
@@ -364,14 +392,15 @@ export default function Home() {
     const needsCoach = !window.localStorage.getItem('crestbound-dash-learned');
     const needsModifierCoach = !isPractice && !window.localStorage.getItem(`crestbound-twist-seen-${localDay}-${modifier.id}`);
     coachPauseRef.current = needsCoach || needsModifierCoach;
-    dashCoachRef.current = needsCoach; setShowDashCoach(needsCoach); if (!isPractice) track('run_start');
+    dashCoachRef.current = needsCoach; setShowDashCoach(needsCoach); track(isPractice ? 'practice_start' : 'run_start');
     setShowModifierCoach(needsModifierCoach);
-    if (replaying && !isPractice) track('replay');
+    if (shouldWaitForLandscape) track('orientation_wait');
+    if (replaying) track('replay');
     requestAnimationFrame(() => canvasRef.current?.focus());
   }
 
   function togglePause() {
-    if (screenRef.current === 'playing') setGameScreen('paused');
+    if (screenRef.current === 'playing') { track('pause'); setGameScreen('paused'); }
     else if (screenRef.current === 'paused') {
       const shouldWaitForLandscape = window.matchMedia('(orientation: portrait) and (pointer: coarse)').matches;
       waitingForLandscapeRef.current = shouldWaitForLandscape;
@@ -391,14 +420,15 @@ export default function Home() {
   }
 
   function recordStreak() {
-    const today = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Chicago' });
+    const today = chicagoDayKey();
     const last = window.localStorage.getItem('crestbound-last-day');
     if (last === today) return;
-    const yesterday = new Date(`${today}T12:00:00`); yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayKey = yesterday.toLocaleDateString('en-CA');
+    const yesterday = new Date(`${today}T12:00:00Z`); yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+    const yesterdayKey = chicagoDayKey(yesterday);
     const next = last === yesterdayKey ? (Number(window.localStorage.getItem('crestbound-streak')) || 0) + 1 : 1;
     window.localStorage.setItem('crestbound-last-day', today);
     window.localStorage.setItem('crestbound-streak', String(next));
+    setStreak(next);
   }
 
   async function submitRun(event: FormEvent) {
@@ -485,6 +515,7 @@ export default function Home() {
     const context = canvas.getContext('2d');
     if (!context) return;
     const touchLandscape = window.matchMedia('(pointer: coarse) and (orientation: landscape)');
+    const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     const spriteSheet = new Image();
     spriteSheet.src = '/sunny-pixel-master.svg';
@@ -536,11 +567,13 @@ export default function Home() {
       lives = damage.lives;
       screenShake = .24;
       tone(soundKind);
+      track('life_lost', { reason: soundKind, lives, checkpoint: checkpointIndex, progress: player.x, elapsedMs: elapsed * 1000 });
       setHud((current) => ({ ...current, lives }));
       if (lives <= 0) {
         runEnded = true;
         player.invuln = 999;
         inputRef.current = { left: false, right: false, jump: false, dash: false };
+        track('run_over', { reason: soundKind, checkpoint: checkpointIndex, progress: player.x, elapsedMs: elapsed * 1000 });
         setGameScreen('over');
       } else resetPosition();
     };
@@ -683,7 +716,7 @@ export default function Home() {
         checkpointToast = 2.2;
         setHud((current) => ({ ...current, lives, checkpoint: checkpointIndex }));
         tone('checkpoint');
-        if (!isPractice) track('checkpoint');
+        track('checkpoint', { checkpoint: checkpointIndex, lives, progress: player.x, elapsedMs: elapsed * 1000 });
       }
       if (player.x > FINISH_X) {
         const bestKey = `crestbound-best-${course.id}`;
@@ -694,7 +727,9 @@ export default function Home() {
           ghost = trace;
         }
         setHud({ sparks: collected, total: sparks.length, lives, time: elapsed, best: Math.min(best, elapsed), checkpoint: checkpointIndex, progress: player.x, dashReady: player.dashCooldown <= 0, shield: stormShield });
-        if (!isPractice) recordStreak(); tone('win'); setGameScreen('won');
+        if (!isPractice) recordStreak();
+        else track('practice_finish', { lives, progress: player.x, elapsedMs: elapsed * 1000 });
+        tone('win'); setGameScreen('won');
       }
       cameraX += (Math.max(0, Math.min(WORLD_W - VIEW_W, player.x - 390)) - cameraX) * Math.min(1, dt * 5.5);
       if (elapsed - lastHud > 0.08) {
@@ -706,7 +741,7 @@ export default function Home() {
 
     function draw() {
       const ctx = context;
-      const shakeX = screenShake > 0 ? ((Math.floor(elapsed * 60) % 3) - 1) * 4 : 0;
+      const shakeX = !reducedMotion && screenShake > 0 ? ((Math.floor(elapsed * 60) % 3) - 1) * 4 : 0;
       // Keep the playable rooftop above a phone's thumb controls without
       // changing the course geometry or the desktop composition.
       const touchWorldLift = touchLandscape.matches ? 120 : 0;
@@ -1018,7 +1053,7 @@ export default function Home() {
                 </picture>
               </div>
               <div className="home-dashboard">
-                <div className="daily-course"><span>{isPractice ? 'PRACTICE RUN' : 'TODAY\'S RUN'}</span><b>{course.name}</b><em>{isPractice ? 'STANDARD RULES' : `TWIST · ${modifier.name}`}</em></div>
+                <div className="daily-course"><span>{isPractice ? 'PRACTICE RUN' : 'TODAY\'S RUN'}</span><b>{course.name}</b><em>{isPractice ? 'STANDARD RULES' : `TWIST · ${modifier.name}`}</em><div className="daily-return"><strong>{isPractice ? 'PRACTICE MODE' : streak > 0 ? `${streak} DAY STREAK` : 'FINISH TO START A STREAK'}</strong><small>{isPractice ? 'TODAY\'S BOARD IS UNAFFECTED' : `NEW RUN IN ${dailyReset}`}</small></div></div>
                 <button className="play-button" type="button" onClick={() => void startGame(true)}>{isPractice ? 'Start Practice' : 'Play Today\'s Run'} <span aria-hidden="true">▶</span></button>
                 <div className="daily-glance"><span>{community.players} {community.players === 1 ? 'SUNCRESTER HAS' : 'SUNCRESTERS HAVE'} RUN TODAY</span><b>{entries[0] ? `FASTEST: ${entries[0].name} · ${formatTime(entries[0].timeMs / 1000)}` : 'BE THE FIRST FINISHER'}</b><div className="community-progress"><div><span>COMMUNITY LIGHT</span><b>{community.lights.toLocaleString()} / {community.goal.toLocaleString()}</b></div><progress aria-label={`${community.lights} of ${community.goal} community lights collected today`} max={community.goal} value={Math.min(community.lights, community.goal)} /><small>{community.lights >= community.goal ? 'TODAY\'S GOAL REACHED — KEEP IT GLOWING' : `${(community.goal - community.lights).toLocaleString()} LIGHTS TO TODAY'S GOAL`}</small></div></div>
                 <div className="home-links"><button type="button" onClick={() => { openHomePanel('leaderboard'); track('leaderboard_open'); }}>Leaderboard</button><button type="button" onClick={() => openHomePanel('courses')}>{isPractice ? 'Change Course' : 'Practice Courses'}</button><button type="button" onClick={() => openHomePanel('help')}>How to Play</button></div>
@@ -1062,7 +1097,7 @@ export default function Home() {
           </div>
         )}
 
-        {screen === 'paused' && <div ref={gameModalRef} className="game-modal" role="dialog" aria-modal="true" aria-labelledby="pause-title" tabIndex={-1}><p>RUN PAUSED</p><h2 id="pause-title">Catch your breath.</h2><button type="button" onClick={togglePause}>Resume</button><button className="secondary" type="button" onClick={() => setGameScreen('title')}>Quit Run</button></div>}
+        {screen === 'paused' && <div ref={gameModalRef} className="game-modal" role="dialog" aria-modal="true" aria-labelledby="pause-title" tabIndex={-1}><p>RUN PAUSED</p><h2 id="pause-title">Catch your breath.</h2><button type="button" onClick={togglePause}>Resume</button><button className="secondary" type="button" onClick={() => { track('quit', { checkpoint: hud.checkpoint, progress: hud.progress, elapsedMs: hud.time * 1000 }); setGameScreen('title'); }}>Quit Run</button></div>}
         {screen === 'over' && <div ref={gameModalRef} className="game-modal" role="dialog" aria-modal="true" aria-labelledby="over-title" tabIndex={-1}><p>LIGHT LOST</p><h2 id="over-title">That route got you.</h2><p>Use the high paths, save your dash, and hit enemies from above.</p><button type="button" onClick={() => void startGame()}>Run It Back</button><button className="secondary" type="button" onClick={() => { setGameScreen('title'); if (isPractice) openHomePanel('courses'); }}>{isPractice ? 'Choose Another Course' : 'Back to Home'}</button></div>}
         {screen === 'won' && (
           <div ref={gameModalRef} className="game-modal win-modal" role="dialog" aria-modal="true" aria-labelledby="win-title" tabIndex={-1}>

@@ -54,3 +54,26 @@ export function resolveDamage(lives: number, shieldSeconds: number) {
   if (shieldSeconds > 0) return { lives, shieldSeconds: 0, absorbed: true };
   return { lives: Math.max(0, lives - 1), shieldSeconds: 0, absorbed: false };
 }
+
+export function chicagoDayKey(date = new Date()) {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(date);
+}
+
+export function millisecondsUntilNextChicagoDay(now = new Date()) {
+  const currentKey = chicagoDayKey(now);
+  let lower = now.getTime();
+  let upper = lower + 30 * 60 * 60 * 1000;
+  while (upper - lower > 1000) {
+    const midpoint = Math.floor((lower + upper) / 2);
+    if (chicagoDayKey(new Date(midpoint)) === currentKey) lower = midpoint;
+    else upper = midpoint;
+  }
+  return Math.max(0, upper - now.getTime());
+}
+
+export function formatDailyReset(milliseconds: number) {
+  const totalMinutes = Math.max(0, Math.floor(milliseconds / 60000));
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours}H ${String(minutes).padStart(2, '0')}M`;
+}

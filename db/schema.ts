@@ -53,8 +53,19 @@ export const schemaStatements = [
     day_key TEXT NOT NULL,
     created_at INTEGER NOT NULL
   )`,
+  `CREATE TABLE IF NOT EXISTS game_event_details (
+    event_id INTEGER PRIMARY KEY,
+    metadata TEXT NOT NULL,
+    FOREIGN KEY(event_id) REFERENCES game_events(id)
+  )`,
+  `CREATE TABLE IF NOT EXISTS request_limits (
+    bucket_key TEXT PRIMARY KEY,
+    request_count INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL
+  )`,
   `CREATE INDEX IF NOT EXISTS idx_crest_scores_day_course ON crest_scores(day_key, course_id, score_ms)`,
   `CREATE INDEX IF NOT EXISTS idx_crest_scores_week ON crest_scores(week_key, player_id, day_key)`,
   `CREATE INDEX IF NOT EXISTS idx_crest_scores_player ON crest_scores(player_id, created_at)`,
   `CREATE INDEX IF NOT EXISTS idx_events_day ON game_events(day_key, event_name)`,
+  `CREATE INDEX IF NOT EXISTS idx_request_limits_expiry ON request_limits(expires_at)`,
 ];

@@ -2,8 +2,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { soundSources } from './audio-assets.ts';
-import { collectLightPower, gravityForModifier, musicTrackForCourse, resetRunTiming, resolveDamage, tailwindAcceleration } from './game-rules.ts';
+import { chicagoDayKey, collectLightPower, formatDailyReset, gravityForModifier, millisecondsUntilNextChicagoDay, musicTrackForCourse, resetRunTiming, resolveDamage, tailwindAcceleration } from './game-rules.ts';
 import { checkNickname, publicNickname } from '../lib/nickname.ts';
+import { normalizeEventMetadata } from '../lib/telemetry.ts';
 
 test('Moonstep lowers gravity while other twists preserve standard gravity', () => {
   assert.equal(gravityForModifier('moonstep'), 1500);
@@ -77,4 +78,18 @@ test('nickname moderation rejects profanity and common obfuscation', () => {
 
 test('unsafe stored nicknames never render publicly', () => {
   assert.equal(publicNickname('F U C K'), 'SUNCRESTER');
+});
+
+test('daily reset countdown targets the next Chicago calendar day', () => {
+  const beforeSpringMidnight = new Date('2026-08-26T04:30:00.000Z');
+  assert.equal(chicagoDayKey(beforeSpringMidnight), '2026-08-25');
+  assert.equal(formatDailyReset(millisecondsUntilNextChicagoDay(beforeSpringMidnight)), '0H 30M');
+  const beforeFallMidnight = new Date('2026-12-15T05:15:00.000Z');
+  assert.equal(chicagoDayKey(beforeFallMidnight), '2026-12-14');
+  assert.equal(formatDailyReset(millisecondsUntilNextChicagoDay(beforeFallMidnight)), '0H 45M');
+});
+
+test('event metadata keeps useful product signals without accepting arbitrary data', () => {
+  assert.equal(normalizeEventMetadata({ mode: 'practice', reason: 'fall', lives: 2, secret: 'nope' }), '{"mode":"practice","reason":"fall","lives":2}');
+  assert.equal(normalizeEventMetadata({ reason: 'x'.repeat(40) }), null);
 });

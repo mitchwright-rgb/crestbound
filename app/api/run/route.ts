@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { chicagoKeys, database, ensureSchema } from '@/lib/db';
 import { checkNickname } from '@/lib/nickname';
+import { rateLimit } from '@/lib/rate-limit';
 
 const courses = new Set(['goldline', 'crosswind', 'nightshift']);
 const modifiers = new Set(['clear', 'tailwind', 'moonstep', 'sparkstorm']);
@@ -28,6 +29,8 @@ export async function POST(request: Request) {
 
   if (body.action === 'start') {
     if (!validId(playerId) || !courses.has(courseId) || !modifiers.has(modifierId) || courseId !== scheduled.courseId || modifierId !== scheduled.modifierId) return NextResponse.json({ error: 'That is not today\'s ranked course.' }, { status: 400 });
+    const allowance = await rateLimit(request, 'run-start', playerId, 20, 10 * 60_000);
+    if (!allowance.allowed) return NextResponse.json({ error: 'Too many run starts. Try again shortly.' }, { status: 429, headers: { 'Retry-After': String(allowance.retryAfter) } });
     const id = crypto.randomUUID();
     const startedAt = Date.now();
     await db.batch([
@@ -45,6 +48,8 @@ export async function POST(request: Request) {
   if (!nickname.ok) return NextResponse.json({ error: nickname.message }, { status: 400 });
   const name = nickname.name;
   if (!validId(runId) || !validId(playerId) || !courses.has(courseId) || !modifiers.has(modifierId) || courseId !== scheduled.courseId || modifierId !== scheduled.modifierId || !Number.isFinite(scoreMs) || scoreMs < 10000 || scoreMs > 900000 || !Number.isInteger(sparks) || sparks < 0 || sparks > 64) return NextResponse.json({ error: 'That run could not be verified.' }, { status: 400 });
+  const allowance = await rateLimit(request, 'run-finish', playerId, 20, 10 * 60_000);
+  if (!allowance.allowed) return NextResponse.json({ error: 'Too many score attempts. Try again shortly.' }, { status: 429, headers: { 'Retry-After': String(allowance.retryAfter) } });
 
   const run = await db.prepare(`SELECT r.started_at, r.completed_at, c.player_id, c.course_id, c.modifier_id
     FROM game_runs r JOIN run_context c ON c.run_id = r.id WHERE r.id = ?`).bind(runId).first<{ started_at: number; completed_at: number | null; player_id: string; course_id: string; modifier_id: string }>();
