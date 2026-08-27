@@ -2,7 +2,7 @@
 
 import { FormEvent, PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SoundKind, soundSources, soundVolumes } from './audio-assets';
-import { chicagoDayKey, collectLightPower, formatDailyReset, gravityForModifier, millisecondsUntilNextChicagoDay, musicTrackForCourse, resetRunTiming, resolveDamage, tailwindAcceleration } from './game-rules';
+import { chicagoDayKey, collectLightPower, formatDailyReset, gravityForModifier, millisecondsUntilNextChicagoDay, musicTrackForCourse, resetRunTiming, resolveDamage, tailwindAcceleration, touchInputFromControls } from './game-rules';
 import { checkNickname } from '@/lib/nickname';
 
 type Screen = 'title' | 'playing' | 'paused' | 'won' | 'over';
@@ -157,6 +157,7 @@ export default function Home() {
   const waitingForLandscapeRef = useRef(false);
   const coachPauseRef = useRef(false);
   const inputRef = useRef({ left: false, right: false, jump: false, dash: false });
+  const activeTouchPointersRef = useRef<Map<number, keyof typeof inputRef.current>>(new Map());
   const resetRef = useRef<(() => void) | null>(null);
   const [screen, setScreen] = useState<Screen>('title');
   const [waitingForLandscape, setWaitingForLandscape] = useState(false);
@@ -346,6 +347,10 @@ export default function Home() {
 
   function setGameScreen(next: Screen) {
     if (next !== 'playing') stopMusic();
+    if (next !== 'playing') {
+      activeTouchPointersRef.current.clear();
+      inputRef.current = { left: false, right: false, jump: false, dash: false };
+    }
     screenRef.current = next;
     setScreen(next);
   }
@@ -487,31 +492,42 @@ export default function Home() {
     } catch (error) { setSubmitError(error instanceof Error ? error.message : 'Couldn\'t post this run.'); setSubmitState('error'); }
   }
 
-  function press(control: keyof typeof inputRef.current, active: boolean) {
-    inputRef.current[control] = active;
-    if (active) canvasRef.current?.focus();
+  function syncTouchInput() {
+    inputRef.current = touchInputFromControls(activeTouchPointersRef.current.values());
+  }
+
+  function releaseTouchPointer(pointerId: number) {
+    activeTouchPointersRef.current.delete(pointerId);
+    syncTouchInput();
   }
 
   function beginPress(control: keyof typeof inputRef.current, event: ReactPointerEvent<HTMLButtonElement>) {
     event.preventDefault();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    press(control, true);
+    activeTouchPointersRef.current.set(event.pointerId, control);
+    syncTouchInput();
+    canvasRef.current?.focus();
+    try { event.currentTarget.setPointerCapture(event.pointerId); } catch { /* Global release handling remains active. */ }
   }
 
   function endPress(control: keyof typeof inputRef.current, event: ReactPointerEvent<HTMLButtonElement>) {
     event.preventDefault();
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-    press(control, false);
+    releaseTouchPointer(event.pointerId);
   }
 
   useEffect(() => {
-    const clearTouchInput = () => { inputRef.current = { left: false, right: false, jump: false, dash: false }; };
+    const releasePointer = (event: PointerEvent) => releaseTouchPointer(event.pointerId);
+    const clearTouchInput = () => { activeTouchPointersRef.current.clear(); inputRef.current = { left: false, right: false, jump: false, dash: false }; };
     window.addEventListener('blur', clearTouchInput);
-    window.addEventListener('pointercancel', clearTouchInput);
+    window.addEventListener('pointerup', releasePointer, true);
+    window.addEventListener('pointercancel', releasePointer, true);
+    window.addEventListener('pagehide', clearTouchInput);
     document.addEventListener('visibilitychange', clearTouchInput);
     return () => {
       window.removeEventListener('blur', clearTouchInput);
-      window.removeEventListener('pointercancel', clearTouchInput);
+      window.removeEventListener('pointerup', releasePointer, true);
+      window.removeEventListener('pointercancel', releasePointer, true);
+      window.removeEventListener('pagehide', clearTouchInput);
       document.removeEventListener('visibilitychange', clearTouchInput);
     };
   }, []);
@@ -532,7 +548,11 @@ export default function Home() {
         if (waitingForLandscapeRef.current === shouldWait) return;
         waitingForLandscapeRef.current = shouldWait;
         setWaitingForLandscape(shouldWait);
-        if (shouldWait) { if (musicRef.current) musicRef.current.volume = 0; }
+        if (shouldWait) {
+          activeTouchPointersRef.current.clear();
+          inputRef.current = { left: false, right: false, jump: false, dash: false };
+          if (musicRef.current) musicRef.current.volume = 0;
+        }
         else { startMusic(); requestAnimationFrame(() => canvasRef.current?.focus()); }
       }, 160);
     };
@@ -1077,11 +1097,11 @@ export default function Home() {
         {screen !== 'title' && (
           <header className="hud" aria-live="polite" aria-atomic="false">
             <div className="hud-brand"><span className="mini-sun">✦</span><strong>{course.short}</strong><i className={hud.dashReady ? 'ready' : ''}>{hud.dashReady ? 'DASH READY' : 'DASH CHARGING'}</i></div>
-            <div className="hud-stats">
-              <span><b>{'◆'.repeat(hud.lives)}</b><small>LIVES</small></span>
-              <span><b>{hud.sparks}/{hud.total}</b><small>LIGHT</small></span>
-              <span><b>{formatTime(hud.time)}</b><small>TIME</small></span>
-              {hud.shield > 0 && <span className="shield-status"><b>{hud.shield.toFixed(1)}</b><small>SHIELD</small></span>}
+            <div className={gameNotice ? `hud-stats notice-mode ${gameNotice.kind}` : 'hud-stats'}>
+              {gameNotice ? <span className="hud-notice" role="status"><b>{gameNotice.text}</b></span> : <><span><b>{'◆'.repeat(hud.lives)}</b><small>LIVES</small></span>
+                <span><b>{hud.sparks}/{hud.total}</b><small>LIGHT</small></span>
+                <span><b>{formatTime(hud.time)}</b><small>TIME</small></span>
+                {hud.shield > 0 && <span className="shield-status"><b>{hud.shield.toFixed(1)}</b><small>SHIELD</small></span>}</>}
             </div>
             <div className="hud-actions">
               <button type="button" onClick={toggleSound} aria-label={muted ? 'Turn sound on' : 'Mute sound'}>{muted ? '♪ OFF' : '♪ ON'}</button>
@@ -1163,9 +1183,9 @@ export default function Home() {
         )}
 
         {screen === 'playing' && (
-          <>{waitingForLandscape && <div className="rotate-prompt"><span aria-hidden="true">↻</span><strong>Turn Sideways to Start</strong><small>Your run and timer are paused until the phone is in landscape.</small></div>}{gameNotice && !waitingForLandscape && !showModifierCoach && !showDashCoach && <div className={`game-notice ${gameNotice.kind}`} role="status"><b>{gameNotice.text}</b></div>}{showModifierCoach && !waitingForLandscape ? <div className="dash-coach modifier-coach"><b>TODAY&apos;S TWIST · {modifier.name}</b><span>{modifier.description}</span><button type="button" onClick={dismissModifierCoach}>LET&apos;S RUN</button></div> : showDashCoach && !waitingForLandscape && <div className="dash-coach"><b>DASH IS YOUR EDGE</b><span>Press SHIFT or X — or tap DASH — to burst through hazards. The HUD tells you when it recharges.</span><button type="button" onClick={() => dismissDashCoach()}>GOT IT</button></div>}<div className="touch-controls" aria-label="Touch controls">
-            <div><button type="button" aria-label="Move left" onPointerDown={(event) => beginPress('left', event)} onPointerUp={(event) => endPress('left', event)} onPointerCancel={(event) => endPress('left', event)} onLostPointerCapture={() => press('left', false)}>←</button><button type="button" aria-label="Move right" onPointerDown={(event) => beginPress('right', event)} onPointerUp={(event) => endPress('right', event)} onPointerCancel={(event) => endPress('right', event)} onLostPointerCapture={() => press('right', false)}>→</button></div>
-            <div><button className={hud.dashReady ? 'dash-control ready' : 'dash-control'} type="button" aria-label={hud.dashReady ? 'Dash ready' : 'Dash charging'} onPointerDown={(event) => beginPress('dash', event)} onPointerUp={(event) => endPress('dash', event)} onPointerCancel={(event) => endPress('dash', event)} onLostPointerCapture={() => press('dash', false)}>DASH</button><button className="jump-control" type="button" aria-label="Jump — tap twice for double jump" onPointerDown={(event) => beginPress('jump', event)} onPointerUp={(event) => endPress('jump', event)} onPointerCancel={(event) => endPress('jump', event)} onLostPointerCapture={() => press('jump', false)}>JUMP 2X</button></div>
+          <>{waitingForLandscape && <div className="rotate-prompt"><span aria-hidden="true">↻</span><strong>Turn Sideways to Start</strong><small>Your run and timer are paused until the phone is in landscape.</small></div>}{showModifierCoach && !waitingForLandscape ? <div className="dash-coach modifier-coach"><b>TODAY&apos;S TWIST · {modifier.name}</b><span>{modifier.description}</span><button type="button" onClick={dismissModifierCoach}>LET&apos;S RUN</button></div> : showDashCoach && !waitingForLandscape && <div className="dash-coach"><b>DASH IS YOUR EDGE</b><span>Press SHIFT or X — or tap DASH — to burst through hazards. The HUD tells you when it recharges.</span><button type="button" onClick={() => dismissDashCoach()}>GOT IT</button></div>}<div className="touch-controls" aria-label="Touch controls">
+            <div><button type="button" aria-label="Move left" onPointerDown={(event) => beginPress('left', event)} onPointerUp={(event) => endPress('left', event)} onPointerCancel={(event) => endPress('left', event)} onLostPointerCapture={(event) => endPress('left', event)}>←</button><button type="button" aria-label="Move right" onPointerDown={(event) => beginPress('right', event)} onPointerUp={(event) => endPress('right', event)} onPointerCancel={(event) => endPress('right', event)} onLostPointerCapture={(event) => endPress('right', event)}>→</button></div>
+            <div><button className={hud.dashReady ? 'dash-control ready' : 'dash-control'} type="button" aria-label={hud.dashReady ? 'Dash ready' : 'Dash charging'} onPointerDown={(event) => beginPress('dash', event)} onPointerUp={(event) => endPress('dash', event)} onPointerCancel={(event) => endPress('dash', event)} onLostPointerCapture={(event) => endPress('dash', event)}>DASH</button><button className="jump-control" type="button" aria-label="Jump — tap twice for double jump" onPointerDown={(event) => beginPress('jump', event)} onPointerUp={(event) => endPress('jump', event)} onPointerCancel={(event) => endPress('jump', event)} onLostPointerCapture={(event) => endPress('jump', event)}>JUMP 2X</button></div>
           </div></>
         )}
       </section>

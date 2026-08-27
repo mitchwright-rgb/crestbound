@@ -1,4 +1,10 @@
 export type ModifierId = 'clear' | 'tailwind' | 'moonstep' | 'sparkstorm';
+export type TouchControl = 'left' | 'right' | 'jump' | 'dash';
+
+export function touchInputFromControls(controls: Iterable<TouchControl>) {
+  const active = new Set(controls);
+  return { left: active.has('left'), right: active.has('right'), jump: active.has('jump'), dash: active.has('dash') };
+}
 
 export type MusicTrack = {
   name: string;

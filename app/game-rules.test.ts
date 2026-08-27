@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { soundSources } from './audio-assets.ts';
-import { chicagoDayKey, collectLightPower, formatDailyReset, gravityForModifier, millisecondsUntilNextChicagoDay, musicTrackForCourse, resetRunTiming, resolveDamage, tailwindAcceleration } from './game-rules.ts';
+import { chicagoDayKey, collectLightPower, formatDailyReset, gravityForModifier, millisecondsUntilNextChicagoDay, musicTrackForCourse, resetRunTiming, resolveDamage, tailwindAcceleration, touchInputFromControls } from './game-rules.ts';
 import { checkNickname, publicNickname } from '../lib/nickname.ts';
 import { normalizeEventMetadata } from '../lib/telemetry.ts';
 
@@ -61,6 +61,12 @@ test('every player action has a playable retro sound effect', () => {
 
 test('restarting a run resets both gameplay time and HUD refresh time', () => {
   assert.deepEqual(resetRunTiming(), { elapsed: 0, lastHud: 0 });
+});
+
+test('releasing Jump cannot cancel or stick a separately held direction', () => {
+  assert.deepEqual(touchInputFromControls(['right', 'jump']), { left: false, right: true, jump: true, dash: false });
+  assert.deepEqual(touchInputFromControls(['right']), { left: false, right: true, jump: false, dash: false });
+  assert.deepEqual(touchInputFromControls([]), { left: false, right: false, jump: false, dash: false });
 });
 
 test('family-safe nicknames pass after normalization', () => {
