@@ -7,7 +7,7 @@ import { checkNickname, publicNickname } from '../lib/nickname.ts';
 import { normalizeEventMetadata } from '../lib/telemetry.ts';
 
 test('Moonstep lowers gravity while other twists preserve standard gravity', () => {
-  assert.equal(gravityForModifier('moonstep'), 1250);
+  assert.equal(gravityForModifier('moonstep'), 1350);
   assert.equal(gravityForModifier('clear'), 1850);
   assert.equal(gravityForModifier('sparkstorm'), 1850);
 });

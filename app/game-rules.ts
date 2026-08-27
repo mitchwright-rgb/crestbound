@@ -43,7 +43,7 @@ export function resetRunTiming() {
 }
 
 export function gravityForModifier(modifierId: ModifierId) {
-  return modifierId === 'moonstep' ? 1250 : 1850;
+  return modifierId === 'moonstep' ? 1350 : 1850;
 }
 
 export function tailwindAcceleration(modifierId: ModifierId, direction: number) {
