@@ -13,6 +13,7 @@ type Enemy = { x: number; y: number; minX: number; maxX: number; speed: number; 
 type Board = 'daily' | 'weekly' | 'all';
 type BoardEntry = { rank: number; name: string; timeMs: number; sparks: number; points?: number; runs?: number };
 type HomePanel = 'none' | 'leaderboard' | 'help' | 'courses';
+type GameNotice = { text: string; kind: 'checkpoint' | 'power' };
 
 type Community = { players: number; lights: number; goal: number; nearby: BoardEntry[]; playerRank: number | null; recent: string[] };
 
@@ -186,6 +187,16 @@ export default function Home() {
   const [community, setCommunity] = useState<Community>({ players: 0, lights: 0, goal: 2500, nearby: [], playerRank: null, recent: [] });
   const [streak, setStreak] = useState(0);
   const [dailyReset, setDailyReset] = useState('—');
+  const [gameNotice, setGameNotice] = useState<GameNotice | null>(null);
+  const gameNoticeTimerRef = useRef(0);
+
+  const showGameNotice = useCallback((text: string, kind: GameNotice['kind']) => {
+    window.clearTimeout(gameNoticeTimerRef.current);
+    setGameNotice({ text, kind });
+    gameNoticeTimerRef.current = window.setTimeout(() => setGameNotice(null), 2200);
+  }, []);
+
+  useEffect(() => () => window.clearTimeout(gameNoticeTimerRef.current), []);
 
   useEffect(() => { mutedRef.current = muted; }, [muted]);
   useEffect(() => {
@@ -602,10 +613,6 @@ export default function Home() {
     let animation = 0;
     let screenShake = 0;
     let stormShield = 0;
-    let powerToast = 0;
-    let powerToastMessage = '';
-    let checkpointToast = 0;
-    let checkpointLifeAwarded = false;
     let runEnded = false;
     let trace: Array<{ t: number; x: number; y: number }> = [];
     let traceTimer = 0;
@@ -624,8 +631,7 @@ export default function Home() {
         stormShield = damage.shieldSeconds;
         player.invuln = .7;
         screenShake = .1;
-        powerToast = 1.8;
-        powerToastMessage = 'SHIELD SAVED YOU';
+        showGameNotice('SHIELD SAVED YOU', 'power');
         tone(soundKind === 'fall' ? 'fall' : 'checkpoint');
         return;
       }
@@ -647,7 +653,8 @@ export default function Home() {
       player.x = checkpoints[0]; player.y = 620 - player.h; player.vx = 0; player.vy = 0; player.grounded = true; player.invuln = 1.25; player.jumps = 0;
       sparks = sparkSeed.map((item) => ({ ...item }));
       enemies = enemySeed.map((item) => ({ ...item }));
-      lives = 3; collected = 0; ({ elapsed, lastHud } = resetRunTiming()); cameraX = 0; checkpointIndex = 0; jumpBuffer = 0; coyote = 0; previousJump = false; previousDash = false; trace = []; traceTimer = 0; stormShield = 0; powerToast = 0; powerToastMessage = ''; checkpointToast = 0; checkpointLifeAwarded = false; runEnded = false;
+      lives = 3; collected = 0; ({ elapsed, lastHud } = resetRunTiming()); cameraX = 0; checkpointIndex = 0; jumpBuffer = 0; coyote = 0; previousJump = false; previousDash = false; trace = []; traceTimer = 0; stormShield = 0; runEnded = false;
+      window.clearTimeout(gameNoticeTimerRef.current); setGameNotice(null);
       const storedBest = window.localStorage.getItem(`crestbound-best-${course.id}`);
       setHud({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: storedBest ? Number(storedBest) : null, checkpoint: 0, progress: 0, dashReady: true, shield: 0 });
     };
@@ -682,8 +689,6 @@ export default function Home() {
       if (traceTimer >= .12) { trace.push({ t: elapsed, x: player.x, y: player.y }); traceTimer = 0; }
       player.invuln = Math.max(0, player.invuln - dt);
       stormShield = Math.max(0, stormShield - dt);
-      powerToast = Math.max(0, powerToast - dt);
-      checkpointToast = Math.max(0, checkpointToast - dt);
       player.dashCooldown = Math.max(0, player.dashCooldown - dt);
       player.dashTime = Math.max(0, player.dashTime - dt);
       jumpBuffer = Math.max(0, jumpBuffer - dt);
@@ -767,8 +772,7 @@ export default function Home() {
           player.dashCooldown = lightPower.dashCooldown;
           if (lightPower.shieldSeconds > 0) {
             stormShield = lightPower.shieldSeconds;
-            powerToast = 2.1;
-            powerToastMessage = 'STORM SHIELD  5 SEC';
+            showGameNotice('STORM SHIELD · 5 SEC', 'power');
           }
           tone('light');
         }
@@ -778,8 +782,7 @@ export default function Home() {
         checkpointIndex += 1;
         const previousLives = lives;
         lives = Math.min(3, lives + 1);
-        checkpointLifeAwarded = lives > previousLives;
-        checkpointToast = 2.2;
+        showGameNotice(lives > previousLives ? 'CHECKPOINT · +1 LIFE' : 'CHECKPOINT · LIFE FULL', 'checkpoint');
         setHud((current) => ({ ...current, lives, checkpoint: checkpointIndex }));
         tone('checkpoint');
         track('checkpoint', { checkpoint: checkpointIndex, lives, progress: player.x, elapsedMs: elapsed * 1000 });
@@ -1040,19 +1043,6 @@ export default function Home() {
         }
         ctx.globalAlpha = 1;
       }
-      if (checkpointToast > 0) {
-        const message = checkpointLifeAwarded ? 'CHECKPOINT  +1 LIFE' : 'CHECKPOINT  LIFE FULL';
-        ctx.fillStyle = 'rgba(3, 19, 23, .92)'; ctx.fillRect(430, 112, 420, 58);
-        ctx.fillStyle = '#78d7d2'; ctx.fillRect(430, 112, 420, 6);
-        ctx.fillStyle = checkpointLifeAwarded ? '#f5d263' : '#fff8e9';
-        ctx.font = 'bold 22px monospace'; ctx.textAlign = 'center'; ctx.fillText(message, 640, 149); ctx.textAlign = 'start';
-      }
-      if (powerToast > 0) {
-        const y = checkpointToast > 0 ? 184 : 112;
-        ctx.fillStyle = 'rgba(3, 19, 23, .94)'; ctx.fillRect(430, y, 420, 58);
-        ctx.fillStyle = '#78d7d2'; ctx.fillRect(430, y, 420, 6);
-        ctx.fillStyle = '#fff8e9'; ctx.font = 'bold 22px monospace'; ctx.textAlign = 'center'; ctx.fillText(powerToastMessage, 640, y + 37); ctx.textAlign = 'start';
-      }
     }
 
     function loop(now: number) {
@@ -1173,7 +1163,7 @@ export default function Home() {
         )}
 
         {screen === 'playing' && (
-          <>{waitingForLandscape && <div className="rotate-prompt"><span aria-hidden="true">↻</span><strong>Turn Sideways to Start</strong><small>Your run and timer are paused until the phone is in landscape.</small></div>}{showModifierCoach && !waitingForLandscape ? <div className="dash-coach modifier-coach"><b>TODAY&apos;S TWIST · {modifier.name}</b><span>{modifier.description}</span><button type="button" onClick={dismissModifierCoach}>LET&apos;S RUN</button></div> : showDashCoach && !waitingForLandscape && <div className="dash-coach"><b>DASH IS YOUR EDGE</b><span>Press SHIFT or X — or tap DASH — to burst through hazards. The HUD tells you when it recharges.</span><button type="button" onClick={() => dismissDashCoach()}>GOT IT</button></div>}<div className="touch-controls" aria-label="Touch controls">
+          <>{waitingForLandscape && <div className="rotate-prompt"><span aria-hidden="true">↻</span><strong>Turn Sideways to Start</strong><small>Your run and timer are paused until the phone is in landscape.</small></div>}{gameNotice && !waitingForLandscape && !showModifierCoach && !showDashCoach && <div className={`game-notice ${gameNotice.kind}`} role="status"><b>{gameNotice.text}</b></div>}{showModifierCoach && !waitingForLandscape ? <div className="dash-coach modifier-coach"><b>TODAY&apos;S TWIST · {modifier.name}</b><span>{modifier.description}</span><button type="button" onClick={dismissModifierCoach}>LET&apos;S RUN</button></div> : showDashCoach && !waitingForLandscape && <div className="dash-coach"><b>DASH IS YOUR EDGE</b><span>Press SHIFT or X — or tap DASH — to burst through hazards. The HUD tells you when it recharges.</span><button type="button" onClick={() => dismissDashCoach()}>GOT IT</button></div>}<div className="touch-controls" aria-label="Touch controls">
             <div><button type="button" aria-label="Move left" onPointerDown={(event) => beginPress('left', event)} onPointerUp={(event) => endPress('left', event)} onPointerCancel={(event) => endPress('left', event)} onLostPointerCapture={() => press('left', false)}>←</button><button type="button" aria-label="Move right" onPointerDown={(event) => beginPress('right', event)} onPointerUp={(event) => endPress('right', event)} onPointerCancel={(event) => endPress('right', event)} onLostPointerCapture={() => press('right', false)}>→</button></div>
             <div><button className={hud.dashReady ? 'dash-control ready' : 'dash-control'} type="button" aria-label={hud.dashReady ? 'Dash ready' : 'Dash charging'} onPointerDown={(event) => beginPress('dash', event)} onPointerUp={(event) => endPress('dash', event)} onPointerCancel={(event) => endPress('dash', event)} onLostPointerCapture={() => press('dash', false)}>DASH</button><button className="jump-control" type="button" aria-label="Jump — tap twice for double jump" onPointerDown={(event) => beginPress('jump', event)} onPointerUp={(event) => endPress('jump', event)} onPointerCancel={(event) => endPress('jump', event)} onLostPointerCapture={() => press('jump', false)}>JUMP 2X</button></div>
           </div></>
