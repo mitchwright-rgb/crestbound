@@ -501,7 +501,7 @@ export default function Home() {
       player.x = checkpoints[0]; player.y = 620 - player.h; player.vx = 0; player.vy = 0; player.grounded = true; player.invuln = 1.25; player.jumps = 0;
       sparks = sparkSeed.map((item) => ({ ...item }));
       enemies = enemySeed.map((item) => ({ ...item }));
-      lives = 3; collected = 0; elapsed = 0; cameraX = 0; checkpointIndex = 0; jumpBuffer = 0; coyote = 0; previousJump = false; previousDash = false; trace = []; traceTimer = 0; stormShield = 0; powerToast = 0; powerToastMessage = ''; checkpointToast = 0; checkpointLifeAwarded = false; runEnded = false;
+      lives = 3; collected = 0; elapsed = 0; lastHud = 0; cameraX = 0; checkpointIndex = 0; jumpBuffer = 0; coyote = 0; previousJump = false; previousDash = false; trace = []; traceTimer = 0; stormShield = 0; powerToast = 0; powerToastMessage = ''; checkpointToast = 0; checkpointLifeAwarded = false; runEnded = false;
       const storedBest = window.localStorage.getItem(`crestbound-best-${course.id}`);
       setHud({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: storedBest ? Number(storedBest) : null, checkpoint: 0, progress: 0, dashReady: true, shield: 0 });
     };
