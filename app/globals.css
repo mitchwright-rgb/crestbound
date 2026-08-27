@@ -597,3 +597,31 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .home-dashboard .home-links { gap: 14px; }
   .home-dashboard .home-links button { min-height: 40px; padding: 6px; font-size: 11px; }
 }
+
+/* Product-quality interaction and responsive finishing pass. */
+.home-panel, .game-modal { scroll-padding-block: 68px; }
+.home-panel:focus, .game-modal:focus { outline: 3px solid var(--teal-light); outline-offset: 3px; }
+.panel-dismiss {
+  position: sticky;
+  z-index: 4;
+  top: 8px;
+  float: right;
+  width: 44px;
+  height: 44px;
+  margin: -10px -10px 0 10px;
+  border: 3px solid #171b1c;
+  color: #071316;
+  background: var(--gold);
+  box-shadow: 3px 3px 0 #171b1c;
+  font: 900 12px/1 var(--font-pixel), monospace;
+  cursor: pointer;
+}
+.panel-dismiss:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #171b1c; }
+.game-modal > button, .game-modal .secondary, .panel-close { min-height: 44px; }
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .home-cover img { object-position: center top; }
+  .home-dashboard { min-height: 140px; grid-template-rows: 70px 44px; gap: 7px 16px; padding-block: 7px 6px; }
+  .home-dashboard .daily-course, .home-dashboard .daily-glance, .home-dashboard .play-button { min-height: 68px; padding-block: 7px; }
+  .home-dashboard .home-links button { min-height: 44px; font-size: 11px; }
+}
