@@ -2,7 +2,7 @@
 
 import { FormEvent, PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SoundKind, soundSources, soundVolumes } from './audio-assets';
-import { chicagoDayKey, collectLightPower, formatDailyReset, gravityForModifier, millisecondsUntilNextChicagoDay, musicTrackForCourse, resetRunTiming, resolveDamage, tailwindAcceleration, touchInputFromControls } from './game-rules';
+import { chicagoDayKey, collectLightPower, formatDailyReset, gravityForModifier, horizontalSpeedLimit, millisecondsUntilNextChicagoDay, musicTrackForCourse, resetRunTiming, resolveDamage, tailwindAcceleration, touchInputFromControls } from './game-rules';
 import { checkNickname } from '@/lib/nickname';
 
 type Screen = 'title' | 'playing' | 'paused' | 'won' | 'over';
@@ -33,9 +33,9 @@ const courseSpecs = [
 ] as const;
 const modifierSpecs = [
   { id: 'clear', name: 'Clear Skies', description: 'The standard route: normal gravity, normal wind, and familiar light.' },
-  { id: 'tailwind', name: 'Tailwind', description: 'A steady breeze gives Sunny a small forward push while moving right.' },
-  { id: 'moonstep', name: 'Moonstep', description: 'Lower gravity gives every jump more height and longer airtime.' },
-  { id: 'sparkstorm', name: 'Spark Storm', description: 'Extra teal Storm Lights appear on high routes. Each recharges Dash and shields one hit for five seconds.' },
+  { id: 'tailwind', name: 'Tailwind', description: 'A strong eastbound wind gives Sunny faster acceleration and a higher top speed while moving right.' },
+  { id: 'moonstep', name: 'Moonstep', description: 'Low gravity makes every jump dramatically higher and keeps Sunny airborne longer.' },
+  { id: 'sparkstorm', name: 'Spark Storm', description: 'Extra teal Storm Lights appear throughout the route. Each recharges Dash and shields one hit for seven seconds.' },
 ] as const;
 const dailyCourse = courseSpecs[dailyCourseIndex];
 const dailyModifier = modifierSpecs[((daySerial + dailyCourseIndex) % modifierSpecs.length + modifierSpecs.length) % modifierSpecs.length];
@@ -84,7 +84,7 @@ function buildCourse(index: number, modifierId: string) {
     const regularSparks: Spark[] = [0, 1].flatMap((copy) => baseSparkSeed.map((spark, sparkIndex) => ({ ...spark, x: spark.x + copy * COURSE_OFFSET + (copy ? (sparkIndex % 3 - 1) * 38 : 0) })));
     const stormSparks = modifierId === 'sparkstorm' ? platforms
       .filter((platform, platformIndex) => platform.y < 520 && platformIndex % 4 === 1)
-      .slice(0, 12)
+      .slice(0, 16)
       .map((platform, stormIndex) => ({ x: platform.x + platform.w * (stormIndex % 2 ? .72 : .28), y: platform.y - 74, storm: true })) : [];
     return {
       platforms,
@@ -121,7 +121,7 @@ function buildCourse(index: number, modifierId: string) {
   const regularSparks = [...aerial, ...groundLight].sort((a, b) => a.x - b.x).slice(0, 60);
   const stormSparks = modifierId === 'sparkstorm' ? platforms
     .filter((platform, platformIndex) => platform.y < 500 && platformIndex % 5 === 2)
-    .slice(0, 12)
+    .slice(0, 16)
     .map((platform, stormIndex) => ({ x: platform.x + platform.w * (stormIndex % 2 ? .7 : .3), y: platform.y - 78, storm: true })) : [];
   const ground = platforms.filter((platform) => platform.y >= 600 && platform.w >= 430);
   const enemySeed = ground.filter((_, groundIndex) => groundIndex > 0 && (index === 2 || groundIndex % 2 === 0)).map((platform, enemyIndex) => ({
@@ -787,8 +787,9 @@ export default function Home() {
       if (direction && player.vx && Math.sign(player.vx) !== direction) player.vx *= .38;
       const acceleration = player.grounded ? 2200 : 1450;
       player.vx += direction * acceleration * dt;
+      player.vx += tailwindAcceleration(modifier.id, direction) * dt;
       if (!direction) player.vx *= Math.pow(player.grounded ? 0.0008 : 0.08, dt);
-      player.vx = Math.max(-430, Math.min(430, player.vx));
+      player.vx = Math.max(-430, Math.min(horizontalSpeedLimit(modifier.id, direction), player.vx));
 
       if (input.jump && !previousJump) jumpBuffer = 0.12;
       if (jumpBuffer > 0 && (player.grounded || coyote > 0 || player.jumps < 2)) {
@@ -802,7 +803,6 @@ export default function Home() {
       }
       previousJump = input.jump;
       previousDash = input.dash;
-      player.vx += tailwindAcceleration(modifier.id, direction) * dt;
       if (player.dashTime <= 0) player.vy += gravityForModifier(modifier.id) * dt;
       player.vy = Math.min(player.vy, 980);
       screenShake = Math.max(0, screenShake - dt);
@@ -860,7 +860,7 @@ export default function Home() {
           player.dashCooldown = lightPower.dashCooldown;
           if (lightPower.shieldSeconds > 0) {
             stormShield = lightPower.shieldSeconds;
-            showGameNotice('STORM SHIELD · 5 SEC', 'power');
+            showGameNotice('STORM SHIELD · 7 SEC', 'power');
           }
           tone('light');
         }
@@ -997,6 +997,26 @@ export default function Home() {
           const y = ((index * 53 + elapsed * 460) % 820) - 90;
           ctx.fillStyle = index % 5 === 0 ? '#78d7d2' : '#457583';
           ctx.fillRect(Math.floor(x / 4) * 4, Math.floor(y / 4) * 4, index % 5 === 0 ? 4 : 3, index % 5 === 0 ? 22 : 14);
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      if (modifier.id === 'tailwind' && !reducedMotion) {
+        ctx.globalAlpha = .55;
+        for (let index = 0; index < 22; index += 1) {
+          const x = ((index * 149 + elapsed * 520) % 1500) - 140;
+          const y = 90 + ((index * 83) % 500);
+          ctx.fillStyle = index % 4 === 0 ? '#fff8e9' : '#9de8e1';
+          ctx.fillRect(Math.floor(x / 4) * 4, Math.floor(y / 4) * 4, index % 3 === 0 ? 112 : 68, 4);
+        }
+        ctx.globalAlpha = 1;
+      } else if (modifier.id === 'moonstep' && !reducedMotion) {
+        ctx.globalAlpha = .42;
+        for (let index = 0; index < 18; index += 1) {
+          const x = ((index * 211 - cameraX * .12) % 1420 + 1420) % 1420 - 60;
+          const y = ((index * 97 - elapsed * 54) % 620 + 620) % 620 + 34;
+          ctx.fillStyle = index % 3 === 0 ? '#fff0ad' : '#a7e4df';
+          ctx.fillRect(Math.floor(x / 4) * 4, Math.floor(y / 4) * 4, 6, 6);
         }
         ctx.globalAlpha = 1;
       }
@@ -1218,7 +1238,7 @@ export default function Home() {
               <p className="kicker">READY, SUNNY?</p><h2 id="help-title">How to Play</h2>
               <div><b>RUN</b><span>Arrow keys / A D / touch arrows</span><b>JUMP</b><span>Space / touch JUMP · tap twice</span><b>DASH</b><span>Shift or X / touch DASH · recharges</span></div>
               <p>Touch controls appear automatically. Turn your phone sideways for the full course.</p>
-              <section className="world-rules"><h3>World Rules</h3><article><b>GOLD LIGHT</b><span>Shortens Dash recharge.</span></article><article><b>STORM LIGHT</b><span>Teal. In Spark Storm, fully recharges Dash and shields one hit for five seconds.</span></article><article><b>CHECKPOINT</b><span>Saves your route and restores one life, up to three.</span></article><article><b>ENEMY</b><span>Dash through it or land on it from above.</span></article></section>
+              <section className="world-rules"><h3>World Rules</h3><article><b>GOLD LIGHT</b><span>Shortens Dash recharge.</span></article><article><b>STORM LIGHT</b><span>Teal. In Spark Storm, fully recharges Dash and shields one hit for seven seconds.</span></article><article><b>CHECKPOINT</b><span>Saves your route and restores one life, up to three.</span></article><article><b>ENEMY</b><span>Dash through it or land on it from above.</span></article></section>
               <section className="twist-directory"><h3>Daily Twists</h3>{modifierSpecs.map((item) => <article className={item.id === modifier.id && !isPractice ? 'today' : ''} key={item.id}><b>{item.name}{item.id === modifier.id && !isPractice ? ' · TODAY' : ''}</b><span>{item.description}</span></article>)}</section>
               <p className="app-tip"><b>FULL-SCREEN TEST</b> On iPhone, tap Share, then Add to Home Screen. Crestbound will open without Safari&apos;s bars.</p>
               <button className="panel-close" type="button" onClick={closeHomePanel}>Got It</button>

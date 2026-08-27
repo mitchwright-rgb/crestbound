@@ -43,16 +43,20 @@ export function resetRunTiming() {
 }
 
 export function gravityForModifier(modifierId: ModifierId) {
-  return modifierId === 'moonstep' ? 1500 : 1850;
+  return modifierId === 'moonstep' ? 1250 : 1850;
 }
 
 export function tailwindAcceleration(modifierId: ModifierId, direction: number) {
-  return modifierId === 'tailwind' && direction > 0 ? 85 : 0;
+  return modifierId === 'tailwind' && direction > 0 ? 360 : 0;
+}
+
+export function horizontalSpeedLimit(modifierId: ModifierId, direction: number) {
+  return modifierId === 'tailwind' && direction > 0 ? 520 : 430;
 }
 
 export function collectLightPower(storm: boolean, dashCooldown: number) {
   return storm
-    ? { dashCooldown: 0, shieldSeconds: 5 }
+    ? { dashCooldown: 0, shieldSeconds: 7 }
     : { dashCooldown: Math.max(0, dashCooldown - 0.35), shieldSeconds: 0 };
 }
 
