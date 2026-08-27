@@ -164,6 +164,7 @@ export default function Home() {
   const [hud, setHud] = useState<Hud>({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: null, checkpoint: 0, progress: 0, dashReady: true, shield: 0 });
   const musicRef = useRef<HTMLAudioElement | null>(null);
   const sfxRef = useRef<Map<SoundKind, HTMLAudioElement>>(new Map());
+  const telemetryQueueRef = useRef<Array<{ eventName: string; playerId: string; courseId: string; metadata: Record<string, string | number> }>>([]);
   const runIdRef = useRef<string | null>(null);
   const playerIdRef = useRef('');
   const homeTrackedRef = useRef(false);
@@ -342,6 +343,15 @@ export default function Home() {
     });
   }
 
+  function postTelemetry(payload: { eventName: string; playerId: string; courseId: string; metadata: Record<string, string | number> }) {
+    void fetch('/api/event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).catch(() => undefined);
+  }
+
+  function flushTelemetry() {
+    const queued = telemetryQueueRef.current.splice(0);
+    queued.forEach(postTelemetry);
+  }
+
   function track(eventName: string, details: Record<string, string | number> = {}) {
     if (!playerIdRef.current) return;
     const metadata = {
@@ -351,7 +361,12 @@ export default function Home() {
       device: window.matchMedia('(pointer: coarse)').matches ? 'touch' : 'desktop',
       ...details,
     };
-    void fetch('/api/event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventName, playerId: playerIdRef.current, courseId: course.id, metadata }) }).catch(() => undefined);
+    const payload = { eventName, playerId: playerIdRef.current, courseId: course.id, metadata };
+    // Checkpoint and damage events are useful launch diagnostics, but sending
+    // them while the canvas is animating can briefly contend with audio and
+    // rendering on mobile Safari. Flush them when the run stops instead.
+    if (eventName === 'checkpoint' || eventName === 'life_lost') telemetryQueueRef.current.push(payload);
+    else postTelemetry(payload);
   }
 
   function dismissDashCoach(learned = false) {
@@ -400,7 +415,7 @@ export default function Home() {
   }
 
   function togglePause() {
-    if (screenRef.current === 'playing') { track('pause'); setGameScreen('paused'); }
+    if (screenRef.current === 'playing') { track('pause'); flushTelemetry(); setGameScreen('paused'); }
     else if (screenRef.current === 'paused') {
       const shouldWaitForLandscape = window.matchMedia('(orientation: portrait) and (pointer: coarse)').matches;
       waitingForLandscapeRef.current = shouldWaitForLandscape;
@@ -574,6 +589,7 @@ export default function Home() {
         player.invuln = 999;
         inputRef.current = { left: false, right: false, jump: false, dash: false };
         track('run_over', { reason: soundKind, checkpoint: checkpointIndex, progress: player.x, elapsedMs: elapsed * 1000 });
+        flushTelemetry();
         setGameScreen('over');
       } else resetPosition();
     };
@@ -648,7 +664,7 @@ export default function Home() {
       player.vy = Math.min(player.vy, 980);
       screenShake = Math.max(0, screenShake - dt);
 
-      const activePlatforms = platforms.map((platform) => {
+      const activePlatforms = platforms.filter((platform) => platform.x + platform.w >= player.x - 180 && platform.x <= player.x + player.w + 180).map((platform) => {
         if (!platform.moving) return platform;
         return { ...platform, y: (platform.baseY ?? platform.y) + Math.sin(elapsed * 1.45 + (platform.phase ?? 0)) * 72 };
       });
@@ -729,10 +745,11 @@ export default function Home() {
         setHud({ sparks: collected, total: sparks.length, lives, time: elapsed, best: Math.min(best, elapsed), checkpoint: checkpointIndex, progress: player.x, dashReady: player.dashCooldown <= 0, shield: stormShield });
         if (!isPractice) recordStreak();
         else track('practice_finish', { lives, progress: player.x, elapsedMs: elapsed * 1000 });
+        flushTelemetry();
         tone('win'); setGameScreen('won');
       }
       cameraX += (Math.max(0, Math.min(WORLD_W - VIEW_W, player.x - 390)) - cameraX) * Math.min(1, dt * 5.5);
-      if (elapsed - lastHud > 0.08) {
+      if (elapsed - lastHud > 0.2) {
         lastHud = elapsed;
         const stored = window.localStorage.getItem(`crestbound-best-${course.id}`);
         setHud({ sparks: collected, total: sparks.length, lives, time: elapsed, best: stored ? Number(stored) : null, checkpoint: checkpointIndex, progress: player.x, dashReady: player.dashCooldown <= 0, shield: stormShield });
@@ -742,6 +759,9 @@ export default function Home() {
     function draw() {
       const ctx = context;
       const shakeX = !reducedMotion && screenShake > 0 ? ((Math.floor(elapsed * 60) % 3) - 1) * 4 : 0;
+      // Physics stays sub-pixel smooth, while the rendered camera lands on the
+      // 4-unit grid that maps exactly to one backing-canvas pixel.
+      const renderCameraX = Math.round(cameraX / 4) * 4;
       // Keep the playable rooftop above a phone's thumb controls without
       // changing the course geometry or the desktop composition.
       const touchWorldLift = touchLandscape.matches ? 120 : 0;
@@ -861,9 +881,13 @@ export default function Home() {
         ctx.globalAlpha = 1;
       }
 
-      ctx.save(); ctx.translate(-cameraX, -touchWorldLift);
-      const activePlatforms = platforms.map((platform) => platform.moving ? { ...platform, y: (platform.baseY ?? platform.y) + Math.sin(elapsed * 1.45 + (platform.phase ?? 0)) * 72 } : platform);
-      activePlatforms.forEach((platform) => {
+      ctx.save(); ctx.translate(-renderCameraX, -touchWorldLift);
+      const viewLeft = renderCameraX - 180;
+      const viewRight = renderCameraX + VIEW_W + 180;
+      const visible = (x: number, width = 0) => x + width >= viewLeft && x <= viewRight;
+      platforms.forEach((sourcePlatform) => {
+        if (!visible(sourcePlatform.x, sourcePlatform.w)) return;
+        const platform = sourcePlatform.moving ? { ...sourcePlatform, y: (sourcePlatform.baseY ?? sourcePlatform.y) + Math.sin(elapsed * 1.45 + (sourcePlatform.phase ?? 0)) * 72 } : sourcePlatform;
         const px = Math.floor(platform.x / 4) * 4; const py = Math.floor(platform.y / 4) * 4;
         ctx.fillStyle = '#061a20'; ctx.fillRect(px - 4, py - 4, platform.w + 8, platform.h + 4);
         ctx.fillStyle = atmosphere.edge; ctx.fillRect(px, py, platform.w, 20);
@@ -884,6 +908,7 @@ export default function Home() {
         }
       });
       const drawSign = (x: number, y: number, text: string, accent: string) => {
+        if (!visible(x, 150)) return;
         ctx.fillStyle = '#071316'; ctx.fillRect(x - 6, y - 6, 150, 48);
         ctx.fillStyle = accent; ctx.fillRect(x, y, 138, 36);
         ctx.fillStyle = '#071316'; ctx.fillRect(x + 5, y + 5, 128, 26);
@@ -897,17 +922,19 @@ export default function Home() {
       drawSign(11280, 545, modifier.name.toUpperCase(), '#78d7d2');
       drawSign(14290, 540, 'FINAL PUSH', '#ef6f52');
       spikeZones.forEach((spike) => {
+        if (!visible(spike.x, spike.w)) return;
         ctx.fillStyle = '#071316'; ctx.fillRect(spike.x, spike.y + 20, spike.w, 8);
         ctx.fillStyle = '#f06f52';
         for (let x = spike.x; x < spike.x + spike.w; x += 24) { ctx.beginPath(); ctx.moveTo(x, spike.y + 24); ctx.lineTo(x + 12, spike.y); ctx.lineTo(x + 24, spike.y + 24); ctx.closePath(); ctx.fill(); }
       });
       checkpoints.slice(1).forEach((x, index) => {
+        if (!visible(x, 42)) return;
         const active = checkpointIndex > index;
         ctx.fillStyle = active ? '#f5d263' : '#527b7c'; ctx.fillRect(x - 4, 486, 8, 86); ctx.fillRect(x, 486, 42, 8);
         ctx.fillStyle = active ? '#ef6f52' : '#234d50'; ctx.fillRect(x + 8, 494, 30, 22);
       });
       sparks.forEach((spark, index) => {
-        if (spark.taken) return;
+        if (spark.taken || !visible(spark.x - 28, 56)) return;
         const bob = Math.round(Math.sin(elapsed * 5 + index) * 4 / 4) * 4;
         ctx.save(); ctx.translate(spark.x, spark.y + bob); const color = spark.storm ? '#78d7d2' : '#f5d263';
         ctx.fillStyle = '#071316'; ctx.fillRect(-12, -20, 24, 40); ctx.fillRect(-20, -12, 40, 24);
@@ -918,7 +945,7 @@ export default function Home() {
         ctx.restore();
       });
       enemies.forEach((enemy) => {
-        if (!enemy.alive) return;
+        if (!enemy.alive || !visible(enemy.x - 32, 64)) return;
         const ex = Math.floor(enemy.x / 4) * 4; const ey = Math.floor(enemy.y / 4) * 4;
         const step = Math.floor(elapsed * 8 + enemy.x / 80) % 2 ? 4 : 0;
         ctx.fillStyle = '#071316'; ctx.fillRect(ex - 22, ey - 34, 10, 10); ctx.fillRect(ex - 8, ey - 40, 12, 12); ctx.fillRect(ex + 8, ey - 34, 10, 10);
@@ -929,10 +956,12 @@ export default function Home() {
         ctx.fillStyle = '#071316'; ctx.fillRect(ex - 22 - step, ey + 20, 16, 8); ctx.fillRect(ex + 8 + step, ey + 20, 16, 8);
       });
       const exitX = FINISH_X - 35;
-      ctx.fillStyle = '#071316'; ctx.fillRect(exitX, 414, 88, 24); ctx.fillStyle = '#f5d263'; ctx.font = 'bold 16px monospace'; ctx.fillText('EXIT', exitX + 20, 432);
-      ctx.fillStyle = '#b96f14'; ctx.fillRect(exitX - 16, 440, 120, 180); ctx.fillStyle = '#f5d263'; ctx.fillRect(exitX - 4, 452, 96, 168);
-      ctx.fillStyle = Math.floor(elapsed * 5) % 2 ? '#18a7a2' : '#78d7d2'; ctx.fillRect(exitX + 12, 468, 64, 152);
-      ctx.fillStyle = '#071820'; ctx.fillRect(exitX + 28, 484, 32, 136);
+      if (visible(exitX - 16, 120)) {
+        ctx.fillStyle = '#071316'; ctx.fillRect(exitX, 414, 88, 24); ctx.fillStyle = '#f5d263'; ctx.font = 'bold 16px monospace'; ctx.fillText('EXIT', exitX + 20, 432);
+        ctx.fillStyle = '#b96f14'; ctx.fillRect(exitX - 16, 440, 120, 180); ctx.fillStyle = '#f5d263'; ctx.fillRect(exitX - 4, 452, 96, 168);
+        ctx.fillStyle = Math.floor(elapsed * 5) % 2 ? '#18a7a2' : '#78d7d2'; ctx.fillRect(exitX + 12, 468, 64, 152);
+        ctx.fillStyle = '#071820'; ctx.fillRect(exitX + 28, 484, 32, 136);
+      }
 
       let spriteIndex = 0;
       if (player.invuln > 0 && Math.floor(elapsed * 12) % 2 === 0) ctx.globalAlpha = .35;
