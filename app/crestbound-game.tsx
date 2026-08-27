@@ -179,6 +179,8 @@ export default function Home() {
   const [nickname, setNickname] = useState('');
   const [submitState, setSubmitState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [submitError, setSubmitError] = useState('');
+  const [runStartState, setRunStartState] = useState<'idle' | 'connecting' | 'error'>('idle');
+  const [runStartError, setRunStartError] = useState('');
   const [rank, setRank] = useState<number | null>(null);
   const [homePanel, setHomePanel] = useState<HomePanel>('none');
   const homePanelRef = useRef<HTMLElement>(null);
@@ -409,7 +411,7 @@ export default function Home() {
     track('modifier_learned');
   }
 
-  function startGame(tryImmersive = false) {
+  async function startGame(tryImmersive = false) {
     if (sfxContextRef.current?.state === 'suspended') void sfxContextRef.current.resume().catch(() => undefined);
     if (tryImmersive && window.matchMedia('(pointer: coarse)').matches && !window.matchMedia('(display-mode: standalone)').matches && !document.fullscreenElement) {
       const immersiveRequest = document.documentElement.requestFullscreen?.({ navigationUI: 'hide' });
@@ -422,12 +424,36 @@ export default function Home() {
     resetRef.current?.();
     setSubmitState('idle'); setRank(null); runIdRef.current = null;
     const shouldWaitForLandscape = window.matchMedia('(orientation: portrait) and (pointer: coarse)').matches;
-    startMusic(!shouldWaitForLandscape);
     if (!isPractice) {
-      void fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'start', playerId: playerIdRef.current, courseId: dailyCourse.id, modifierId: dailyModifier.id }) })
-        .then(async (response) => { if (response.ok) runIdRef.current = ((await response.json()) as { runId: string }).runId; })
-        .catch(() => undefined);
+      setRunStartState('connecting');
+      setRunStartError('');
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 8000);
+      try {
+        const response = await fetch('/api/run', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'start', playerId: playerIdRef.current, courseId: dailyCourse.id, modifierId: dailyModifier.id }),
+          signal: controller.signal,
+        });
+        const data = await response.json().catch(() => null) as { runId?: string; error?: string } | null;
+        if (!response.ok || !data?.runId) throw new Error(data?.error || 'Ranked play is temporarily unavailable.');
+        runIdRef.current = data.runId;
+      } catch (error) {
+        const message = error instanceof DOMException && error.name === 'AbortError'
+          ? 'The ranked connection timed out. Check your connection and try again.'
+          : error instanceof Error ? error.message : 'Ranked play is temporarily unavailable. Try again.';
+        setRunStartState('error');
+        setRunStartError(message);
+        if (screenRef.current !== 'title') setGameScreen('title');
+        return;
+      } finally {
+        window.clearTimeout(timeout);
+      }
     }
+    setRunStartState('idle');
+    setRunStartError('');
+    startMusic(!shouldWaitForLandscape);
     waitingForLandscapeRef.current = shouldWaitForLandscape;
     setWaitingForLandscape(shouldWaitForLandscape);
     setGameScreen('playing');
@@ -1164,7 +1190,8 @@ export default function Home() {
               </div>
               <div className="home-dashboard">
                 <div className="daily-course"><span>{isPractice ? 'PRACTICE RUN' : 'TODAY\'S RUN'}</span><b>{course.name}</b><em>{isPractice ? 'STANDARD RULES' : `TWIST · ${modifier.name}`}</em><div className="daily-return"><strong>{isPractice ? 'PRACTICE MODE' : streak > 0 ? `${streak} DAY STREAK` : 'FINISH TO START A STREAK'}</strong><small>{isPractice ? 'TODAY\'S BOARD IS UNAFFECTED' : `NEW RUN IN ${dailyReset}`}</small></div></div>
-                <button className="play-button" type="button" onClick={() => void startGame(true)}>{isPractice ? 'Start Practice' : 'Play Today\'s Run'} <span aria-hidden="true">▶</span></button>
+                <button className="play-button" type="button" disabled={runStartState === 'connecting'} onClick={() => void startGame(true)}>{runStartState === 'connecting' ? 'Connecting Ranked Run…' : isPractice ? 'Start Practice' : 'Play Today\'s Run'} {runStartState !== 'connecting' && <span aria-hidden="true">▶</span>}</button>
+                {runStartState === 'error' && <p className="run-start-error" role="alert"><b>RUN NOT STARTED</b><span>{runStartError}</span></p>}
                 <div className="daily-glance"><span>{community.players} {community.players === 1 ? 'SUNCRESTER HAS' : 'SUNCRESTERS HAVE'} RUN TODAY</span><b>{entries[0] ? `FASTEST: ${entries[0].name} · ${formatTime(entries[0].timeMs / 1000)}` : 'BE THE FIRST FINISHER'}</b><div className="community-progress"><div><span>COMMUNITY LIGHT</span><b>{community.lights.toLocaleString()} / {community.goal.toLocaleString()}</b></div><progress aria-label={`${community.lights} of ${community.goal} community lights collected today`} max={community.goal} value={Math.min(community.lights, community.goal)} /><small>{community.lights >= community.goal ? 'TODAY\'S GOAL REACHED — KEEP IT GLOWING' : `${(community.goal - community.lights).toLocaleString()} LIGHTS TO TODAY'S GOAL`}</small></div></div>
                 <div className="home-links"><button type="button" onClick={() => { openHomePanel('leaderboard'); track('leaderboard_open'); }}>Leaderboard</button><button type="button" onClick={() => openHomePanel('courses')}>{isPractice ? 'Change Course' : 'Practice Courses'}</button><button type="button" onClick={() => openHomePanel('help')}>How to Play</button></div>
               </div>

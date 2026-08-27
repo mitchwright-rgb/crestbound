@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { chicagoKeys, database, ensureSchema } from '@/lib/db';
+import { chicagoKeys, database } from '@/lib/db';
 import { rateLimit } from '@/lib/rate-limit';
 import { normalizeEventMetadata } from '@/lib/telemetry';
 
@@ -7,7 +7,6 @@ const events = new Set(['home_view', 'run_start', 'practice_start', 'dash_learne
 const courses = new Set(['goldline', 'crosswind', 'nightshift']);
 
 export async function POST(request: Request) {
-  await ensureSchema();
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
   const playerId = String(body?.playerId ?? '');
   const eventName = String(body?.eventName ?? '');

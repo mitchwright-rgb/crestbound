@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
-import { chicagoKeys, database, ensureSchema } from '@/lib/db';
+import { chicagoKeys, database } from '@/lib/db';
 import { publicNickname } from '@/lib/nickname';
 
 type Row = { player_id: string; player_name: string; score_ms: number; sparks: number; points?: number; runs?: number; rank?: number };
 
 export async function GET(request: Request) {
-  await ensureSchema();
   const db = database();
   const url = new URL(request.url);
   const board = ['daily', 'weekly', 'all'].includes(url.searchParams.get('board') ?? '') ? url.searchParams.get('board')! : 'daily';

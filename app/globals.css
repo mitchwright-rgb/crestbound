@@ -515,6 +515,22 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   cursor: pointer;
   text-transform: uppercase;
 }
+.home-dashboard .play-button:disabled { color: #456164; background: #8b9b83; box-shadow: 4px 4px 0 #020708; cursor: wait; }
+.home-dashboard .run-start-error {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 14px;
+  margin: 0;
+  padding: 10px 14px;
+  border: 3px solid var(--coral);
+  color: #fff8e9;
+  background: #32191a;
+  font-family: var(--font-pixel), monospace;
+  font-size: 9px;
+  line-height: 1.45;
+}
+.home-dashboard .run-start-error b { color: #ff8767; }
 .home-dashboard .daily-glance {
   width: 100%;
   min-height: 72px;

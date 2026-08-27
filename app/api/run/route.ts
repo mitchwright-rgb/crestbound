@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { chicagoKeys, database, ensureSchema } from '@/lib/db';
+import { chicagoKeys, database } from '@/lib/db';
 import { checkNickname } from '@/lib/nickname';
 import { rateLimit } from '@/lib/rate-limit';
 
@@ -18,7 +18,6 @@ function scheduledRun() {
 }
 
 export async function POST(request: Request) {
-  await ensureSchema();
   const db = database();
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
   if (!body) return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
