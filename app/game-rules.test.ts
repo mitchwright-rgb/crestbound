@@ -12,12 +12,14 @@ test('Moonstep lowers gravity while other twists preserve standard gravity', () 
   assert.equal(gravityForModifier('sparkstorm'), 1850);
 });
 
-test('Tailwind only adds forward acceleration while moving right', () => {
-  assert.equal(tailwindAcceleration('tailwind', 1), 360);
+test('Tailwind strongly accelerates right, drifts while coasting, and resists leftward recovery', () => {
+  assert.equal(tailwindAcceleration('tailwind', 1), 900);
+  assert.equal(tailwindAcceleration('tailwind', 0), 180);
   assert.equal(tailwindAcceleration('tailwind', -1), 0);
   assert.equal(tailwindAcceleration('clear', 1), 0);
-  assert.equal(horizontalSpeedLimit('tailwind', 1), 520);
-  assert.equal(horizontalSpeedLimit('tailwind', -1), 430);
+  assert.equal(horizontalSpeedLimit('tailwind', 1), 600);
+  assert.equal(horizontalSpeedLimit('tailwind', 0), 600);
+  assert.equal(horizontalSpeedLimit('tailwind', -1), 330);
   assert.equal(horizontalSpeedLimit('clear', 1), 430);
 });
 

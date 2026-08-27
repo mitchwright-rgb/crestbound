@@ -33,7 +33,7 @@ const courseSpecs = [
 ] as const;
 const modifierSpecs = [
   { id: 'clear', name: 'Clear Skies', description: 'The standard route: normal gravity, normal wind, and familiar light.' },
-  { id: 'tailwind', name: 'Tailwind', description: 'A strong eastbound wind gives Sunny faster acceleration and a higher top speed while moving right.' },
+  { id: 'tailwind', name: 'Tailwind', description: 'A strong eastbound wind makes rightward jumps much faster, pushes Sunny while coasting, and resists moving left.' },
   { id: 'moonstep', name: 'Moonstep', description: 'Low gravity makes every jump dramatically higher and keeps Sunny airborne longer.' },
   { id: 'sparkstorm', name: 'Spark Storm', description: 'Extra teal Storm Lights appear throughout the route. Each recharges Dash and shields one hit for seven seconds.' },
 ] as const;
@@ -787,9 +787,9 @@ export default function Home() {
       if (direction && player.vx && Math.sign(player.vx) !== direction) player.vx *= .38;
       const acceleration = player.grounded ? 2200 : 1450;
       player.vx += direction * acceleration * dt;
-      player.vx += tailwindAcceleration(modifier.id, direction) * dt;
       if (!direction) player.vx *= Math.pow(player.grounded ? 0.0008 : 0.08, dt);
-      player.vx = Math.max(-430, Math.min(horizontalSpeedLimit(modifier.id, direction), player.vx));
+      player.vx += tailwindAcceleration(modifier.id, direction) * dt;
+      player.vx = Math.max(-horizontalSpeedLimit(modifier.id, -1), Math.min(horizontalSpeedLimit(modifier.id, direction), player.vx));
 
       if (input.jump && !previousJump) jumpBuffer = 0.12;
       if (jumpBuffer > 0 && (player.grounded || coyote > 0 || player.jumps < 2)) {
@@ -1002,9 +1002,9 @@ export default function Home() {
       }
 
       if (modifier.id === 'tailwind' && !reducedMotion) {
-        ctx.globalAlpha = .55;
+        ctx.globalAlpha = .74;
         for (let index = 0; index < 22; index += 1) {
-          const x = ((index * 149 + elapsed * 520) % 1500) - 140;
+          const x = ((index * 149 + elapsed * 720) % 1500) - 140;
           const y = 90 + ((index * 83) % 500);
           ctx.fillStyle = index % 4 === 0 ? '#fff8e9' : '#9de8e1';
           ctx.fillRect(Math.floor(x / 4) * 4, Math.floor(y / 4) * 4, index % 3 === 0 ? 112 : 68, 4);

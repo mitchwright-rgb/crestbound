@@ -47,11 +47,15 @@ export function gravityForModifier(modifierId: ModifierId) {
 }
 
 export function tailwindAcceleration(modifierId: ModifierId, direction: number) {
-  return modifierId === 'tailwind' && direction > 0 ? 360 : 0;
+  if (modifierId !== 'tailwind') return 0;
+  if (direction > 0) return 900;
+  if (direction === 0) return 180;
+  return 0;
 }
 
 export function horizontalSpeedLimit(modifierId: ModifierId, direction: number) {
-  return modifierId === 'tailwind' && direction > 0 ? 520 : 430;
+  if (modifierId !== 'tailwind') return 430;
+  return direction < 0 ? 330 : 600;
 }
 
 export function collectLightPower(storm: boolean, dashCooldown: number) {
