@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { chicagoKeys, database } from '@/lib/db';
 import { publicNickname } from '@/lib/nickname';
+import { dailyChallengeIdForDay } from '@/lib/daily-challenge';
 
 type Row = { player_id: string; player_name: string; score_ms: number; sparks: number; points?: number; runs?: number; rank?: number };
 
@@ -11,6 +12,7 @@ export async function GET(request: Request) {
   const playerId = url.searchParams.get('playerId') ?? '';
   const courseId = ['goldline', 'crosswind', 'nightshift'].includes(url.searchParams.get('courseId') ?? '') ? url.searchParams.get('courseId')! : 'goldline';
   const keys = chicagoKeys();
+  const challengeId = dailyChallengeIdForDay(keys.day);
   let rows: Row[] = [];
 
   if (board === 'weekly') {
@@ -22,25 +24,25 @@ export async function GET(request: Request) {
       COUNT(*) runs FROM daily GROUP BY player_id ORDER BY points DESC, score_ms ASC LIMIT 10`).bind(keys.week).all<Row>();
     rows = result.results;
   } else {
-    const where = board === 'daily' ? 'WHERE day_key = ? AND course_id = ?' : '';
+    const where = board === 'daily' ? 'WHERE day_key = ? AND course_id = ? AND challenge_id = ?' : '';
     const query = db.prepare(`SELECT player_id, MAX(player_name) player_name, MIN(score_ms) score_ms, MAX(sparks) sparks, COUNT(*) runs
       FROM crest_scores ${where} GROUP BY player_id ORDER BY score_ms ASC, sparks DESC LIMIT 10`);
-    const result = board === 'daily' ? await query.bind(keys.day, courseId).all<Row>() : await query.all<Row>();
+    const result = board === 'daily' ? await query.bind(keys.day, courseId, challengeId).all<Row>() : await query.all<Row>();
     rows = result.results;
   }
 
   const dailyRanked = await db.prepare(`WITH best AS (
     SELECT player_id, MAX(player_name) player_name, MIN(score_ms) score_ms, MAX(sparks) sparks
-    FROM crest_scores WHERE day_key = ? AND course_id = ? GROUP BY player_id
+    FROM crest_scores WHERE day_key = ? AND course_id = ? AND challenge_id = ? GROUP BY player_id
   ), ranked AS (SELECT *, ROW_NUMBER() OVER (ORDER BY score_ms ASC, sparks DESC) rank FROM best)
-  SELECT * FROM ranked ORDER BY rank`).bind(keys.day, courseId).all<Row>();
+  SELECT * FROM ranked ORDER BY rank`).bind(keys.day, courseId, challengeId).all<Row>();
   const ranked = dailyRanked.results;
   const player = ranked.find((entry) => entry.player_id === playerId);
   const nearby = player ? ranked.filter((entry) => Math.abs(Number(entry.rank) - Number(player.rank)) <= 2) : [];
   const summary = await db.prepare(`WITH best AS (
-    SELECT player_id, MAX(sparks) sparks FROM crest_scores WHERE day_key = ? AND course_id = ? GROUP BY player_id
-  ) SELECT COUNT(*) players, COALESCE(SUM(sparks), 0) lights FROM best`).bind(keys.day, courseId).first<{ players: number; lights: number }>();
-  const recent = await db.prepare(`SELECT player_name FROM crest_scores WHERE day_key = ? AND course_id = ? ORDER BY created_at DESC LIMIT 5`).bind(keys.day, courseId).all<{ player_name: string }>();
+    SELECT player_id, MAX(sparks) sparks FROM crest_scores WHERE day_key = ? AND course_id = ? AND challenge_id = ? GROUP BY player_id
+  ) SELECT COUNT(*) players, COALESCE(SUM(sparks), 0) lights FROM best`).bind(keys.day, courseId, challengeId).first<{ players: number; lights: number }>();
+  const recent = await db.prepare(`SELECT player_name FROM crest_scores WHERE day_key = ? AND course_id = ? AND challenge_id = ? ORDER BY created_at DESC LIMIT 5`).bind(keys.day, courseId, challengeId).all<{ player_name: string }>();
 
   return NextResponse.json({
     board,

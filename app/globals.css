@@ -100,11 +100,12 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .how-to > p:not(.kicker) { color: #8eb0af; font-size: 13px; line-height: 1.45; }
 .how-to .app-tip { margin: 12px 0 0; padding: 10px 12px; border: 2px solid #31575a; color: #b9d7d5; background: #092329; }
 .how-to .app-tip b { color: var(--gold-light); }
-.world-rules, .twist-directory { display: grid; gap: 8px; margin: 18px 0; }
-.world-rules h3, .twist-directory h3 { margin: 0 0 3px; color: var(--gold-light); font-family: var(--font-pixel), monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
-.world-rules article, .twist-directory article { display: grid; grid-template-columns: minmax(100px, .35fr) 1fr; gap: 12px; align-items: start; padding: 9px 10px; border: 2px solid #23474d; background: #082329; }
-.world-rules article b, .twist-directory article b { color: var(--teal-light); line-height: 1.4; }
-.world-rules article span, .twist-directory article span { line-height: 1.4; }
+.world-rules, .twist-directory, .challenge-directory { display: grid; gap: 8px; margin: 18px 0; }
+.world-rules h3, .twist-directory h3, .challenge-directory h3 { margin: 0 0 3px; color: var(--gold-light); font-family: var(--font-pixel), monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.world-rules article, .twist-directory article, .challenge-directory article { display: grid; grid-template-columns: minmax(100px, .35fr) 1fr; gap: 12px; align-items: start; padding: 9px 10px; border: 2px solid #23474d; background: #082329; }
+.world-rules article b, .twist-directory article b, .challenge-directory article b { color: var(--teal-light); line-height: 1.4; }
+.world-rules article span, .twist-directory article span, .challenge-directory article span { line-height: 1.4; }
+.challenge-directory p { margin: 0; color: #a9c0bf; font-size: 11px; line-height: 1.45; }
 .twist-directory article.today { border-color: var(--gold); background: #172d2c; }
 .twist-directory { display: grid; gap: 7px; margin: 16px 0; padding: 12px; border: 2px solid #31575a; background: #06161a; text-align: left; }
 .twist-directory h3 { margin: 0 0 3px; color: var(--gold-light); font-family: var(--font-pixel), monospace; font-size: 12px; text-transform: uppercase; }
@@ -377,6 +378,11 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .daily-return { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 8px; padding-top: 5px; border-top: 1px solid #31575a; font-family: var(--font-pixel), monospace; }
 .daily-return strong { color: var(--coral); font-size: 8px; font-weight: 400; }
 .daily-return small { color: #a9d6d3; font-size: 8px; white-space: nowrap; }
+.daily-challenge { grid-column: 1 / -1; display: flex; justify-content: space-between; gap: 8px; padding-top: 5px; border-top: 1px solid #31575a; font-family: var(--font-pixel), monospace; }
+.daily-challenge strong { color: var(--gold-light); font-size: 8px; font-weight: 400; }
+.daily-challenge small { color: #d9e8e4; font-size: 8px; text-align: right; }
+.challenge-result { display: flex; justify-content: space-between; gap: 12px; margin: -8px 0 14px; padding: 9px 11px; border: 3px solid #31575a; color: #d9e8e4; background: #082329; font-family: var(--font-pixel), monospace; font-size: 9px; line-height: 1.35; }
+.challenge-result b { color: var(--teal-light); }.challenge-result.silver { border-color: #a9c0bf; }.challenge-result.gold { border-color: var(--gold); }
 .home-dashboard .play-button { width: 100%; min-height: 66px; padding: 12px 20px; border: 4px solid #171b1c; outline: 2px solid #d8931d; color: #071316; background: repeating-linear-gradient(0deg, #f2b52b 0 5px, #e8a721 5px 6px); box-shadow: 6px 6px 0 #171b1c, inset 0 4px 0 #f9df78; font-family: var(--font-pixel), monospace; font-size: clamp(10px, 1vw, 13px); cursor: pointer; text-transform: uppercase; }
 .home-dashboard .play-button:active { transform: translate(4px, 4px); box-shadow: 2px 2px 0 #171b1c; }
 .home-community { min-width: 0; }
@@ -592,6 +598,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .home-dashboard .daily-course b { font-size: 15px; }
   .home-dashboard .daily-course em { font-size: 10px; }
   .daily-return strong, .daily-return small { font-size: 8px; }
+  .daily-challenge strong, .daily-challenge small { font-size: 8px; }
   .home-dashboard .play-button { min-height: 58px; margin: 0; padding: 10px; font-size: 13px; }
   .home-dashboard .daily-glance { min-height: 96px; gap: 5px; padding: 8px 12px; font-size: 11px; }
   .home-dashboard .daily-glance .community-progress { padding-top: 5px; }
@@ -620,6 +627,8 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .home-dashboard .daily-course b { font-size: 15px; }
   .home-dashboard .daily-course em { font-size: 11px; }
   .daily-return strong, .daily-return small { font-size: 8px; }
+  .daily-challenge { padding-top: 3px; }
+  .daily-challenge strong, .daily-challenge small { font-size: 7px; }
   .home-dashboard .daily-glance { gap: 5px; font-size: 11px; }
   .home-dashboard .play-button { min-height: 88px; padding: 10px 14px; font-size: 13px; }
   .home-dashboard .daily-glance .community-progress { padding-top: 5px; }
@@ -655,5 +664,12 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .home-cover img { object-position: center top; }
   .home-dashboard { min-height: 140px; grid-template-rows: 70px 44px; gap: 7px 16px; padding-block: 7px 6px; }
   .home-dashboard .daily-course, .home-dashboard .daily-glance, .home-dashboard .play-button { min-height: 68px; padding-block: 7px; }
+  .home-dashboard .daily-course { height: 68px; gap: 2px 8px; overflow: hidden; }
+  .home-dashboard .daily-course span { font-size: 7px; }
+  .home-dashboard .daily-course b { font-size: 10px; }
+  .home-dashboard .daily-course em { font-size: 8px; }
+  .daily-challenge { padding-top: 2px; }
+  .daily-challenge strong { font-size: 6px; }
+  .daily-challenge small, .daily-return { display: none; }
   .home-dashboard .home-links button { min-height: 44px; font-size: 11px; }
 }

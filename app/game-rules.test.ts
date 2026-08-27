@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { soundSources } from './audio-assets.ts';
-import { chicagoDayKey, collectLightPower, formatDailyReset, gravityForModifier, horizontalSpeedLimit, millisecondsUntilNextChicagoDay, musicTrackForCourse, resetRunTiming, resolveDamage, tailwindAcceleration, touchInputFromControls } from './game-rules.ts';
+import { challengeMedal, chicagoDayKey, collectLightPower, dailyObjectiveForSerial, formatDailyReset, gravityForModifier, horizontalSpeedLimit, millisecondsUntilNextChicagoDay, musicTrackForCourse, objectiveResultLabel, resetRunTiming, resolveDamage, tailwindAcceleration, touchInputFromControls } from './game-rules.ts';
+import { buildSeededCourse, checkpointIsSupported, courseSignature, maximumGroundGap } from './course-generator.ts';
 import { checkNickname, publicNickname } from '../lib/nickname.ts';
 import { normalizeEventMetadata } from '../lib/telemetry.ts';
 
@@ -103,4 +104,38 @@ test('daily reset countdown targets the next Chicago calendar day', () => {
 test('event metadata keeps useful product signals without accepting arbitrary data', () => {
   assert.equal(normalizeEventMetadata({ mode: 'practice', reason: 'fall', lives: 2, secret: 'nope' }), '{"mode":"practice","reason":"fall","lives":2}');
   assert.equal(normalizeEventMetadata({ reason: 'x'.repeat(40) }), null);
+});
+
+test('daily route generation is deterministic but changes with the date seed', () => {
+  const first = buildSeededCourse(0, 'clear', 20693);
+  const repeated = buildSeededCourse(0, 'clear', 20693);
+  const tomorrow = buildSeededCourse(0, 'clear', 20694);
+  assert.equal(courseSignature(first), courseSignature(repeated));
+  assert.notEqual(courseSignature(first), courseSignature(tomorrow));
+});
+
+test('seeded routes stay structurally distinct and keep safe recovery paths', () => {
+  for (const seed of [20693, 20694, 20700, 21000]) {
+    const routes = [0, 1, 2].map((courseIndex) => buildSeededCourse(courseIndex, 'sparkstorm', seed));
+    assert.equal(new Set(routes.map(courseSignature)).size, 3);
+    for (const route of routes) {
+      assert.ok(maximumGroundGap(route) <= 370);
+      assert.ok(route.checkpoints.every((checkpoint) => checkpointIsSupported(route, checkpoint)));
+      assert.ok(route.platforms.some((platform) => platform.y >= 600 && 15135 >= platform.x && 15135 <= platform.x + platform.w));
+      assert.ok(route.sparkSeed.some((spark) => spark.storm));
+    }
+  }
+});
+
+test('daily objectives rotate predictably and award meaningful medal tiers', () => {
+  const rotation = Array.from({ length: 4 }, (_, offset) => dailyObjectiveForSerial(20693 + offset, 0));
+  assert.equal(new Set(rotation).size, 4);
+  assert.equal(challengeMedal('sprint', { time: 54.9, sparks: 1, total: 40, lives: 1 }), 'GOLD');
+  assert.equal(challengeMedal('sprint', { time: 70, sparks: 1, total: 40, lives: 1 }), 'SILVER');
+  assert.equal(challengeMedal('light_hunt', { time: 200, sparks: 33, total: 40, lives: 1 }), 'GOLD');
+  assert.equal(challengeMedal('clean_run', { time: 200, sparks: 1, total: 40, lives: 3, hits: 0 }), 'GOLD');
+  assert.equal(challengeMedal('clean_run', { time: 200, sparks: 1, total: 40, lives: 3, hits: 1 }), 'SILVER');
+  assert.equal(challengeMedal('clean_run', { time: 200, sparks: 1, total: 40, lives: 3, hits: 2 }), 'BRONZE');
+  assert.equal(challengeMedal('skyline_mastery', { time: 74, sparks: 30, total: 40, lives: 2 }), 'GOLD');
+  assert.equal(objectiveResultLabel('light_hunt', { time: 60, sparks: 22, total: 40, lives: 2 }), '22/40 LIGHT');
 });

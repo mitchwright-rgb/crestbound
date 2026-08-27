@@ -1,5 +1,35 @@
 export type ModifierId = 'clear' | 'tailwind' | 'moonstep' | 'sparkstorm';
 export type TouchControl = 'left' | 'right' | 'jump' | 'dash';
+export type DailyObjectiveId = 'sprint' | 'light_hunt' | 'clean_run' | 'skyline_mastery';
+export type ChallengeMedal = 'BRONZE' | 'SILVER' | 'GOLD';
+
+export const dailyObjectiveSpecs: Record<DailyObjectiveId, { name: string; short: string; description: string }> = {
+  sprint: { name: 'Skyline Sprint', short: 'BEAT THE CLOCK', description: 'Gold under 0:55 · Silver under 1:15' },
+  light_hunt: { name: 'Light Hunt', short: 'FIND THE LIGHT', description: 'Gold at 82% · Silver at 60%' },
+  clean_run: { name: 'Perfect Landing', short: 'STAY UNTOUCHED', description: 'Gold with 0 hits · Silver with only 1' },
+  skyline_mastery: { name: 'Skyline Mastery', short: 'SPEED + LIGHT', description: 'Gold under 1:15 with 70% Light' },
+};
+
+export function dailyObjectiveForSerial(daySerial: number, courseIndex: number): DailyObjectiveId {
+  const objectives: DailyObjectiveId[] = ['sprint', 'light_hunt', 'clean_run', 'skyline_mastery'];
+  return objectives[((daySerial * 3 + courseIndex) % objectives.length + objectives.length) % objectives.length];
+}
+
+export function challengeMedal(objective: DailyObjectiveId, result: { time: number; sparks: number; total: number; lives: number; hits?: number }): ChallengeMedal {
+  const lightRatio = result.total > 0 ? result.sparks / result.total : 0;
+  if (objective === 'sprint') return result.time <= 55 ? 'GOLD' : result.time <= 75 ? 'SILVER' : 'BRONZE';
+  if (objective === 'light_hunt') return lightRatio >= .82 ? 'GOLD' : lightRatio >= .6 ? 'SILVER' : 'BRONZE';
+  if (objective === 'clean_run') return (result.hits ?? 3 - result.lives) === 0 ? 'GOLD' : (result.hits ?? 3 - result.lives) === 1 ? 'SILVER' : 'BRONZE';
+  return result.time <= 75 && lightRatio >= .7 ? 'GOLD' : result.time <= 90 || lightRatio >= .55 ? 'SILVER' : 'BRONZE';
+}
+
+export function objectiveResultLabel(objective: DailyObjectiveId, result: { time: number; sparks: number; total: number; lives: number; hits?: number }) {
+  if (objective === 'sprint') return `${result.time.toFixed(1)} SEC`;
+  if (objective === 'light_hunt') return `${result.sparks}/${result.total} LIGHT`;
+  if (objective === 'clean_run') return `${result.hits ?? 3 - result.lives} HITS`;
+  const percentage = result.total > 0 ? Math.round(result.sparks / result.total * 100) : 0;
+  return `${result.time.toFixed(1)} SEC · ${percentage}% LIGHT`;
+}
 
 export function touchInputFromControls(controls: Iterable<TouchControl>) {
   const active = new Set(controls);

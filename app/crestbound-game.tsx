@@ -2,14 +2,13 @@
 
 import { FormEvent, PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SoundKind, soundSources, soundVolumes } from './audio-assets';
-import { chicagoDayKey, collectLightPower, formatDailyReset, gravityForModifier, horizontalSpeedLimit, millisecondsUntilNextChicagoDay, musicTrackForCourse, resetRunTiming, resolveDamage, tailwindAcceleration, touchInputFromControls } from './game-rules';
+import { challengeMedal, chicagoDayKey, collectLightPower, dailyObjectiveForSerial, dailyObjectiveSpecs, formatDailyReset, gravityForModifier, horizontalSpeedLimit, millisecondsUntilNextChicagoDay, musicTrackForCourse, objectiveResultLabel, resetRunTiming, resolveDamage, tailwindAcceleration, touchInputFromControls } from './game-rules';
+import { buildSeededCourse } from './course-generator';
 import { checkNickname } from '@/lib/nickname';
+import { dailyChallengeIdForDay } from '@/lib/daily-challenge';
 
 type Screen = 'title' | 'playing' | 'paused' | 'won' | 'over';
-type Hud = { sparks: number; total: number; lives: number; time: number; best: number | null; checkpoint: number; progress: number; dashReady: boolean; shield: number };
-type Platform = { x: number; y: number; w: number; h: number; moving?: boolean; phase?: number; baseY?: number };
-type Spark = { x: number; y: number; taken?: boolean; secret?: boolean; storm?: boolean };
-type Enemy = { x: number; y: number; minX: number; maxX: number; speed: number; dir: number; alive: boolean };
+type Hud = { sparks: number; total: number; lives: number; hits: number; time: number; best: number | null; checkpoint: number; progress: number; dashReady: boolean; shield: number };
 type Board = 'daily' | 'weekly' | 'all';
 type BoardEntry = { rank: number; name: string; timeMs: number; sparks: number; points?: number; runs?: number };
 type HomePanel = 'none' | 'leaderboard' | 'help' | 'courses';
@@ -17,7 +16,6 @@ type GameNotice = { text: string; kind: 'checkpoint' | 'power' };
 
 type Community = { players: number; lights: number; goal: number; nearby: BoardEntry[]; playerRank: number | null; recent: string[] };
 
-const COURSE_OFFSET = 7600;
 const WORLD_W = 15400;
 const FINISH_X = 15135;
 const VIEW_W = 1280;
@@ -25,6 +23,7 @@ const VIEW_H = 720;
 
 const localDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(new Date());
 const daySerial = Math.floor(new Date(`${localDay}T12:00:00Z`).getTime() / 86400000);
+const dailyChallengeId = dailyChallengeIdForDay(localDay);
 const dailyCourseIndex = ((daySerial % 3) + 3) % 3;
 const courseSpecs = [
   { id: 'goldline', name: 'Goldline Rooftops', short: 'GOLDLINE', accent: '#f5d263', description: 'Balanced rooftops, branching high paths, and precision shortcuts.' },
@@ -39,109 +38,13 @@ const modifierSpecs = [
 ] as const;
 const dailyCourse = courseSpecs[dailyCourseIndex];
 const dailyModifier = modifierSpecs[((daySerial + dailyCourseIndex) % modifierSpecs.length + modifierSpecs.length) % modifierSpecs.length];
+const dailyObjectiveId = dailyObjectiveForSerial(daySerial, dailyCourseIndex);
 
-const basePlatforms: Platform[] = [
-  { x: 0, y: 620, w: 860, h: 120 }, { x: 240, y: 500, w: 210, h: 24 }, { x: 560, y: 410, w: 180, h: 24 },
-  { x: 950, y: 620, w: 790, h: 120 }, { x: 1020, y: 505, w: 180, h: 24 }, { x: 1280, y: 415, w: 185, h: 24 }, { x: 1510, y: 330, w: 150, h: 24 },
-  { x: 1810, y: 620, w: 480, h: 120 }, { x: 1970, y: 485, w: 170, h: 24 },
-  { x: 2310, y: 555, w: 175, h: 24 }, { x: 2510, y: 455, w: 165, h: 24 }, { x: 2710, y: 350, w: 180, h: 24 }, { x: 2940, y: 445, w: 170, h: 24 },
-  { x: 3160, y: 620, w: 720, h: 120 }, { x: 3340, y: 460, w: 165, h: 24, moving: true, phase: 0, baseY: 460 }, { x: 3600, y: 360, w: 190, h: 24 },
-  { x: 3950, y: 620, w: 730, h: 120 }, { x: 4050, y: 490, w: 170, h: 24 }, { x: 4310, y: 390, w: 190, h: 24 },
-  { x: 4720, y: 620, w: 940, h: 120 }, { x: 4820, y: 505, w: 175, h: 24 }, { x: 5100, y: 410, w: 190, h: 24 }, { x: 5390, y: 325, w: 180, h: 24 },
-  { x: 5720, y: 550, w: 170, h: 24, moving: true, phase: 1.7, baseY: 500 }, { x: 5960, y: 430, w: 170, h: 24, moving: true, phase: 3.1, baseY: 440 },
-  { x: 6200, y: 620, w: 1600, h: 120 }, { x: 6360, y: 500, w: 190, h: 24 }, { x: 6660, y: 405, w: 180, h: 24 }, { x: 6960, y: 315, w: 180, h: 24 }, { x: 7250, y: 445, w: 210, h: 24 },
-];
-
-const baseSpikeZones = [
-  { x: 1120, y: 596, w: 130 }, { x: 1675, y: 596, w: 65 }, { x: 4070, y: 596, w: 150 },
-  { x: 5030, y: 596, w: 160 }, { x: 5290, y: 596, w: 175 }, { x: 6480, y: 596, w: 130 }, { x: 6850, y: 596, w: 130 },
-];
-
-const baseSparkSeed: Spark[] = [
-  { x: 345, y: 450 }, { x: 650, y: 360 }, { x: 1030, y: 565 }, { x: 1370, y: 360 }, { x: 1585, y: 275, secret: true },
-  { x: 2055, y: 430 }, { x: 2385, y: 500 }, { x: 2590, y: 400 }, { x: 2795, y: 295 }, { x: 3030, y: 390 },
-  { x: 3420, y: 400 }, { x: 3685, y: 305, secret: true }, { x: 4125, y: 435 }, { x: 4400, y: 335 }, { x: 4895, y: 450 },
-  { x: 5195, y: 355 }, { x: 5480, y: 270, secret: true }, { x: 5800, y: 430 }, { x: 6040, y: 355 }, { x: 6445, y: 445 },
-  { x: 6745, y: 350 }, { x: 7045, y: 260, secret: true }, { x: 7340, y: 390 }, { x: 7500, y: 545 },
-];
-
-const baseEnemySeed: Enemy[] = [
-  { x: 1180, y: 570, minX: 970, maxX: 1660, speed: 95, dir: 1, alive: true },
-  { x: 2040, y: 570, minX: 1830, maxX: 2240, speed: 125, dir: -1, alive: true },
-  { x: 4180, y: 570, minX: 3970, maxX: 4610, speed: 150, dir: 1, alive: true },
-  { x: 4920, y: 570, minX: 4740, maxX: 5580, speed: 170, dir: -1, alive: true },
-  { x: 6690, y: 570, minX: 6250, maxX: 7100, speed: 185, dir: 1, alive: true },
-];
-
-function buildCourse(index: number, modifierId: string) {
-  if (index === 0) {
-    const platforms = [0, 1].flatMap((copy) => basePlatforms.map((platform, platformIndex) => {
-      const shift = copy === 0 || platform.y >= 600 ? 0 : [24, -42, 36, -28][platformIndex % 4];
-      const y = platform.y >= 600 ? platform.y : Math.max(280, Math.min(555, platform.y + shift));
-      const xShift = copy === 0 || platform.y >= 600 ? 0 : [-30, 48, 0, 72][platformIndex % 4];
-      return { ...platform, x: platform.x + copy * COURSE_OFFSET + xShift, y, baseY: platform.moving ? y : platform.baseY };
-    }));
-    const regularSparks: Spark[] = [0, 1].flatMap((copy) => baseSparkSeed.map((spark, sparkIndex) => ({ ...spark, x: spark.x + copy * COURSE_OFFSET + (copy ? (sparkIndex % 3 - 1) * 38 : 0) })));
-    const stormSparks = modifierId === 'sparkstorm' ? platforms
-      .filter((platform, platformIndex) => platform.y < 520 && platformIndex % 4 === 1)
-      .slice(0, 16)
-      .map((platform, stormIndex) => ({ x: platform.x + platform.w * (stormIndex % 2 ? .72 : .28), y: platform.y - 74, storm: true })) : [];
-    return {
-      platforms,
-      spikeZones: [0, 1].flatMap((copy) => baseSpikeZones.map((spike, spikeIndex) => ({ ...spike, x: spike.x + copy * COURSE_OFFSET + (copy ? spikeIndex % 2 * 70 : 0) }))),
-      sparkSeed: [...regularSparks, ...stormSparks].sort((a, b) => a.x - b.x),
-      enemySeed: [0, 1].flatMap((copy) => baseEnemySeed.map((enemy) => ({ ...enemy, x: enemy.x + copy * COURSE_OFFSET, minX: enemy.minX + copy * COURSE_OFFSET, maxX: enemy.maxX + copy * COURSE_OFFSET, speed: enemy.speed + copy * 18 }))),
-      checkpoints: [270, 2180, 4780, 7720, 9780, 12380],
-    };
-  }
-
-  const platforms: Platform[] = [];
-  const spikeZones: Array<{ x: number; y: number; w: number }> = [];
-  for (let section = 0; section < 20; section += 1) {
-    const x = section * 760;
-    if (index === 1) {
-      const width = section === 19 ? 960 : [520, 440, 610, 390][section % 4];
-      platforms.push({ x, y: 620, w: width, h: 120 });
-      platforms.push({ x: x + Math.max(250, width - 40), y: 510 - (section % 2) * 35, w: 170, h: 24, moving: section % 3 === 1, phase: section * .7, baseY: 510 - (section % 2) * 35 });
-      platforms.push({ x: x + 120 + (section % 3) * 45, y: 375 - (section % 2) * 55, w: 180, h: 24, moving: section % 4 === 2, phase: section, baseY: 375 - (section % 2) * 55 });
-      if (section % 2 === 0) platforms.push({ x: x + 500, y: 300 + (section % 3) * 35, w: 150, h: 24, moving: true, phase: section * .45, baseY: 300 + (section % 3) * 35 });
-      if (section % 4 === 2) spikeZones.push({ x: x + 120, y: 596, w: 110 });
-    } else {
-      const width = section === 19 ? 960 : [700, 520, 650, 440][section % 4];
-      platforms.push({ x, y: 620, w: width, h: 120 });
-      platforms.push({ x: x + 165, y: 455 + (section % 2) * 35, w: 240, h: 24 });
-      if (section % 3 !== 1) platforms.push({ x: x + 455, y: 355 - (section % 2) * 35, w: 175, h: 24, moving: section % 5 === 0, phase: section * .6, baseY: 355 - (section % 2) * 35 });
-      if (width < 600) platforms.push({ x: x + width + 25, y: 535, w: 145, h: 24 });
-      if (section > 0 && section % 2 === 0) spikeZones.push({ x: x + 315, y: 596, w: section % 4 === 0 ? 150 : 100 });
-    }
-  }
-
-  const aerial = platforms.filter((platform) => platform.y < 600).map((platform, sparkIndex) => ({ x: platform.x + platform.w / 2, y: platform.y - 48, secret: sparkIndex % 7 === 0 }));
-  const groundLight = Array.from({ length: 20 }, (_, section) => ({ x: section * 760 + 105, y: 555, secret: false }));
-  const regularSparks = [...aerial, ...groundLight].sort((a, b) => a.x - b.x).slice(0, 60);
-  const stormSparks = modifierId === 'sparkstorm' ? platforms
-    .filter((platform, platformIndex) => platform.y < 500 && platformIndex % 5 === 2)
-    .slice(0, 16)
-    .map((platform, stormIndex) => ({ x: platform.x + platform.w * (stormIndex % 2 ? .7 : .3), y: platform.y - 78, storm: true })) : [];
-  const ground = platforms.filter((platform) => platform.y >= 600 && platform.w >= 430);
-  const enemySeed = ground.filter((_, groundIndex) => groundIndex > 0 && (index === 2 || groundIndex % 2 === 0)).map((platform, enemyIndex) => ({
-    x: platform.x + Math.min(platform.w - 80, 260 + enemyIndex % 3 * 70), y: 570, minX: platform.x + 60, maxX: platform.x + platform.w - 60,
-    speed: (index === 2 ? 155 : 115) + enemyIndex % 4 * 18, dir: enemyIndex % 2 ? -1 : 1, alive: true,
-  }));
-  return { platforms, spikeZones, sparkSeed: [...regularSparks, ...stormSparks].sort((a, b) => a.x - b.x), enemySeed, checkpoints: [270, 2400, 4680, 7720, 10000, 12300] };
-}
 
 function formatTime(seconds: number) {
   const minutes = Math.floor(seconds / 60);
   const remainder = (seconds % 60).toFixed(1).padStart(4, '0');
   return `${minutes}:${remainder}`;
-}
-
-function medalFor(seconds: number) {
-  if (seconds < 45) return 'GOLD';
-  if (seconds < 75) return 'SILVER';
-  if (seconds < 110) return 'BRONZE';
-  return 'FINISHER';
 }
 
 export default function Home() {
@@ -150,7 +53,9 @@ export default function Home() {
   const activeCourseIndex = practiceCourseIndex ?? dailyCourseIndex;
   const course = courseSpecs[activeCourseIndex];
   const modifier = isPractice ? modifierSpecs[0] : dailyModifier;
-  const courseData = useMemo(() => buildCourse(activeCourseIndex, modifier.id), [activeCourseIndex, modifier.id]);
+  const objectiveId = isPractice ? 'sprint' : dailyObjectiveId;
+  const objective = dailyObjectiveSpecs[objectiveId];
+  const courseData = useMemo(() => buildSeededCourse(activeCourseIndex, modifier.id, daySerial), [activeCourseIndex, modifier.id]);
   const { platforms, spikeZones, sparkSeed, enemySeed, checkpoints } = courseData;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const touchControlsRef = useRef<HTMLDivElement>(null);
@@ -164,7 +69,9 @@ export default function Home() {
   const [waitingForLandscape, setWaitingForLandscape] = useState(false);
   const [muted, setMuted] = useState(false);
   const mutedRef = useRef(false);
-  const [hud, setHud] = useState<Hud>({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: null, checkpoint: 0, progress: 0, dashReady: true, shield: 0 });
+  const [hud, setHud] = useState<Hud>({ sparks: 0, total: sparkSeed.length, lives: 3, hits: 0, time: 0, best: null, checkpoint: 0, progress: 0, dashReady: true, shield: 0 });
+  const earnedMedal = challengeMedal(objectiveId, hud);
+  const objectiveResult = objectiveResultLabel(objectiveId, hud);
   const musicRef = useRef<HTMLAudioElement | null>(null);
   const sfxContextRef = useRef<AudioContext | null>(null);
   const sfxBuffersRef = useRef<Map<SoundKind, AudioBuffer>>(new Map());
@@ -433,7 +340,7 @@ export default function Home() {
         const response = await fetch('/api/run', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'start', playerId: playerIdRef.current, courseId: dailyCourse.id, modifierId: dailyModifier.id }),
+          body: JSON.stringify({ action: 'start', playerId: playerIdRef.current, courseId: dailyCourse.id, modifierId: dailyModifier.id, challengeId: dailyChallengeId }),
           signal: controller.signal,
         });
         const data = await response.json().catch(() => null) as { runId?: string; error?: string } | null;
@@ -512,7 +419,7 @@ export default function Home() {
     const cleanName = nicknameResult.name;
     window.localStorage.setItem('crestbound-nickname', cleanName); setNickname(cleanName);
     try {
-      const response = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'finish', runId: runIdRef.current, playerId: playerIdRef.current, courseId: dailyCourse.id, modifierId: dailyModifier.id, name: cleanName, scoreMs: Math.round(hud.time * 1000), sparks: hud.sparks }) });
+      const response = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'finish', runId: runIdRef.current, playerId: playerIdRef.current, courseId: dailyCourse.id, modifierId: dailyModifier.id, challengeId: dailyChallengeId, name: cleanName, scoreMs: Math.round(hud.time * 1000), sparks: hud.sparks }) });
       const data = await response.json() as { rank?: number; error?: string };
       if (!response.ok) throw new Error(data.error);
       setRank(data.rank ?? null); setSubmitState('saved'); setBoard('daily'); void loadBoard('daily');
@@ -688,6 +595,7 @@ export default function Home() {
     let sparks = sparkSeed.map((item) => ({ ...item }));
     let enemies = enemySeed.map((item) => ({ ...item }));
     let lives = 3;
+    let hits = 0;
     let collected = 0;
     let { elapsed, lastHud } = resetRunTiming();
     let cameraX = 0;
@@ -724,10 +632,11 @@ export default function Home() {
         return;
       }
       lives = damage.lives;
+      hits += 1;
       screenShake = .24;
       tone(soundKind);
       track('life_lost', { reason: soundKind, lives, checkpoint: checkpointIndex, progress: player.x, elapsedMs: elapsed * 1000 });
-      setHud((current) => ({ ...current, lives }));
+      setHud((current) => ({ ...current, lives, hits }));
       if (lives <= 0) {
         runEnded = true;
         player.invuln = 999;
@@ -741,10 +650,10 @@ export default function Home() {
       player.x = checkpoints[0]; player.y = 620 - player.h; player.vx = 0; player.vy = 0; player.grounded = true; player.invuln = 1.25; player.jumps = 0;
       sparks = sparkSeed.map((item) => ({ ...item }));
       enemies = enemySeed.map((item) => ({ ...item }));
-      lives = 3; collected = 0; ({ elapsed, lastHud } = resetRunTiming()); cameraX = 0; checkpointIndex = 0; jumpBuffer = 0; coyote = 0; previousJump = false; previousDash = false; trace = []; traceTimer = 0; stormShield = 0; runEnded = false;
+      lives = 3; hits = 0; collected = 0; ({ elapsed, lastHud } = resetRunTiming()); cameraX = 0; checkpointIndex = 0; jumpBuffer = 0; coyote = 0; previousJump = false; previousDash = false; trace = []; traceTimer = 0; stormShield = 0; runEnded = false;
       window.clearTimeout(gameNoticeTimerRef.current); setGameNotice(null);
       const storedBest = window.localStorage.getItem(`crestbound-best-${course.id}`);
-      setHud({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: storedBest ? Number(storedBest) : null, checkpoint: 0, progress: 0, dashReady: true, shield: 0 });
+      setHud({ sparks: 0, total: sparkSeed.length, lives: 3, hits: 0, time: 0, best: storedBest ? Number(storedBest) : null, checkpoint: 0, progress: 0, dashReady: true, shield: 0 });
     };
     resetRef.current = reset;
 
@@ -883,7 +792,7 @@ export default function Home() {
           window.localStorage.setItem(`crestbound-ghost-${course.id}`, JSON.stringify(trace));
           ghost = trace;
         }
-        setHud({ sparks: collected, total: sparks.length, lives, time: elapsed, best: Math.min(best, elapsed), checkpoint: checkpointIndex, progress: player.x, dashReady: player.dashCooldown <= 0, shield: stormShield });
+        setHud({ sparks: collected, total: sparks.length, lives, hits, time: elapsed, best: Math.min(best, elapsed), checkpoint: checkpointIndex, progress: player.x, dashReady: player.dashCooldown <= 0, shield: stormShield });
         if (!isPractice) recordStreak();
         else track('practice_finish', { lives, progress: player.x, elapsedMs: elapsed * 1000 });
         flushTelemetry();
@@ -893,7 +802,7 @@ export default function Home() {
       if (elapsed - lastHud > 0.2) {
         lastHud = elapsed;
         const stored = window.localStorage.getItem(`crestbound-best-${course.id}`);
-        setHud({ sparks: collected, total: sparks.length, lives, time: elapsed, best: stored ? Number(stored) : null, checkpoint: checkpointIndex, progress: player.x, dashReady: player.dashCooldown <= 0, shield: stormShield });
+        setHud({ sparks: collected, total: sparks.length, lives, hits, time: elapsed, best: stored ? Number(stored) : null, checkpoint: checkpointIndex, progress: player.x, dashReady: player.dashCooldown <= 0, shield: stormShield });
       }
     }
 
@@ -1209,7 +1118,7 @@ export default function Home() {
                 </picture>
               </div>
               <div className="home-dashboard">
-                <div className="daily-course"><span>{isPractice ? 'PRACTICE RUN' : 'TODAY\'S RUN'}</span><b>{course.name}</b><em>{isPractice ? 'STANDARD RULES' : `TWIST · ${modifier.name}`}</em><div className="daily-return"><strong>{isPractice ? 'PRACTICE MODE' : streak > 0 ? `${streak} DAY STREAK` : 'FINISH TO START A STREAK'}</strong><small>{isPractice ? 'TODAY\'S BOARD IS UNAFFECTED' : `NEW RUN IN ${dailyReset}`}</small></div></div>
+                <div className="daily-course"><span>{isPractice ? 'PRACTICE RUN' : 'TODAY\'S SEEDED RUN'}</span><b>{course.name}</b><em>{isPractice ? 'STANDARD RULES' : `TWIST · ${modifier.name}`}</em><div className="daily-challenge"><strong>{isPractice ? 'PRACTICE GOAL' : `CHALLENGE · ${objective.name}`}</strong><small>{objective.description}</small></div><div className="daily-return"><strong>{isPractice ? 'PRACTICE MODE' : streak > 0 ? `${streak} DAY STREAK` : 'FINISH TO START A STREAK'}</strong><small>{isPractice ? 'TODAY\'S BOARD IS UNAFFECTED' : `NEW ROUTE IN ${dailyReset}`}</small></div></div>
                 <button className="play-button" type="button" disabled={runStartState === 'connecting'} onClick={() => void startGame(true)}>{runStartState === 'connecting' ? 'Connecting Ranked Run…' : isPractice ? 'Start Practice' : 'Play Today\'s Run'} {runStartState !== 'connecting' && <span aria-hidden="true">▶</span>}</button>
                 {runStartState === 'error' && <p className="run-start-error" role="alert"><b>RUN NOT STARTED</b><span>{runStartError}</span></p>}
                 <div className="daily-glance"><span>{community.players} {community.players === 1 ? 'SUNCRESTER HAS' : 'SUNCRESTERS HAVE'} RUN TODAY</span><b>{entries[0] ? `FASTEST: ${entries[0].name} · ${formatTime(entries[0].timeMs / 1000)}` : 'BE THE FIRST FINISHER'}</b><div className="community-progress"><div><span>COMMUNITY LIGHT</span><b>{community.lights.toLocaleString()} / {community.goal.toLocaleString()}</b></div><progress aria-label={`${community.lights} of ${community.goal} community lights collected today`} max={community.goal} value={Math.min(community.lights, community.goal)} /><small>{community.lights >= community.goal ? 'TODAY\'S GOAL REACHED — KEEP IT GLOWING' : `${(community.goal - community.lights).toLocaleString()} LIGHTS TO TODAY'S GOAL`}</small></div></div>
@@ -1239,6 +1148,7 @@ export default function Home() {
               <div><b>RUN</b><span>Arrow keys / A D / touch arrows</span><b>JUMP</b><span>Space / touch JUMP · tap twice</span><b>DASH</b><span>Shift or X / touch DASH · recharges</span></div>
               <p>Touch controls appear automatically. Turn your phone sideways for the full course.</p>
               <section className="world-rules"><h3>World Rules</h3><article><b>GOLD LIGHT</b><span>Shortens Dash recharge.</span></article><article><b>STORM LIGHT</b><span>Teal. In Spark Storm, fully recharges Dash and shields one hit for seven seconds.</span></article><article><b>CHECKPOINT</b><span>Saves your route and restores one life, up to three.</span></article><article><b>ENEMY</b><span>Dash through it or land on it from above.</span></article></section>
+              <section className="challenge-directory"><h3>Daily Challenge</h3><article><b>{objective.name}{!isPractice ? ' · TODAY' : ''}</b><span>{objective.description}. Finish for Bronze; hit the listed target for Silver or Gold.</span></article><p>Everyone gets the same seeded skyline each day. The route, challenge, and leaderboard reset together at midnight Central.</p></section>
               <section className="twist-directory"><h3>Daily Twists</h3>{modifierSpecs.map((item) => <article className={item.id === modifier.id && !isPractice ? 'today' : ''} key={item.id}><b>{item.name}{item.id === modifier.id && !isPractice ? ' · TODAY' : ''}</b><span>{item.description}</span></article>)}</section>
               <p className="app-tip"><b>FULL-SCREEN TEST</b> On iPhone, tap Share, then Add to Home Screen. Crestbound will open without Safari&apos;s bars.</p>
               <button className="panel-close" type="button" onClick={closeHomePanel}>Got It</button>
@@ -1258,8 +1168,9 @@ export default function Home() {
         {screen === 'over' && <div ref={gameModalRef} className="game-modal" role="dialog" aria-modal="true" aria-labelledby="over-title" tabIndex={-1}><p>LIGHT LOST</p><h2 id="over-title">That route got you.</h2><p>Use the high paths, save your dash, and hit enemies from above.</p><button type="button" onClick={() => void startGame()}>Run It Back</button><button className="secondary" type="button" onClick={() => { setGameScreen('title'); if (isPractice) openHomePanel('courses'); }}>{isPractice ? 'Choose Another Course' : 'Back to Home'}</button></div>}
         {screen === 'won' && (
           <div ref={gameModalRef} className="game-modal win-modal" role="dialog" aria-modal="true" aria-labelledby="win-title" tabIndex={-1}>
-            <p>LIGHT RESTORED // {medalFor(hud.time)} MEDAL</p><h2 id="win-title">Skyline cleared.</h2>
+            <p>LIGHT RESTORED // {earnedMedal} MEDAL</p><h2 id="win-title">Skyline cleared.</h2>
             <div className="result-grid"><span><b>{formatTime(hud.time)}</b><small>FINISH</small></span><span><b>{hud.sparks}/{hud.total}</b><small>LIGHT</small></span><span><b>{hud.best ? formatTime(hud.best) : '—'}</b><small>BEST</small></span></div>
+            <div className={`challenge-result ${earnedMedal.toLowerCase()}`}><b>{objective.name}</b><span>{objectiveResult}</span></div>
             {isPractice ? <div className="rank-callout">PRACTICE COMPLETE // PERSONAL BESTS STAY ON THIS DEVICE</div> : submitState !== 'saved' ? <form className="score-form" onSubmit={submitRun}>
               <label htmlFor="nickname">POST TO TODAY&apos;S BOARD</label>
               <div><input id="nickname" value={nickname} onChange={(event) => setNickname(event.target.value)} minLength={2} maxLength={12} pattern="[A-Za-z0-9 _-]{2,12}" placeholder="NICKNAME" autoComplete="nickname" /><button type="submit" disabled={submitState === 'saving' || !runIdRef.current}>{submitState === 'saving' ? 'SAVING...' : 'POST RUN'}</button></div>
