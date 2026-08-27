@@ -163,7 +163,8 @@ export default function Home() {
   const mutedRef = useRef(false);
   const [hud, setHud] = useState<Hud>({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: null, checkpoint: 0, progress: 0, dashReady: true, shield: 0 });
   const musicRef = useRef<HTMLAudioElement | null>(null);
-  const sfxRef = useRef<Map<SoundKind, HTMLAudioElement>>(new Map());
+  const sfxContextRef = useRef<AudioContext | null>(null);
+  const sfxBuffersRef = useRef<Map<SoundKind, AudioBuffer>>(new Map());
   const telemetryQueueRef = useRef<Array<{ eventName: string; playerId: string; courseId: string; metadata: Record<string, string | number> }>>([]);
   const runIdRef = useRef<string | null>(null);
   const playerIdRef = useRef('');
@@ -225,16 +226,21 @@ export default function Home() {
     return () => window.removeEventListener('keydown', trapModalFocus);
   }, [screen]);
   useEffect(() => {
-    const soundPool = sfxRef.current;
-    for (const [kind, src] of Object.entries(soundSources) as Array<[SoundKind, string]>) {
-      const clip = new Audio(src);
-      clip.preload = 'auto';
-      clip.volume = soundVolumes[kind];
-      soundPool.set(kind, clip);
-    }
+    const AudioContextConstructor = window.AudioContext ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AudioContextConstructor) return;
+    const audioContext = new AudioContextConstructor({ latencyHint: 'interactive' });
+    sfxContextRef.current = audioContext;
+    let cancelled = false;
+    void Promise.all((Object.entries(soundSources) as Array<[SoundKind, string]>).map(async ([kind, src]) => {
+      const response = await fetch(src);
+      const buffer = await audioContext.decodeAudioData(await response.arrayBuffer());
+      if (!cancelled) sfxBuffersRef.current.set(kind, buffer);
+    })).catch(() => undefined);
     return () => {
-      soundPool.forEach((clip) => clip.pause());
-      soundPool.clear();
+      cancelled = true;
+      sfxBuffersRef.current.clear();
+      sfxContextRef.current = null;
+      void audioContext.close().catch(() => undefined);
     };
   }, []);
   useEffect(() => {
@@ -316,12 +322,15 @@ export default function Home() {
 
   function sound(kind: SoundKind) {
     if (mutedRef.current) return;
-    const clip = sfxRef.current.get(kind);
-    if (!clip) return;
-    clip.pause();
-    clip.currentTime = 0;
-    clip.volume = soundVolumes[kind];
-    void clip.play().catch(() => undefined);
+    const audioContext = sfxContextRef.current;
+    const buffer = sfxBuffersRef.current.get(kind);
+    if (!audioContext || !buffer) return;
+    if (audioContext.state === 'suspended') void audioContext.resume().catch(() => undefined);
+    const source = audioContext.createBufferSource();
+    const gain = audioContext.createGain();
+    source.buffer = buffer;
+    gain.gain.value = soundVolumes[kind];
+    source.connect(gain); gain.connect(audioContext.destination); source.start();
   }
 
   function setGameScreen(next: Screen) {
@@ -384,6 +393,7 @@ export default function Home() {
   }
 
   function startGame(tryImmersive = false) {
+    if (sfxContextRef.current?.state === 'suspended') void sfxContextRef.current.resume().catch(() => undefined);
     if (tryImmersive && window.matchMedia('(pointer: coarse)').matches && !window.matchMedia('(display-mode: standalone)').matches && !document.fullscreenElement) {
       const immersiveRequest = document.documentElement.requestFullscreen?.({ navigationUI: 'hide' });
       void immersiveRequest?.catch(() => {
@@ -531,6 +541,46 @@ export default function Home() {
     if (!context) return;
     const touchLandscape = window.matchMedia('(pointer: coarse) and (orientation: landscape)');
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const atmosphere = [
+      { skyTop: '#0d99a8', skyMid: '#63cec4', skyLow: '#ffd36f', haze: '#ff9662', far: '#668292', near: '#365b6d', window: '#ffd86a', rail: '#2bc8c0', edge: '#087d86', blockA: '#164f5f', blockB: '#0e3e4c', support: '#082d38' },
+      { skyTop: '#168fc5', skyMid: '#68cbdc', skyLow: '#d5f1e8', haze: '#fff0b0', far: '#75aeba', near: '#347382', window: '#f5fff5', rail: '#35c9c1', edge: '#087b85', blockA: '#235f70', blockB: '#194e5d', support: '#103b49' },
+      { skyTop: '#06111f', skyMid: '#0a2333', skyLow: '#174251', haze: '#245d68', far: '#153746', near: '#092431', window: '#f5c84d', rail: '#24aaa9', edge: '#0b666d', blockA: '#0e3541', blockB: '#092a35', support: '#061c25' },
+    ][activeCourseIndex];
+    const skyLayer = document.createElement('canvas');
+    skyLayer.width = VIEW_W / 4; skyLayer.height = VIEW_H / 4;
+    const skyContext = skyLayer.getContext('2d');
+    if (skyContext) {
+      skyContext.setTransform(.25, 0, 0, .25, 0, 0);
+      const skyGradient = skyContext.createLinearGradient(0, 0, 0, VIEW_H);
+      skyGradient.addColorStop(0, atmosphere.skyTop);
+      skyGradient.addColorStop(.38, atmosphere.skyMid);
+      skyGradient.addColorStop(.67, atmosphere.skyLow);
+      skyGradient.addColorStop(1, atmosphere.haze);
+      skyContext.fillStyle = skyGradient; skyContext.fillRect(0, 0, VIEW_W, VIEW_H);
+    }
+    const skylineTileWidth = 1440;
+    const skylineTiles = [0, 1].map((layer) => {
+      const tile = document.createElement('canvas');
+      tile.width = skylineTileWidth / 4; tile.height = VIEW_H / 4;
+      const tileContext = tile.getContext('2d');
+      if (!tileContext) return tile;
+      tileContext.setTransform(.25, 0, 0, .25, 0, 0);
+      tileContext.imageSmoothingEnabled = false;
+      const baseY = layer ? 505 : 430;
+      const building = layer ? atmosphere.near : atmosphere.far;
+      for (let index = 0; index < 12; index += 1) {
+        const x = index * 120;
+        const h = 80 + Math.abs((index * 47 + layer * 31) % 150);
+        tileContext.fillStyle = building; tileContext.fillRect(x, baseY - h, 96, h + 220);
+        if (index % 3 === 0) { tileContext.fillRect(x + 44, baseY - h - 28, 8, 28); tileContext.fillRect(x + 34, baseY - h - 28, 28, 5); }
+        for (let wx = 16; wx < 80; wx += 24) for (let wy = baseY - h + 16; wy < baseY - 12; wy += 28) {
+          const lit = (index + wx + wy + layer) % 4 !== 0;
+          tileContext.fillStyle = lit ? (activeCourseIndex === 2 ? atmosphere.window : activeCourseIndex === 0 ? '#e78c52' : '#bde4e8') : building;
+          tileContext.fillRect(x + wx, wy, 8, 12);
+        }
+      }
+      return tile;
+    });
 
     const spriteSheet = new Image();
     spriteSheet.src = '/sunny-pixel-master.svg';
@@ -767,17 +817,7 @@ export default function Home() {
       const touchWorldLift = touchLandscape.matches ? 120 : 0;
       ctx.setTransform(.25, 0, 0, .25, shakeX * .25, 0);
       ctx.imageSmoothingEnabled = false;
-      const atmosphere = [
-        { skyTop: '#0d99a8', skyMid: '#63cec4', skyLow: '#ffd36f', haze: '#ff9662', far: '#668292', near: '#365b6d', window: '#ffd86a', rail: '#2bc8c0', edge: '#087d86', blockA: '#164f5f', blockB: '#0e3e4c', support: '#082d38' },
-        { skyTop: '#168fc5', skyMid: '#68cbdc', skyLow: '#d5f1e8', haze: '#fff0b0', far: '#75aeba', near: '#347382', window: '#f5fff5', rail: '#35c9c1', edge: '#087b85', blockA: '#235f70', blockB: '#194e5d', support: '#103b49' },
-        { skyTop: '#06111f', skyMid: '#0a2333', skyLow: '#174251', haze: '#245d68', far: '#153746', near: '#092431', window: '#f5c84d', rail: '#24aaa9', edge: '#0b666d', blockA: '#0e3541', blockB: '#092a35', support: '#061c25' },
-      ][activeCourseIndex];
-      const sky = ctx.createLinearGradient(0, 0, 0, VIEW_H);
-      sky.addColorStop(0, atmosphere.skyTop);
-      sky.addColorStop(.38, atmosphere.skyMid);
-      sky.addColorStop(.67, atmosphere.skyLow);
-      sky.addColorStop(1, atmosphere.haze);
-      ctx.fillStyle = sky; ctx.fillRect(-8, 0, VIEW_W + 16, VIEW_H);
+      ctx.drawImage(skyLayer, 0, 0, skyLayer.width, skyLayer.height, -8, 0, VIEW_W + 16, VIEW_H);
       ctx.save();
 
       if (activeCourseIndex === 0) {
@@ -844,22 +884,11 @@ export default function Home() {
         }
       }
 
-      for (let layer = 0; layer < 2; layer += 1) {
+      for (let layer = 0; layer < skylineTiles.length; layer += 1) {
         const parallax = layer ? .32 : .17;
-        const baseY = layer ? 505 : 430;
-        const building = layer ? atmosphere.near : atmosphere.far;
-        for (let index = -1; index < 18; index += 1) {
-          const x = index * 120 - ((cameraX * parallax) % 120);
-          const h = 80 + Math.abs((index * 47 + layer * 31) % 150);
-          const buildingX = Math.floor(x / 8) * 8;
-          ctx.fillStyle = building; ctx.fillRect(buildingX, baseY - h, 96, h + 220);
-          if (index % 3 === 0) { ctx.fillRect(buildingX + 44, baseY - h - 28, 8, 28); ctx.fillRect(buildingX + 34, baseY - h - 28, 28, 5); }
-          for (let wx = 16; wx < 80; wx += 24) for (let wy = baseY - h + 16; wy < baseY - 12; wy += 28) {
-            const lit = (index + wx + wy + layer) % 4 !== 0;
-            ctx.fillStyle = lit ? (activeCourseIndex === 2 ? atmosphere.window : activeCourseIndex === 0 ? '#e78c52' : '#bde4e8') : building;
-            ctx.fillRect(buildingX + wx, wy, 8, 12);
-          }
-        }
+        const offset = -((renderCameraX * parallax) % skylineTileWidth);
+        ctx.drawImage(skylineTiles[layer], 0, 0, skylineTiles[layer].width, skylineTiles[layer].height, offset, 0, skylineTileWidth, VIEW_H);
+        ctx.drawImage(skylineTiles[layer], 0, 0, skylineTiles[layer].width, skylineTiles[layer].height, offset + skylineTileWidth, 0, skylineTileWidth, VIEW_H);
       }
       ctx.fillStyle = activeCourseIndex === 0 ? '#ffd77a' : activeCourseIndex === 1 ? '#dff7f2' : '#78d7d2';
       for (let index = 0; index < 16; index += 1) { const x = ((index * 101 - cameraX * .52) % 1440 + 1440) % 1440 - 80; ctx.fillRect(x, 520 + (index % 3) * 10, 10, 4); }
