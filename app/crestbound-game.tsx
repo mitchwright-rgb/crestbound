@@ -153,6 +153,7 @@ export default function Home() {
   const courseData = useMemo(() => buildCourse(activeCourseIndex, modifier.id), [activeCourseIndex, modifier.id]);
   const { platforms, spikeZones, sparkSeed, enemySeed, checkpoints } = courseData;
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const touchControlsRef = useRef<HTMLDivElement>(null);
   const screenRef = useRef<Screen>('title');
   const waitingForLandscapeRef = useRef(false);
   const coachPauseRef = useRef(false);
@@ -502,6 +503,7 @@ export default function Home() {
   }
 
   function beginPress(control: keyof typeof inputRef.current, event: ReactPointerEvent<HTMLButtonElement>) {
+    if (event.pointerType === 'touch') return;
     event.preventDefault();
     activeTouchPointersRef.current.set(event.pointerId, control);
     syncTouchInput();
@@ -510,6 +512,7 @@ export default function Home() {
   }
 
   function endPress(control: keyof typeof inputRef.current, event: ReactPointerEvent<HTMLButtonElement>) {
+    if (event.pointerType === 'touch') return;
     event.preventDefault();
     if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
     releaseTouchPointer(event.pointerId);
@@ -529,6 +532,44 @@ export default function Home() {
       window.removeEventListener('pointercancel', releasePointer, true);
       window.removeEventListener('pagehide', clearTouchInput);
       document.removeEventListener('visibilitychange', clearTouchInput);
+    };
+  }, []);
+
+  useEffect(() => {
+    const controls = touchControlsRef.current;
+    if (!controls) return;
+    const touchKey = (identifier: number) => -(identifier + 1);
+    const startTouches = (event: TouchEvent) => {
+      let handled = false;
+      for (const touch of Array.from(event.changedTouches)) {
+        const target = touch.target instanceof Element ? touch.target.closest<HTMLButtonElement>('button[data-control]') : null;
+        const control = target?.dataset.control as keyof typeof inputRef.current | undefined;
+        if (!target || !control || !controls.contains(target)) continue;
+        // A new physical touch owns its control. This also self-heals any stale
+        // touch identifier Safari failed to release on a prior interaction.
+        for (const [pointerId, activeControl] of activeTouchPointersRef.current) {
+          const sameDirectionGroup = (control === 'left' || control === 'right') && (activeControl === 'left' || activeControl === 'right');
+          if (activeControl === control || sameDirectionGroup) activeTouchPointersRef.current.delete(pointerId);
+        }
+        activeTouchPointersRef.current.set(touchKey(touch.identifier), control);
+        handled = true;
+      }
+      if (!handled) return;
+      event.preventDefault();
+      syncTouchInput();
+      canvasRef.current?.focus();
+    };
+    const endTouches = (event: TouchEvent) => {
+      for (const touch of Array.from(event.changedTouches)) activeTouchPointersRef.current.delete(touchKey(touch.identifier));
+      syncTouchInput();
+    };
+    controls.addEventListener('touchstart', startTouches, { passive: false });
+    document.addEventListener('touchend', endTouches, { passive: true, capture: true });
+    document.addEventListener('touchcancel', endTouches, { passive: true, capture: true });
+    return () => {
+      controls.removeEventListener('touchstart', startTouches);
+      document.removeEventListener('touchend', endTouches, true);
+      document.removeEventListener('touchcancel', endTouches, true);
     };
   }, []);
 
@@ -1183,9 +1224,9 @@ export default function Home() {
         )}
 
         {screen === 'playing' && (
-          <>{waitingForLandscape && <div className="rotate-prompt"><span aria-hidden="true">↻</span><strong>Turn Sideways to Start</strong><small>Your run and timer are paused until the phone is in landscape.</small></div>}{showModifierCoach && !waitingForLandscape ? <div className="dash-coach modifier-coach"><b>TODAY&apos;S TWIST · {modifier.name}</b><span>{modifier.description}</span><button type="button" onClick={dismissModifierCoach}>LET&apos;S RUN</button></div> : showDashCoach && !waitingForLandscape && <div className="dash-coach"><b>DASH IS YOUR EDGE</b><span>Press SHIFT or X — or tap DASH — to burst through hazards. The HUD tells you when it recharges.</span><button type="button" onClick={() => dismissDashCoach()}>GOT IT</button></div>}<div className="touch-controls" aria-label="Touch controls">
-            <div><button type="button" aria-label="Move left" onPointerDown={(event) => beginPress('left', event)} onPointerUp={(event) => endPress('left', event)} onPointerCancel={(event) => endPress('left', event)} onLostPointerCapture={(event) => endPress('left', event)}>←</button><button type="button" aria-label="Move right" onPointerDown={(event) => beginPress('right', event)} onPointerUp={(event) => endPress('right', event)} onPointerCancel={(event) => endPress('right', event)} onLostPointerCapture={(event) => endPress('right', event)}>→</button></div>
-            <div><button className={hud.dashReady ? 'dash-control ready' : 'dash-control'} type="button" aria-label={hud.dashReady ? 'Dash ready' : 'Dash charging'} onPointerDown={(event) => beginPress('dash', event)} onPointerUp={(event) => endPress('dash', event)} onPointerCancel={(event) => endPress('dash', event)} onLostPointerCapture={(event) => endPress('dash', event)}>DASH</button><button className="jump-control" type="button" aria-label="Jump — tap twice for double jump" onPointerDown={(event) => beginPress('jump', event)} onPointerUp={(event) => endPress('jump', event)} onPointerCancel={(event) => endPress('jump', event)} onLostPointerCapture={(event) => endPress('jump', event)}>JUMP 2X</button></div>
+          <>{waitingForLandscape && <div className="rotate-prompt"><span aria-hidden="true">↻</span><strong>Turn Sideways to Start</strong><small>Your run and timer are paused until the phone is in landscape.</small></div>}{showModifierCoach && !waitingForLandscape ? <div className="dash-coach modifier-coach"><b>TODAY&apos;S TWIST · {modifier.name}</b><span>{modifier.description}</span><button type="button" onClick={dismissModifierCoach}>LET&apos;S RUN</button></div> : showDashCoach && !waitingForLandscape && <div className="dash-coach"><b>DASH IS YOUR EDGE</b><span>Press SHIFT or X — or tap DASH — to burst through hazards. The HUD tells you when it recharges.</span><button type="button" onClick={() => dismissDashCoach()}>GOT IT</button></div>}<div ref={touchControlsRef} className="touch-controls" aria-label="Touch controls">
+            <div><button type="button" data-control="left" aria-label="Move left" onPointerDown={(event) => beginPress('left', event)} onPointerUp={(event) => endPress('left', event)} onPointerCancel={(event) => endPress('left', event)} onLostPointerCapture={(event) => endPress('left', event)}>←</button><button type="button" data-control="right" aria-label="Move right" onPointerDown={(event) => beginPress('right', event)} onPointerUp={(event) => endPress('right', event)} onPointerCancel={(event) => endPress('right', event)} onLostPointerCapture={(event) => endPress('right', event)}>→</button></div>
+            <div><button className={hud.dashReady ? 'dash-control ready' : 'dash-control'} type="button" data-control="dash" aria-label={hud.dashReady ? 'Dash ready' : 'Dash charging'} onPointerDown={(event) => beginPress('dash', event)} onPointerUp={(event) => endPress('dash', event)} onPointerCancel={(event) => endPress('dash', event)} onLostPointerCapture={(event) => endPress('dash', event)}>DASH</button><button className="jump-control" type="button" data-control="jump" aria-label="Jump — tap twice for double jump" onPointerDown={(event) => beginPress('jump', event)} onPointerUp={(event) => endPress('jump', event)} onPointerCancel={(event) => endPress('jump', event)} onLostPointerCapture={(event) => endPress('jump', event)}>JUMP 2X</button></div>
           </div></>
         )}
       </section>
