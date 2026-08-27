@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { chicagoKeys, database, ensureSchema } from '@/lib/db';
+import { checkNickname } from '@/lib/nickname';
 
-const banned = ['FUCK', 'SHIT', 'BITCH', 'ASSHOLE', 'NIGGER', 'FAGGOT'];
 const courses = new Set(['goldline', 'crosswind', 'nightshift']);
 const modifiers = new Set(['clear', 'tailwind', 'moonstep', 'sparkstorm']);
 const validId = (value: unknown) => /^[0-9a-f-]{36}$/i.test(String(value ?? ''));
@@ -39,10 +39,11 @@ export async function POST(request: Request) {
 
   if (body.action !== 'finish') return NextResponse.json({ error: 'Unknown action.' }, { status: 400 });
   const runId = String(body.runId ?? '');
-  const name = String(body.name ?? '').trim().toUpperCase().replace(/\s+/g, ' ');
+  const nickname = checkNickname(body.name);
   const scoreMs = Math.round(Number(body.scoreMs));
   const sparks = Math.round(Number(body.sparks));
-  if (!/^[A-Z0-9 _-]{2,12}$/.test(name) || banned.some((word) => name.includes(word))) return NextResponse.json({ error: 'Choose a 2–12 character nickname.' }, { status: 400 });
+  if (!nickname.ok) return NextResponse.json({ error: nickname.message }, { status: 400 });
+  const name = nickname.name;
   if (!validId(runId) || !validId(playerId) || !courses.has(courseId) || !modifiers.has(modifierId) || courseId !== scheduled.courseId || modifierId !== scheduled.modifierId || !Number.isFinite(scoreMs) || scoreMs < 10000 || scoreMs > 900000 || !Number.isInteger(sparks) || sparks < 0 || sparks > 64) return NextResponse.json({ error: 'That run could not be verified.' }, { status: 400 });
 
   const run = await db.prepare(`SELECT r.started_at, r.completed_at, c.player_id, c.course_id, c.modifier_id

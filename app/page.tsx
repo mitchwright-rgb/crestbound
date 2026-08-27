@@ -3,6 +3,9 @@
 import { FormEvent, PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SoundKind, soundSources, soundVolumes } from './audio-assets';
 import { collectLightPower, gravityForModifier, musicTrackForCourse, resetRunTiming, resolveDamage, tailwindAcceleration } from './game-rules';
+import { checkNickname } from '@/lib/nickname';
+
+export const dynamic = 'force-dynamic';
 
 type Screen = 'title' | 'playing' | 'paused' | 'won' | 'over';
 type Hud = { sparks: number; total: number; lives: number; time: number; best: number | null; checkpoint: number; progress: number; dashReady: boolean; shield: number };
@@ -162,7 +165,7 @@ export default function Home() {
   const mutedRef = useRef(false);
   const [hud, setHud] = useState<Hud>({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: null, checkpoint: 0, progress: 0, dashReady: true, shield: 0 });
   const musicRef = useRef<HTMLAudioElement | null>(null);
-  const sfxRef = useRef<Map<SoundKind, { clips: HTMLAudioElement[]; next: number }>>(new Map());
+  const sfxRef = useRef<Map<SoundKind, HTMLAudioElement>>(new Map());
   const runIdRef = useRef<string | null>(null);
   const playerIdRef = useRef('');
   const homeTrackedRef = useRef(false);
@@ -172,6 +175,7 @@ export default function Home() {
   const [boardStatus, setBoardStatus] = useState<'loading' | 'ready' | 'offline'>('loading');
   const [nickname, setNickname] = useState('');
   const [submitState, setSubmitState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [submitError, setSubmitError] = useState('');
   const [rank, setRank] = useState<number | null>(null);
   const [homePanel, setHomePanel] = useState<HomePanel>('none');
   const [showDashCoach, setShowDashCoach] = useState(false);
@@ -182,16 +186,13 @@ export default function Home() {
   useEffect(() => {
     const soundPool = sfxRef.current;
     for (const [kind, src] of Object.entries(soundSources) as Array<[SoundKind, string]>) {
-      const clips = Array.from({ length: 3 }, () => {
-        const clip = new Audio(src);
-        clip.preload = 'auto';
-        clip.volume = soundVolumes[kind];
-        return clip;
-      });
-      soundPool.set(kind, { clips, next: 0 });
+      const clip = new Audio(src);
+      clip.preload = 'auto';
+      clip.volume = soundVolumes[kind];
+      soundPool.set(kind, clip);
     }
     return () => {
-      soundPool.forEach(({ clips }) => clips.forEach((clip) => clip.pause()));
+      soundPool.forEach((clip) => clip.pause());
       soundPool.clear();
     };
   }, []);
@@ -255,10 +256,8 @@ export default function Home() {
 
   function sound(kind: SoundKind) {
     if (mutedRef.current) return;
-    const entry = sfxRef.current.get(kind);
-    if (!entry) return;
-    const clip = entry.clips[entry.next % entry.clips.length];
-    entry.next += 1;
+    const clip = sfxRef.current.get(kind);
+    if (!clip) return;
     clip.pause();
     clip.currentTime = 0;
     clip.volume = soundVolumes[kind];
@@ -352,16 +351,22 @@ export default function Home() {
 
   async function submitRun(event: FormEvent) {
     event.preventDefault();
-    if (!runIdRef.current || nickname.trim().length < 2) { setSubmitState('error'); return; }
+    const nicknameResult = checkNickname(nickname);
+    if (!runIdRef.current || !nicknameResult.ok) {
+      setSubmitError(nicknameResult.ok ? 'Online posting is unavailable for this run.' : nicknameResult.message);
+      setSubmitState('error');
+      return;
+    }
     setSubmitState('saving');
-    const cleanName = nickname.trim().toUpperCase();
+    setSubmitError('');
+    const cleanName = nicknameResult.name;
     window.localStorage.setItem('crestbound-nickname', cleanName); setNickname(cleanName);
     try {
       const response = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'finish', runId: runIdRef.current, playerId: playerIdRef.current, courseId: dailyCourse.id, modifierId: dailyModifier.id, name: cleanName, scoreMs: Math.round(hud.time * 1000), sparks: hud.sparks }) });
       const data = await response.json() as { rank?: number; error?: string };
       if (!response.ok) throw new Error(data.error);
       setRank(data.rank ?? null); setSubmitState('saved'); setBoard('daily'); void loadBoard('daily');
-    } catch { setSubmitState('error'); }
+    } catch (error) { setSubmitError(error instanceof Error ? error.message : 'Couldn\'t post this run.'); setSubmitState('error'); }
   }
 
   function press(control: keyof typeof inputRef.current, active: boolean) {
@@ -445,6 +450,7 @@ export default function Home() {
     let previousJump = false;
     let previousDash = false;
     let last = performance.now();
+    let accumulator = 0;
     let animation = 0;
     let screenShake = 0;
     let stormShield = 0;
@@ -905,9 +911,18 @@ export default function Home() {
     }
 
     function loop(now: number) {
-      const dt = Math.min(.033, (now - last) / 1000);
+      const frameTime = Math.min(.05, (now - last) / 1000);
       last = now;
-      if (screenRef.current === 'playing' && !waitingForLandscapeRef.current && !coachPauseRef.current) update(dt);
+      if (screenRef.current === 'playing' && !waitingForLandscapeRef.current && !coachPauseRef.current) {
+        accumulator += frameTime;
+        let steps = 0;
+        while (accumulator >= 1 / 60 && steps < 3) {
+          update(1 / 60);
+          accumulator -= 1 / 60;
+          steps += 1;
+        }
+        if (steps === 3) accumulator = 0;
+      } else accumulator = 0;
       draw();
       animation = requestAnimationFrame(loop);
     }
@@ -1001,8 +1016,8 @@ export default function Home() {
             {isPractice ? <div className="rank-callout">PRACTICE COMPLETE // PERSONAL BESTS STAY ON THIS DEVICE</div> : submitState !== 'saved' ? <form className="score-form" onSubmit={submitRun}>
               <label htmlFor="nickname">POST TO TODAY&apos;S BOARD</label>
               <div><input id="nickname" value={nickname} onChange={(event) => setNickname(event.target.value)} minLength={2} maxLength={12} pattern="[A-Za-z0-9 _-]{2,12}" placeholder="NICKNAME" autoComplete="nickname" /><button type="submit" disabled={submitState === 'saving' || !runIdRef.current}>{submitState === 'saving' ? 'SAVING...' : 'POST RUN'}</button></div>
-              <small>Use a nickname, not your real name.{!runIdRef.current ? ' Online posting is unavailable for this run.' : ''}</small>
-              {submitState === 'error' && <em>COULDN&apos;T POST. CHECK YOUR NICKNAME OR TRY AGAIN.</em>}
+              <small>Family-friendly nicknames only. Don&apos;t use your real name.{!runIdRef.current ? ' Online posting is unavailable for this run.' : ''}</small>
+              {submitState === 'error' && <em>{submitError || 'COULDN\'T POST. TRY AGAIN.'}</em>}
             </form> : <div className="rank-callout">RUN POSTED {rank ? `// TODAY #${rank}` : '// TO TODAY'}</div>}
             <button type="button" onClick={() => void startGame()}>Beat Your Time</button>
             <button className="secondary" type="button" onClick={() => { setPracticeCourseIndex(null); setGameScreen('title'); void loadBoard('daily'); }}>{isPractice ? 'Return to Today' : 'View Leaderboard'}</button>

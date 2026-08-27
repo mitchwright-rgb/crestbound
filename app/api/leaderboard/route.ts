@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { chicagoKeys, database, ensureSchema } from '@/lib/db';
+import { publicNickname } from '@/lib/nickname';
 
 type Row = { player_id: string; player_name: string; score_ms: number; sparks: number; points?: number; runs?: number; rank?: number };
 
@@ -44,10 +45,10 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     board,
-    entries: rows.map((entry, index) => ({ rank: index + 1, name: entry.player_name, timeMs: entry.score_ms, sparks: entry.sparks, points: entry.points, runs: entry.runs })),
+    entries: rows.map((entry, index) => ({ rank: index + 1, name: publicNickname(entry.player_name), timeMs: entry.score_ms, sparks: entry.sparks, points: entry.points, runs: entry.runs })),
     players: summary?.players ?? 0, lights: summary?.lights ?? 0, goal: 2500,
     playerRank: player?.rank ?? null,
-    nearby: nearby.map((entry) => ({ rank: entry.rank, name: entry.player_name, timeMs: entry.score_ms, sparks: entry.sparks })),
-    recent: recent.results.map((entry) => entry.player_name),
+    nearby: nearby.map((entry) => ({ rank: entry.rank, name: publicNickname(entry.player_name), timeMs: entry.score_ms, sparks: entry.sparks })),
+    recent: recent.results.map((entry) => publicNickname(entry.player_name)),
   }, { headers: { 'Cache-Control': 'no-store' } });
 }

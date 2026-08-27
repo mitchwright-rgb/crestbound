@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { soundSources } from './audio-assets.ts';
 import { collectLightPower, gravityForModifier, musicTrackForCourse, resetRunTiming, resolveDamage, tailwindAcceleration } from './game-rules.ts';
+import { checkNickname, publicNickname } from '../lib/nickname.ts';
 
 test('Moonstep lowers gravity while other twists preserve standard gravity', () => {
   assert.equal(gravityForModifier('moonstep'), 1500);
@@ -59,4 +60,21 @@ test('every player action has a playable retro sound effect', () => {
 
 test('restarting a run resets both gameplay time and HUD refresh time', () => {
   assert.deepEqual(resetRunTiming(), { elapsed: 0, lastHud: 0 });
+});
+
+test('family-safe nicknames pass after normalization', () => {
+  assert.deepEqual(checkNickname('  Sunny Dad  '), { ok: true, name: 'SUNNY DAD' });
+  assert.deepEqual(checkNickname('Light-Runner'), { ok: true, name: 'LIGHT-RUNNER' });
+  assert.deepEqual(checkNickname('Classy Grape'), { ok: true, name: 'CLASSY GRAPE' });
+  assert.equal(publicNickname('SETHY'), 'SETHY');
+});
+
+test('nickname moderation rejects profanity and common obfuscation', () => {
+  for (const name of ['F U C K', 'sh1t', 'fuuuck', 'n@zi', '69']) {
+    assert.equal(checkNickname(name).ok, false, `${name} should be rejected`);
+  }
+});
+
+test('unsafe stored nicknames never render publicly', () => {
+  assert.equal(publicNickname('F U C K'), 'SUNCRESTER');
 });
