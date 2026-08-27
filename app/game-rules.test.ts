@@ -154,3 +154,9 @@ test('daily objectives rotate predictably and award meaningful medal tiers', () 
   assert.equal(challengeMedal('skyline_mastery', { time: 74, sparks: 30, total: 40, lives: 2 }), 'GOLD');
   assert.equal(objectiveResultLabel('light_hunt', { time: 60, sparks: 22, total: 40, lives: 2 }), '22/40 LIGHT');
 });
+
+test('production hosting migrations include the daily challenge columns', () => {
+  const migration = readFileSync(new URL('../drizzle/0003_daily_layout_version.sql', import.meta.url), 'utf8');
+  assert.match(migration, /ALTER TABLE run_context ADD COLUMN challenge_id/);
+  assert.match(migration, /ALTER TABLE crest_scores ADD COLUMN challenge_id/);
+});
