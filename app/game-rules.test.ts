@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { soundSources } from './audio-assets.ts';
 import { challengeMedal, chicagoDayKey, collectLightPower, dailyObjectiveForSerial, formatDailyReset, gravityForModifier, horizontalSpeedLimit, millisecondsUntilNextChicagoDay, musicTrackForCourse, objectiveResultLabel, resetRunTiming, resolveDamage, tailwindAcceleration, touchInputFromControls } from './game-rules.ts';
-import { buildSeededCourse, checkpointIsSupported, courseSignature, maximumGroundGap } from './course-generator.ts';
+import { buildSeededCourse, checkpointHasClearLanding, checkpointIsSupported, courseSignature, maximumGroundGap } from './course-generator.ts';
 import { checkNickname, publicNickname } from '../lib/nickname.ts';
 import { normalizeEventMetadata } from '../lib/telemetry.ts';
 
@@ -121,8 +121,23 @@ test('seeded routes stay structurally distinct and keep safe recovery paths', ()
     for (const route of routes) {
       assert.ok(maximumGroundGap(route) <= 370);
       assert.ok(route.checkpoints.every((checkpoint) => checkpointIsSupported(route, checkpoint)));
+      assert.ok(route.checkpoints.every((checkpoint) => checkpointHasClearLanding(route, checkpoint)));
       assert.ok(route.platforms.some((platform) => platform.y >= 600 && 15135 >= platform.x && 15135 <= platform.x + platform.w));
       assert.ok(route.sparkSeed.some((spark) => spark.storm));
+    }
+  }
+});
+
+test('a full year of daily routes keeps starts, checkpoints, and score limits safe', () => {
+  const modifiers = ['clear', 'tailwind', 'moonstep', 'sparkstorm'] as const;
+  for (let seed = 20693; seed < 20693 + 365; seed += 1) {
+    for (let courseIndex = 0; courseIndex < 3; courseIndex += 1) {
+      const route = buildSeededCourse(courseIndex, modifiers[(seed + courseIndex) % modifiers.length], seed);
+      assert.ok(route.checkpoints.every((checkpoint) => checkpointIsSupported(route, checkpoint)));
+      assert.ok(route.checkpoints.every((checkpoint) => checkpointHasClearLanding(route, checkpoint)));
+      assert.ok(route.spikeZones.every((spike) => spike.x >= 760));
+      assert.ok(route.enemySeed.every((enemy) => enemy.minX >= 760 && enemy.x >= enemy.minX && enemy.x <= enemy.maxX));
+      assert.ok(route.sparkSeed.length <= 120);
     }
   }
 });

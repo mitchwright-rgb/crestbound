@@ -8,6 +8,7 @@ export type CourseData = { platforms: Platform[]; spikeZones: Array<{ x: number;
 const SECTION_W = 760;
 const SECTION_COUNT = 20;
 const CHECKPOINTS = [270, 2400, 4680, 7720, 10000, 12300];
+const CHECKPOINT_CLEARANCE = 72;
 
 function randomUnit(seed: number, courseIndex: number, section: number, channel: number) {
   let value = (seed | 0) ^ Math.imul(courseIndex + 11, 0x45d9f3b) ^ Math.imul(section + 17, 0x27d4eb2d) ^ Math.imul(channel + 23, 0x165667b1);
@@ -101,7 +102,7 @@ export function buildSeededCourse(courseIndex: number, modifierId: ModifierId, s
 
   return {
     platforms,
-    spikeZones: spikeZones.filter((spike) => spike.w >= 60),
+    spikeZones: spikeZones.filter((spike) => spike.w >= 60 && !CHECKPOINTS.some((checkpoint) => checkpoint + CHECKPOINT_CLEARANCE > spike.x && checkpoint - CHECKPOINT_CLEARANCE < spike.x + spike.w)),
     sparkSeed: sparkSeed.sort((a, b) => a.x - b.x),
     enemySeed,
     checkpoints: CHECKPOINTS,
@@ -121,4 +122,8 @@ export function maximumGroundGap(course: CourseData) {
 
 export function checkpointIsSupported(course: CourseData, checkpoint: number) {
   return course.platforms.some((platform) => platform.y >= 600 && checkpoint >= platform.x && checkpoint <= platform.x + platform.w - 40);
+}
+
+export function checkpointHasClearLanding(course: CourseData, checkpoint: number) {
+  return !course.spikeZones.some((spike) => checkpoint + CHECKPOINT_CLEARANCE > spike.x && checkpoint - CHECKPOINT_CLEARANCE < spike.x + spike.w);
 }
