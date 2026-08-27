@@ -1,7 +1,7 @@
 'use client';
 
 import { FormEvent, PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { collectLightPower, gravityForModifier, resolveDamage, tailwindAcceleration } from './game-rules';
+import { collectLightPower, gravityForModifier, musicTrackForCourse, resetRunTiming, resolveDamage, tailwindAcceleration } from './game-rules';
 
 type Screen = 'title' | 'playing' | 'paused' | 'won' | 'over';
 type Hud = { sparks: number; total: number; lives: number; time: number; best: number | null; checkpoint: number; progress: number; dashReady: boolean; shield: number };
@@ -212,15 +212,15 @@ export default function Home() {
     return () => window.clearTimeout(load);
   }, [board, loadBoard]);
 
-  function stopMusic() {
+  const stopMusic = useCallback(() => {
     const music = musicRef.current;
     if (!music) return;
     clearInterval(music.timer);
     music.gain.gain.setTargetAtTime(0.0001, music.gain.context.currentTime, .025);
     musicRef.current = null;
-  }
+  }, []);
 
-  function startMusic() {
+  const startMusic = useCallback(() => {
     if (mutedRef.current || musicRef.current || !('AudioContext' in window)) return;
     const context = audioRef.current ?? new AudioContext();
     audioRef.current = context;
@@ -228,8 +228,7 @@ export default function Home() {
     const master = context.createGain();
     master.gain.value = .034;
     master.connect(context.destination);
-    const melody = [659, 0, 784, 0, 880, 784, 659, 0, 587, 0, 659, 784, 523, 0, 587, 0, 659, 784, 988, 0, 880, 784, 659, 587, 523, 0, 440, 523, 587, 0, 494, 0];
-    const bass = [131, 165, 110, 147, 131, 196, 165, 147];
+    const track = musicTrackForCourse(activeCourseIndex);
     const playNote = (frequency: number, length: number, volume: number, type: OscillatorType) => {
       if (!frequency) return;
       const now = context.currentTime;
@@ -244,12 +243,12 @@ export default function Home() {
     const music = { timer: 0 as unknown as ReturnType<typeof setInterval>, gain: master, step: 0 };
     const tick = () => {
       const step = music.step++;
-      playNote(melody[step % melody.length], .105, .72, 'square');
-      if (step % 4 === 0) playNote(bass[(step / 4) % bass.length], .38, .6, 'triangle');
+      playNote(track.melody[step % track.melody.length], track.tempoMs / 1000 * .88, .72, track.lead);
+      if (step % 4 === 0) playNote(track.bass[(step / 4) % track.bass.length], track.tempoMs / 1000 * 3.15, .6, track.bassVoice);
       if (step % 8 === 6) playNote(98, .035, .18, 'square');
     };
-    tick(); music.timer = setInterval(tick, 120); musicRef.current = music;
-  }
+    tick(); music.timer = setInterval(tick, track.tempoMs); musicRef.current = music;
+  }, [activeCourseIndex]);
 
   function sound(kind: 'jump' | 'dash' | 'spark' | 'hit' | 'checkpoint' | 'win') {
     if (mutedRef.current || !('AudioContext' in window)) return;
@@ -430,7 +429,7 @@ export default function Home() {
       portraitPhone.removeEventListener('change', syncOrientation);
       window.removeEventListener('orientationchange', syncOrientation);
     };
-  }, []);
+  }, [startMusic, stopMusic]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -447,7 +446,7 @@ export default function Home() {
     let enemies = enemySeed.map((item) => ({ ...item }));
     let lives = 3;
     let collected = 0;
-    let elapsed = 0;
+    let { elapsed, lastHud } = resetRunTiming();
     let cameraX = 0;
     let checkpointIndex = 0;
     let jumpBuffer = 0;
@@ -455,7 +454,6 @@ export default function Home() {
     let previousJump = false;
     let previousDash = false;
     let last = performance.now();
-    let lastHud = 0;
     let animation = 0;
     let screenShake = 0;
     let stormShield = 0;
@@ -501,7 +499,7 @@ export default function Home() {
       player.x = checkpoints[0]; player.y = 620 - player.h; player.vx = 0; player.vy = 0; player.grounded = true; player.invuln = 1.25; player.jumps = 0;
       sparks = sparkSeed.map((item) => ({ ...item }));
       enemies = enemySeed.map((item) => ({ ...item }));
-      lives = 3; collected = 0; elapsed = 0; lastHud = 0; cameraX = 0; checkpointIndex = 0; jumpBuffer = 0; coyote = 0; previousJump = false; previousDash = false; trace = []; traceTimer = 0; stormShield = 0; powerToast = 0; powerToastMessage = ''; checkpointToast = 0; checkpointLifeAwarded = false; runEnded = false;
+      lives = 3; collected = 0; ({ elapsed, lastHud } = resetRunTiming()); cameraX = 0; checkpointIndex = 0; jumpBuffer = 0; coyote = 0; previousJump = false; previousDash = false; trace = []; traceTimer = 0; stormShield = 0; powerToast = 0; powerToastMessage = ''; checkpointToast = 0; checkpointLifeAwarded = false; runEnded = false;
       const storedBest = window.localStorage.getItem(`crestbound-best-${course.id}`);
       setHud({ sparks: 0, total: sparkSeed.length, lives: 3, time: 0, best: storedBest ? Number(storedBest) : null, checkpoint: 0, progress: 0, dashReady: true, shield: 0 });
     };
@@ -874,19 +872,19 @@ export default function Home() {
           const ghostFrame = ghost[Math.min(ghost.length - 1, Math.max(0, Math.floor(elapsed / .12)))];
           if (ghostFrame && Math.abs(ghostFrame.x - player.x) < VIEW_W * 1.5) {
             ctx.save(); ctx.globalAlpha = .22; ctx.translate(ghostFrame.x + player.w / 2, ghostFrame.y + player.h); ctx.scale(player.facing, 1);
-            ctx.drawImage(spriteSheet, 0, 0, 32, 48, -drawW / 2, -116, drawW, 116); ctx.restore(); ctx.globalAlpha = 1;
+            ctx.drawImage(spriteSheet, 0, 0, 48, 72, -drawW / 2, -116, drawW, 116); ctx.restore(); ctx.globalAlpha = 1;
           }
         }
         if (player.dashTime > 0) {
           for (let trail = 3; trail > 0; trail -= 1) {
             ctx.globalAlpha = .1 + trail * .08;
             ctx.save(); ctx.translate(player.x + player.w / 2 - player.facing * trail * 30, player.y + player.h); ctx.scale(player.facing, 1);
-            ctx.drawImage(spriteSheet, 160, 0, 32, 48, -drawW / 2, -drawH, drawW, drawH); ctx.restore();
+            ctx.drawImage(spriteSheet, 240, 0, 48, 72, -drawW / 2, -drawH, drawW, drawH); ctx.restore();
           }
           ctx.globalAlpha = 1;
         }
         ctx.save(); ctx.translate(player.x + player.w / 2, player.y + player.h); ctx.scale(player.facing, 1);
-        ctx.drawImage(spriteSheet, spriteIndex * 32, 0, 32, 48, -drawW / 2, -drawH, drawW, drawH); ctx.restore();
+        ctx.drawImage(spriteSheet, spriteIndex * 48, 0, 48, 72, -drawW / 2, -drawH, drawW, drawH); ctx.restore();
       } else { ctx.fillStyle = '#f5d263'; ctx.fillRect(player.x, player.y, player.w, player.h); }
       ctx.globalAlpha = 1; ctx.restore();
       if (activeCourseIndex === 2) {
