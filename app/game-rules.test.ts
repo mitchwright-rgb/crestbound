@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { soundSources } from './audio-assets.ts';
-import { challengeMedal, chicagoDayKey, collectLightPower, dailyObjectiveForSerial, formatDailyReset, gravityForModifier, horizontalSpeedLimit, millisecondsUntilNextChicagoDay, musicTrackForCourse, objectiveResultLabel, resetRunTiming, resolveDamage, tailwindAcceleration, touchInputFromControls } from './game-rules.ts';
+import { challengeMedal, chicagoDayKey, collectLightPower, dailyObjectiveForSerial, formatDailyReset, gravityForModifier, horizontalSpeedLimit, lightHuntTargets, millisecondsUntilNextChicagoDay, musicTrackForCourse, objectiveResultLabel, resetRunTiming, resolveDamage, tailwindAcceleration, touchInputFromControls } from './game-rules.ts';
 import { buildSeededCourse, checkpointHasClearLanding, checkpointIsSupported, courseSignature, maximumGroundGap } from './course-generator.ts';
 import { checkNickname, publicNickname } from '../lib/nickname.ts';
 import { normalizeEventMetadata } from '../lib/telemetry.ts';
@@ -152,7 +152,9 @@ test('daily objectives rotate predictably and award meaningful medal tiers', () 
   assert.equal(challengeMedal('clean_run', { time: 200, sparks: 1, total: 40, lives: 3, hits: 1 }), 'SILVER');
   assert.equal(challengeMedal('clean_run', { time: 200, sparks: 1, total: 40, lives: 3, hits: 2 }), 'BRONZE');
   assert.equal(challengeMedal('skyline_mastery', { time: 74, sparks: 30, total: 40, lives: 2 }), 'GOLD');
-  assert.equal(objectiveResultLabel('light_hunt', { time: 60, sparks: 22, total: 40, lives: 2 }), '22/40 LIGHT');
+  assert.equal(lightHuntTargets(82).gold, 68);
+  assert.equal(objectiveResultLabel('light_hunt', { time: 60, sparks: 22, total: 40, lives: 2 }), '22/40 LIGHT · 55% · 11 MORE FOR GOLD');
+  assert.equal(objectiveResultLabel('light_hunt', { time: 160, sparks: 40, total: 40, lives: 2 }), '40/40 LIGHT · 100% · GOLD TARGET MET');
 });
 
 test('production hosting migrations include the daily challenge columns', () => {

@@ -2,7 +2,7 @@
 
 import { FormEvent, PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SoundKind, soundSources, soundVolumes } from './audio-assets';
-import { challengeMedal, chicagoDayKey, collectLightPower, dailyObjectiveForSerial, dailyObjectiveSpecs, formatDailyReset, gravityForModifier, horizontalSpeedLimit, millisecondsUntilNextChicagoDay, musicTrackForCourse, objectiveResultLabel, resetRunTiming, resolveDamage, tailwindAcceleration, touchInputFromControls } from './game-rules';
+import { challengeMedal, chicagoDayKey, collectLightPower, dailyObjectiveForSerial, dailyObjectiveSpecs, formatDailyReset, gravityForModifier, horizontalSpeedLimit, lightHuntTargets, millisecondsUntilNextChicagoDay, musicTrackForCourse, objectiveResultLabel, resetRunTiming, resolveDamage, tailwindAcceleration, touchInputFromControls } from './game-rules';
 import { buildSeededCourse } from './course-generator';
 import { checkNickname } from '@/lib/nickname';
 import { dailyChallengeIdForDay } from '@/lib/daily-challenge';
@@ -70,8 +70,15 @@ export default function Home() {
   const [muted, setMuted] = useState(false);
   const mutedRef = useRef(false);
   const [hud, setHud] = useState<Hud>({ sparks: 0, total: sparkSeed.length, lives: 3, hits: 0, time: 0, best: null, checkpoint: 0, progress: 0, dashReady: true, shield: 0 });
-  const earnedMedal = challengeMedal(objectiveId, hud);
-  const objectiveResult = objectiveResultLabel(objectiveId, hud);
+  const [finalResult, setFinalResult] = useState<Hud | null>(null);
+  const finalResultRef = useRef<Hud | null>(null);
+  const resultHud = finalResult ?? hud;
+  const earnedMedal = challengeMedal(objectiveId, resultHud);
+  const objectiveResult = objectiveResultLabel(objectiveId, resultHud);
+  const lightTargets = lightHuntTargets(sparkSeed.length);
+  const objectiveDescription = objectiveId === 'light_hunt'
+    ? `Gold ${lightTargets.gold}/${sparkSeed.length} Light · Silver ${lightTargets.silver}/${sparkSeed.length}`
+    : objective.description;
   const musicRef = useRef<HTMLAudioElement | null>(null);
   const sfxContextRef = useRef<AudioContext | null>(null);
   const sfxBuffersRef = useRef<Map<SoundKind, AudioBuffer>>(new Map());
@@ -327,6 +334,8 @@ export default function Home() {
       });
     }
     const replaying = screenRef.current === 'over' || screenRef.current === 'won';
+    finalResultRef.current = null;
+    setFinalResult(null);
     setHomePanel('none');
     resetRef.current?.();
     setSubmitState('idle'); setRank(null); runIdRef.current = null;
@@ -417,9 +426,10 @@ export default function Home() {
     setSubmitState('saving');
     setSubmitError('');
     const cleanName = nicknameResult.name;
+    const runResult = finalResultRef.current ?? hud;
     window.localStorage.setItem('crestbound-nickname', cleanName); setNickname(cleanName);
     try {
-      const response = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'finish', runId: runIdRef.current, playerId: playerIdRef.current, courseId: dailyCourse.id, modifierId: dailyModifier.id, challengeId: dailyChallengeId, name: cleanName, scoreMs: Math.round(hud.time * 1000), sparks: hud.sparks }) });
+      const response = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'finish', runId: runIdRef.current, playerId: playerIdRef.current, courseId: dailyCourse.id, modifierId: dailyModifier.id, challengeId: dailyChallengeId, name: cleanName, scoreMs: Math.round(runResult.time * 1000), sparks: runResult.sparks }) });
       const data = await response.json() as { rank?: number; error?: string };
       if (!response.ok) throw new Error(data.error);
       setRank(data.rank ?? null); setSubmitState('saved'); setBoard('daily'); void loadBoard('daily');
@@ -647,6 +657,8 @@ export default function Home() {
       } else resetPosition();
     };
     const reset = () => {
+      finalResultRef.current = null;
+      setFinalResult(null);
       player.x = checkpoints[0]; player.y = 620 - player.h; player.vx = 0; player.vy = 0; player.grounded = true; player.invuln = 1.25; player.jumps = 0;
       sparks = sparkSeed.map((item) => ({ ...item }));
       enemies = enemySeed.map((item) => ({ ...item }));
@@ -792,7 +804,10 @@ export default function Home() {
           window.localStorage.setItem(`crestbound-ghost-${course.id}`, JSON.stringify(trace));
           ghost = trace;
         }
-        setHud({ sparks: collected, total: sparks.length, lives, hits, time: elapsed, best: Math.min(best, elapsed), checkpoint: checkpointIndex, progress: player.x, dashReady: player.dashCooldown <= 0, shield: stormShield });
+        const finishedRun: Hud = { sparks: collected, total: sparks.length, lives, hits, time: elapsed, best: Math.min(best, elapsed), checkpoint: checkpointIndex, progress: player.x, dashReady: player.dashCooldown <= 0, shield: stormShield };
+        finalResultRef.current = finishedRun;
+        setFinalResult(finishedRun);
+        setHud(finishedRun);
         if (!isPractice) recordStreak();
         else track('practice_finish', { lives, progress: player.x, elapsedMs: elapsed * 1000 });
         flushTelemetry();
@@ -1118,7 +1133,7 @@ export default function Home() {
                 </picture>
               </div>
               <div className="home-dashboard">
-                <div className="daily-course"><span>{isPractice ? 'PRACTICE RUN' : 'TODAY\'S SEEDED RUN'}</span><b>{course.name}</b><em>{isPractice ? 'STANDARD RULES' : `TWIST · ${modifier.name}`}</em><div className="daily-challenge"><strong>{isPractice ? 'PRACTICE GOAL' : `CHALLENGE · ${objective.name}`}</strong><small>{objective.description}</small></div><div className="daily-return"><strong>{isPractice ? 'PRACTICE MODE' : streak > 0 ? `${streak} DAY STREAK` : 'FINISH TO START A STREAK'}</strong><small>{isPractice ? 'TODAY\'S BOARD IS UNAFFECTED' : `NEW ROUTE IN ${dailyReset}`}</small></div></div>
+                <div className="daily-course"><span>{isPractice ? 'PRACTICE RUN' : 'TODAY\'S SEEDED RUN'}</span><b>{course.name}</b><em>{isPractice ? 'STANDARD RULES' : `TWIST · ${modifier.name}`}</em><div className="daily-challenge"><strong>{isPractice ? 'PRACTICE GOAL' : `CHALLENGE · ${objective.name}`}</strong><small>{objectiveDescription}</small></div><div className="daily-return"><strong>{isPractice ? 'PRACTICE MODE' : streak > 0 ? `${streak} DAY STREAK` : 'FINISH TO START A STREAK'}</strong><small>{isPractice ? 'TODAY\'S BOARD IS UNAFFECTED' : `NEW ROUTE IN ${dailyReset}`}</small></div></div>
                 <button className="play-button" type="button" disabled={runStartState === 'connecting'} onClick={() => void startGame(true)}>{runStartState === 'connecting' ? 'Connecting Ranked Run…' : isPractice ? 'Start Practice' : 'Play Today\'s Run'} {runStartState !== 'connecting' && <span aria-hidden="true">▶</span>}</button>
                 {runStartState === 'error' && <p className="run-start-error" role="alert"><b>RUN NOT STARTED</b><span>{runStartError}</span></p>}
                 <div className="daily-glance"><span>{community.players} {community.players === 1 ? 'SUNCRESTER HAS' : 'SUNCRESTERS HAVE'} RUN TODAY</span><b>{entries[0] ? `FASTEST: ${entries[0].name} · ${formatTime(entries[0].timeMs / 1000)}` : 'BE THE FIRST FINISHER'}</b><div className="community-progress"><div><span>COMMUNITY LIGHT</span><b>{community.lights.toLocaleString()} / {community.goal.toLocaleString()}</b></div><progress aria-label={`${community.lights} of ${community.goal} community lights collected today`} max={community.goal} value={Math.min(community.lights, community.goal)} /><small>{community.lights >= community.goal ? 'TODAY\'S GOAL REACHED — KEEP IT GLOWING' : `${(community.goal - community.lights).toLocaleString()} LIGHTS TO TODAY'S GOAL`}</small></div></div>
@@ -1169,7 +1184,7 @@ export default function Home() {
         {screen === 'won' && (
           <div ref={gameModalRef} className="game-modal win-modal" role="dialog" aria-modal="true" aria-labelledby="win-title" tabIndex={-1}>
             <p>LIGHT RESTORED // {earnedMedal} MEDAL</p><h2 id="win-title">Skyline cleared.</h2>
-            <div className="result-grid"><span><b>{formatTime(hud.time)}</b><small>FINISH</small></span><span><b>{hud.sparks}/{hud.total}</b><small>LIGHT</small></span><span><b>{hud.best ? formatTime(hud.best) : '—'}</b><small>BEST</small></span></div>
+            <div className="result-grid"><span><b>{formatTime(resultHud.time)}</b><small>FINISH</small></span><span><b>{resultHud.sparks}/{resultHud.total}</b><small>LIGHT</small></span><span><b>{resultHud.best ? formatTime(resultHud.best) : '—'}</b><small>BEST</small></span></div>
             <div className={`challenge-result ${earnedMedal.toLowerCase()}`}><b>{objective.name}</b><span>{objectiveResult}</span></div>
             {isPractice ? <div className="rank-callout">PRACTICE COMPLETE // PERSONAL BESTS STAY ON THIS DEVICE</div> : submitState !== 'saved' ? <form className="score-form" onSubmit={submitRun}>
               <label htmlFor="nickname">POST TO TODAY&apos;S BOARD</label>

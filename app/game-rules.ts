@@ -23,9 +23,17 @@ export function challengeMedal(objective: DailyObjectiveId, result: { time: numb
   return result.time <= 75 && lightRatio >= .7 ? 'GOLD' : result.time <= 90 || lightRatio >= .55 ? 'SILVER' : 'BRONZE';
 }
 
+export function lightHuntTargets(total: number) {
+  return { gold: Math.ceil(total * .82), silver: Math.ceil(total * .6) };
+}
+
 export function objectiveResultLabel(objective: DailyObjectiveId, result: { time: number; sparks: number; total: number; lives: number; hits?: number }) {
   if (objective === 'sprint') return `${result.time.toFixed(1)} SEC`;
-  if (objective === 'light_hunt') return `${result.sparks}/${result.total} LIGHT`;
+  if (objective === 'light_hunt') {
+    const percentage = result.total > 0 ? Math.round(result.sparks / result.total * 100) : 0;
+    const needed = Math.max(0, lightHuntTargets(result.total).gold - result.sparks);
+    return `${result.sparks}/${result.total} LIGHT · ${percentage}% · ${needed > 0 ? `${needed} MORE FOR GOLD` : 'GOLD TARGET MET'}`;
+  }
   if (objective === 'clean_run') return `${result.hits ?? 3 - result.lives} HITS`;
   const percentage = result.total > 0 ? Math.round(result.sparks / result.total * 100) : 0;
   return `${result.time.toFixed(1)} SEC · ${percentage}% LIGHT`;
