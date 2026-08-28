@@ -1233,11 +1233,29 @@ export default function Home() {
                 </picture>
               </div>
               <div className="home-dashboard">
-                <div className="daily-course"><span>TODAY&apos;S SEEDED RUN</span><b>{dailyCourse.name}</b><em>TWIST · {dailyModifier.name}</em><div className="daily-challenge"><strong>CHALLENGE · {dailyObjectiveSpecs[dailyObjectiveId].name}</strong><small>{dailyObjectiveSpecs[dailyObjectiveId].description}</small></div><div className="daily-return"><strong>{streak > 0 ? `${streak} DAY STREAK` : 'FINISH TO START A STREAK'}</strong><small>NEW ROUTE IN {dailyReset}</small></div></div>
+                <div className="daily-course">
+                  <span>TODAY</span>
+                  <b>{dailyCourse.name}</b>
+                  <em>{dailyModifier.name} · {dailyObjectiveSpecs[dailyObjectiveId].name}</em>
+                  {streak > 0 && <small className="streak-badge" title={`New route in ${dailyReset}`}>{streak} day streak</small>}
+                </div>
                 <button className="play-button" type="button" disabled={runStartState === 'connecting'} onClick={() => void startGame(true)}>{runStartState === 'connecting' ? 'Connecting Ranked Run…' : 'Play Today\'s Run'} {runStartState !== 'connecting' && <span aria-hidden="true">▶</span>}</button>
                 {runStartState === 'error' && <p className="run-start-error" role="alert"><b>RUN NOT STARTED</b><span>{runStartError}</span></p>}
-                <div className="daily-glance"><span>FASTEST TIME WINS TODAY</span><b>{entries[0] ? `#1 ${entries[0].name} · ${formatTime(entries[0].timeMs / 1000)} · ${community.players} ${community.players === 1 ? 'RUNNER' : 'RUNNERS'}` : 'BE THE FIRST FINISHER'}</b><div className="community-progress"><div><span>LIGHT BUILDS THE COMMUNITY GOAL</span><b>{community.lights.toLocaleString()} / {community.goal.toLocaleString()}</b></div><progress aria-label={`${community.lights} of ${community.goal} community lights collected today`} max={community.goal} value={Math.min(community.lights, community.goal)} /><small>{community.lights >= community.goal ? 'TODAY\'S GOAL REACHED — KEEP IT GLOWING' : `${(community.goal - community.lights).toLocaleString()} LIGHTS TO TODAY'S GOAL`}</small></div></div>
-                <div className="home-links"><button type="button" onClick={() => { openHomePanel('leaderboard'); track('leaderboard_open'); }}>Leaderboard</button><button className="series-routes-link" type="button" onClick={() => { setSeriesWeekIndex(activeSeries?.weekIndex ?? 0); openHomePanel('series'); track('series_open'); }}><strong>Series Routes</strong><small>Declarations · New weekly route</small></button><button type="button" onClick={() => openHomePanel('help')}>How to Play</button></div>
+                <div className="daily-glance">
+                  <div className="home-social-stats">
+                    <span><small>FASTEST</small><b>{entries[0] ? `${entries[0].name} · ${formatTime(entries[0].timeMs / 1000)}` : 'CLAIM #1'}</b></span>
+                    <span><small>TODAY</small><b>{community.players} {community.players === 1 ? 'RUNNER' : 'RUNNERS'}</b></span>
+                  </div>
+                  <div className="community-progress">
+                    <div><span>COMMUNITY LIGHT</span><b>{community.lights.toLocaleString()} / {community.goal.toLocaleString()}</b></div>
+                    <progress aria-label={`${community.lights} of ${community.goal} community lights collected today`} max={community.goal} value={Math.min(community.lights, community.goal)} />
+                  </div>
+                </div>
+                <div className="home-links">
+                  <button className="series-routes-link" type="button" onClick={() => { setSeriesWeekIndex(activeSeries?.weekIndex ?? 0); openHomePanel('series'); track('series_open'); }}><strong>Declarations</strong><small>Explore Series Routes →</small></button>
+                  <button type="button" onClick={() => { openHomePanel('leaderboard'); track('leaderboard_open'); }}>Leaderboard</button>
+                  <button type="button" onClick={() => openHomePanel('help')}>How to Play</button>
+                </div>
               </div>
             </div>
             {homePanel === 'leaderboard' && <aside ref={homePanelRef} className="leaderboard home-panel" role="dialog" aria-modal="true" aria-labelledby="leaderboard-title" tabIndex={-1}>
