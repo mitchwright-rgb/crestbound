@@ -1255,19 +1255,15 @@ export default function Home({ initialDay }: { initialDay: string }) {
                   <source media="(orientation: landscape)" srcSet="/crestbound-home-hero.svg" />
                   <img src="/crestbound-square-key-art.svg" width="1254" height="1254" alt="Sunny runs across the golden-hour Crestbound skyline beneath the A Daily Skyline Run tagline" />
                 </picture>
-                <div className="sunny-intro" aria-label="I'm Sunny, the hero of Crestbound">
-                  <span>I&apos;m Sunny!</span>
-                  <i className="sunny-intro-sprite" aria-hidden="true" />
-                </div>
               </div>
               <div className="home-dashboard">
                 <div className="daily-course">
-                  <span>TODAY</span>
+                  <span>SUNNY&apos;S RUN · TODAY</span>
                   <b>{dailyCourse.name}</b>
                   <em>{dailyModifier.name} · {dailyObjectiveSpecs[dailyObjectiveId].name}</em>
                   {streak > 0 && <small className="streak-badge" title={`New route in ${dailyReset}`}>{streak} day streak</small>}
                 </div>
-                <button className="play-button" type="button" disabled={runStartState === 'connecting'} onClick={() => void startGame(true)}>{runStartState === 'connecting' ? 'Connecting Ranked Run…' : 'Play Today\'s Run'} {runStartState !== 'connecting' && <span aria-hidden="true">▶</span>}</button>
+                <button className="play-button" type="button" disabled={runStartState === 'connecting'} onClick={() => void startGame(true)}>{runStartState === 'connecting' ? 'Connecting Ranked Run…' : 'Run with Sunny'} {runStartState !== 'connecting' && <span aria-hidden="true">▶</span>}</button>
                 {runStartState === 'error' && <p className="run-start-error" role="alert"><b>RUN NOT STARTED</b><span>{runStartError}</span></p>}
                 <div className="daily-glance">
                   <div className="home-social-stats">
