@@ -481,25 +481,67 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   top: 16.3%;
   width: 34.3%;
   aspect-ratio: 430 / 465;
-  background: url('/sunny-cover-exact-v2.png') center / contain no-repeat;
   image-rendering: pixelated;
   transform-origin: 50% 88%;
   animation: sunny-cover-jump 8.5s cubic-bezier(.22, .7, .24, 1) infinite;
   will-change: transform, opacity;
   pointer-events: none;
 }
+.sunny-part {
+  position: absolute;
+  inset: 0;
+  background: url('/sunny-cover-exact-v2.png') center / 100% 100% no-repeat;
+  image-rendering: pixelated;
+  will-change: transform;
+}
+.sunny-part-head {
+  z-index: 5;
+  clip-path: polygon(18% 0, 88% 0, 92% 58%, 74% 64%, 25% 61%, 16% 43%);
+  transform-origin: 52% 55%;
+  animation: sunny-head-motion 8.5s ease-in-out infinite;
+}
+.sunny-part-body {
+  z-index: 2;
+  clip-path: polygon(20% 49%, 78% 47%, 79% 83%, 62% 89%, 31% 86%, 18% 68%);
+  transform-origin: 50% 76%;
+  animation: sunny-body-motion 8.5s ease-in-out infinite;
+}
+.sunny-part-arm-back {
+  z-index: 1;
+  clip-path: polygon(0 35%, 43% 35%, 45% 68%, 0 70%);
+  transform-origin: 34% 53%;
+  animation: sunny-arm-back-motion 8.5s ease-in-out infinite;
+}
+.sunny-part-arm-front {
+  z-index: 6;
+  clip-path: polygon(55% 35%, 100% 35%, 100% 70%, 55% 69%);
+  transform-origin: 64% 53%;
+  animation: sunny-arm-front-motion 8.5s ease-in-out infinite;
+}
+.sunny-part-leg-back {
+  z-index: 1;
+  clip-path: polygon(0 64%, 58% 64%, 58% 100%, 0 100%);
+  transform-origin: 44% 74%;
+  animation: sunny-leg-back-motion 8.5s ease-in-out infinite;
+}
+.sunny-part-leg-front {
+  z-index: 4;
+  clip-path: polygon(43% 63%, 100% 63%, 100% 100%, 43% 100%);
+  transform-origin: 58% 73%;
+  animation: sunny-leg-front-motion 8.5s ease-in-out infinite;
+}
 .sunny-cover-intro {
   position: absolute;
   z-index: 3;
-  left: 67%;
-  top: 31%;
+  left: 66%;
+  top: 27%;
   opacity: 0;
   color: #fff4cb;
   text-shadow: 3px 3px 0 #082b31, -2px 0 0 #082b31, 0 -2px 0 #082b31;
-  font: 900 clamp(8px, 1.1vw, 15px)/1 var(--font-pixel), monospace;
+  font: 900 clamp(18px, 2.4vw, 34px)/1 var(--font-pixel), monospace;
   letter-spacing: .08em;
   white-space: nowrap;
-  animation: sunny-cover-hello 8.5s steps(1, end) infinite;
+  animation: sunny-cover-hello 8.5s cubic-bezier(.2, .76, .25, 1) infinite;
   pointer-events: none;
 }
 @keyframes sunny-cover-jump {
@@ -514,10 +556,76 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   75% { opacity: 1; transform: translate(8%, -18%) rotate(6deg) scale(.98); }
   86%, 100% { opacity: 0; transform: translate(58%, -95%) rotate(12deg) scale(.76); }
 }
+@keyframes sunny-head-motion {
+  0%, 5% { transform: rotate(-5deg) translateY(1%); }
+  10% { transform: rotate(4deg) translateY(-2%); }
+  15% { transform: rotate(-3deg) translateY(0); }
+  21% { transform: rotate(3deg) translateY(2%) scaleY(.97); }
+  26%, 36% { transform: rotate(0) translateY(0); }
+  42% { transform: rotate(-5deg) translate(-1%, -1%); }
+  49% { transform: rotate(4deg) translate(1%, 0); }
+  56%, 70% { transform: rotate(0) translateY(0); }
+  76% { transform: rotate(4deg) translateY(-1%); }
+  86%, 100% { transform: rotate(-4deg) translateY(0); }
+}
+@keyframes sunny-body-motion {
+  0%, 5% { transform: rotate(3deg) scaleY(.98); }
+  10% { transform: rotate(-2deg) scaleY(1.02); }
+  15% { transform: rotate(2deg); }
+  21% { transform: translateY(2.5%) scale(1.04, .94); }
+  26%, 70% { transform: none; }
+  76% { transform: rotate(-2deg) scaleY(1.02); }
+  86%, 100% { transform: rotate(3deg) scaleY(.98); }
+}
+@keyframes sunny-arm-back-motion {
+  0%, 5% { transform: rotate(-13deg); }
+  10% { transform: rotate(12deg); }
+  15% { transform: rotate(-10deg); }
+  21% { transform: rotate(6deg); }
+  26%, 36% { transform: rotate(0); }
+  42% { transform: rotate(-18deg); }
+  47% { transform: rotate(13deg); }
+  52% { transform: rotate(-15deg); }
+  57%, 70% { transform: rotate(0); }
+  76% { transform: rotate(12deg); }
+  86%, 100% { transform: rotate(-13deg); }
+}
+@keyframes sunny-arm-front-motion {
+  0%, 5% { transform: rotate(12deg); }
+  10% { transform: rotate(-11deg); }
+  15% { transform: rotate(10deg); }
+  21% { transform: rotate(-5deg); }
+  26%, 36% { transform: rotate(0); }
+  42% { transform: rotate(-8deg) translateY(-1%); }
+  47% { transform: rotate(6deg); }
+  52% { transform: rotate(-5deg); }
+  57%, 70% { transform: rotate(0); }
+  76% { transform: rotate(-10deg); }
+  86%, 100% { transform: rotate(12deg); }
+}
+@keyframes sunny-leg-back-motion {
+  0%, 5% { transform: rotate(10deg); }
+  10% { transform: rotate(-12deg); }
+  15% { transform: rotate(9deg); }
+  21% { transform: rotate(-7deg) translateY(1%); }
+  26%, 70% { transform: rotate(-4deg); }
+  76% { transform: rotate(-12deg); }
+  86%, 100% { transform: rotate(10deg); }
+}
+@keyframes sunny-leg-front-motion {
+  0%, 5% { transform: rotate(-10deg); }
+  10% { transform: rotate(12deg); }
+  15% { transform: rotate(-8deg); }
+  21% { transform: rotate(6deg) translateY(1%); }
+  26%, 70% { transform: rotate(4deg); }
+  76% { transform: rotate(12deg); }
+  86%, 100% { transform: rotate(-10deg); }
+}
 @keyframes sunny-cover-hello {
-  0%, 38% { opacity: 0; transform: translateY(5px); }
-  39%, 58% { opacity: 1; transform: translateY(0); }
-  59%, 100% { opacity: 0; transform: translateY(-4px); }
+  0%, 37% { opacity: 0; transform: translateY(8px) scale(.72) rotate(-2deg); }
+  41% { opacity: 1; transform: translateY(0) scale(1.08) rotate(1deg); }
+  45%, 57% { opacity: 1; transform: translateY(0) scale(1) rotate(0); }
+  62%, 100% { opacity: 0; transform: translateY(-7px) scale(.94); }
 }
 .home-dashboard {
   position: absolute;
@@ -700,8 +808,8 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .home-panel { width: min(700px, calc(100% - 24px)); max-height: calc(100svh - 16px); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
   .home-cover-scene, .home-cover-scene img { width: 100%; height: 100%; }
   .home-cover-scene img { object-fit: cover; object-position: center center; }
-  .sunny-cover-character { left: 3%; top: 8%; width: 31%; }
-  .sunny-cover-intro { left: 24%; top: 13%; font-size: clamp(8px, 1vw, 13px); }
+  .sunny-cover-character { left: 31%; top: -5%; width: 13%; }
+  .sunny-cover-intro { left: 16%; top: 11%; font-size: clamp(18px, 2vw, 30px); }
   .home-dashboard {
     min-height: 174px;
     grid-template-columns: .85fr 1.1fr 1fr;
@@ -996,5 +1104,6 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 
 @media (prefers-reduced-motion: reduce) {
   .sunny-cover-character { opacity: 1; transform: none; animation: none; }
+  .sunny-part { transform: none; animation: none; }
   .sunny-cover-intro { display: none; animation: none; }
 }

@@ -1255,7 +1255,14 @@ export default function Home({ initialDay }: { initialDay: string }) {
                   <source media="(orientation: landscape)" srcSet="/crestbound-landscape-background-v1.png" />
                   <img src="/crestbound-square-background-v1.png" width="1254" height="1254" alt="The golden-hour Crestbound skyline beneath the A Daily Skyline Run title" />
                 </picture>
-                <div className="sunny-cover-character" aria-hidden="true" />
+                <div className="sunny-cover-character" aria-hidden="true">
+                  <span className="sunny-part sunny-part-head" />
+                  <span className="sunny-part sunny-part-body" />
+                  <span className="sunny-part sunny-part-arm-back" />
+                  <span className="sunny-part sunny-part-arm-front" />
+                  <span className="sunny-part sunny-part-leg-back" />
+                  <span className="sunny-part sunny-part-leg-front" />
+                </div>
                 <span className="sunny-cover-intro" aria-hidden="true">I&apos;M SUNNY!</span>
                 <span className="sr-only">Sunny jumps into the Crestbound skyline, introduces himself, and jumps away.</span>
               </div>
