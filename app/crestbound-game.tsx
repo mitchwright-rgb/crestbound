@@ -16,6 +16,7 @@ type BoardEntry = { rank: number; name: string; timeMs: number; sparks: number; 
 type HomePanel = 'none' | 'leaderboard' | 'help' | 'series' | 'resource';
 type GameNotice = { text: string; kind: 'checkpoint' | 'power' };
 type SeriesMessage = { title: string; date: string; speaker: string; url: string; appUrl: string | null; description: string; discussionGuideUrl: string | null; readingGuideUrl: string | null };
+type SeriesBoardEntry = { rank: number; name: string; timeMs: number; lights: number; isPlayer: boolean };
 
 type Community = { players: number; lights: number; goal: number; nearby: BoardEntry[]; playerRank: number | null; recent: string[] };
 
@@ -119,6 +120,8 @@ export default function Home({ initialDay }: { initialDay: string }) {
   const [gameNotice, setGameNotice] = useState<GameNotice | null>(null);
   const gameNoticeTimerRef = useRef(0);
   const [seriesCompletions, setSeriesCompletions] = useState(0);
+  const [seriesEntries, setSeriesEntries] = useState<SeriesBoardEntry[]>([]);
+  const [seriesBoardStatus, setSeriesBoardStatus] = useState<'loading' | 'ready' | 'offline'>('loading');
   const [completedSeriesWeeks, setCompletedSeriesWeeks] = useState<string[]>([]);
   const [seriesMessage, setSeriesMessage] = useState<SeriesMessage | null>(null);
   const [seriesResource, setSeriesResource] = useState<{ title: string; url: string } | null>(null);
@@ -221,6 +224,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
   useEffect(() => {
     if (!activeSeries || !seriesWeek) return;
     setSeriesMessage(null);
+    setSeriesBoardStatus('loading');
     const params = new URLSearchParams({ weekId: seriesWeek.id });
     void fetch(`/api/series-content?${params}`, { cache: 'no-store' })
       .then(async (response) => response.ok ? response.json() as Promise<{ available?: boolean; message?: SeriesMessage }> : null)
@@ -229,9 +233,19 @@ export default function Home({ initialDay }: { initialDay: string }) {
     if (playerIdRef.current) {
       params.set('playerId', playerIdRef.current);
       void fetch(`/api/series?${params}`, { cache: 'no-store' })
-        .then(async (response) => response.ok ? response.json() as Promise<{ completions?: number }> : null)
-        .then((data) => { if (data) setSeriesCompletions(data.completions ?? 0); })
-        .catch(() => undefined);
+        .then(async (response) => {
+          if (!response.ok) throw new Error('Series results unavailable');
+          return response.json() as Promise<{ completions?: number; entries?: SeriesBoardEntry[] }>;
+        })
+        .then((data) => {
+          setSeriesCompletions(data.completions ?? 0);
+          setSeriesEntries(data.entries ?? []);
+          setSeriesBoardStatus('ready');
+        })
+        .catch(() => {
+          setSeriesEntries([]);
+          setSeriesBoardStatus('offline');
+        });
     }
   }, [activeSeries, seriesWeek]);
 
@@ -880,9 +894,12 @@ export default function Home({ initialDay }: { initialDay: string }) {
           track('series_finish', { lives, progress: player.x, elapsedMs: elapsed * 1000 });
           void fetch('/api/series', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ playerId: playerIdRef.current, seriesId: activeSeries.series.id, weekId: seriesWeek!.id, timeMs: Math.round(elapsed * 1000), lights: collected }),
-          }).then(async (response) => response.ok ? response.json() as Promise<{ completions?: number }> : null)
-            .then((data) => { if (data?.completions != null) setSeriesCompletions(data.completions); })
+            body: JSON.stringify({ playerId: playerIdRef.current, name: nickname, seriesId: activeSeries.series.id, weekId: seriesWeek!.id, timeMs: Math.round(elapsed * 1000), lights: collected }),
+          }).then(async (response) => response.ok ? response.json() as Promise<{ completions?: number; entries?: SeriesBoardEntry[] }> : null)
+            .then((data) => {
+              if (data?.completions != null) setSeriesCompletions(data.completions);
+              if (data?.entries) { setSeriesEntries(data.entries); setSeriesBoardStatus('ready'); }
+            })
             .catch(() => undefined);
         }
         flushTelemetry();
@@ -1238,6 +1255,10 @@ export default function Home({ initialDay }: { initialDay: string }) {
                   <source media="(orientation: landscape)" srcSet="/crestbound-home-hero.svg" />
                   <img src="/crestbound-square-key-art.svg" width="1254" height="1254" alt="Sunny runs across the golden-hour Crestbound skyline beneath the A Daily Skyline Run tagline" />
                 </picture>
+                <div className="sunny-intro" aria-label="I'm Sunny, the hero of Crestbound">
+                  <span>I&apos;m Sunny!</span>
+                  <i className="sunny-intro-sprite" aria-hidden="true" />
+                </div>
               </div>
               <div className="home-dashboard">
                 <div className="daily-course">
@@ -1298,7 +1319,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
             {homePanel === 'series' && <aside ref={homePanelRef} className="course-picker series-picker home-panel" role="dialog" aria-modal="true" aria-labelledby="series-title" tabIndex={-1}>
               <button className="panel-dismiss" type="button" aria-label="Close Series Routes" onClick={closeHomePanel}>X</button>
               <p className="kicker">NOW AT SUNCREST</p><h2 id="series-title">Series Routes</h2>
-              {activeSeries && seriesWeek ? <><section className="series-feature"><div className="series-wordmark"><small>TAKE A STAND</small><b>DECLARATIONS</b></div><p>{seriesMessage?.description || activeSeries.series.description}</p><div className="series-week"><span>{seriesWeekIndex === activeSeries.weekIndex ? 'THIS WEEK' : `WEEK ${seriesWeekIndex + 1} ARCHIVE`} · {seriesMessage?.title || seriesWeek.title}</span><b>{seriesWeek.routeName}</b>{seriesMessage?.speaker && <small>{seriesMessage.speaker}</small>}</div><div className="series-week-dots" aria-label={`${completedSeriesWeeks.length} of ${activeSeries.series.weeks.length} routes completed`}>{activeSeries.series.weeks.map((week, index) => { const locked = index > activeSeries.weekIndex; const state = [completedSeriesWeeks.includes(week.id) ? 'complete' : '', index === activeSeries.weekIndex ? 'current' : '', index === seriesWeekIndex ? 'selected' : ''].filter(Boolean).join(' '); return <button type="button" className={state} disabled={locked} aria-label={locked ? `Week ${index + 1} unlocks ${week.sunday}` : `Select week ${index + 1}: ${week.title}`} aria-pressed={index === seriesWeekIndex} onClick={() => setSeriesWeekIndex(index)} key={week.id}>{locked ? '—' : index + 1}</button>; })}</div></section><button className="series-play" type="button" onClick={() => { pendingSeriesStartRef.current = true; setSeriesMode(true); closeHomePanel(); }}>Play {seriesWeekIndex === activeSeries.weekIndex ? 'This Week' : `Week ${seriesWeekIndex + 1}`} ▶</button><div className="series-resources"><button className="message-link" type="button" onClick={() => { track('message_open'); openSeriesResource(seriesMessage?.title || 'This Week\'s Message', seriesMessage?.appUrl || seriesMessage?.url || activeSeries.series.messageUrl); }}>{seriesMessage ? "Watch This Week's Message" : 'Message Details'}</button>{seriesMessage?.discussionGuideUrl && <button type="button" onClick={() => openSeriesResource('Discussion Guide', seriesMessage.discussionGuideUrl!)}>Discussion Guide</button>}{seriesMessage?.readingGuideUrl && <button type="button" onClick={() => openSeriesResource('Reading Guide', seriesMessage.readingGuideUrl!)}>Reading Guide</button>}</div></> : <p>No Series Route is active today. The daily Crestbound route is still ready to run.</p>}
+              {activeSeries && seriesWeek ? <><section className="series-feature"><div className="series-wordmark"><small>TAKE A STAND</small><b>DECLARATIONS</b></div><p>{seriesMessage?.description || activeSeries.series.description}</p><div className="series-week"><span>{seriesWeekIndex === activeSeries.weekIndex ? 'THIS WEEK' : `WEEK ${seriesWeekIndex + 1} ARCHIVE`} · {seriesMessage?.title || seriesWeek.title}</span><b>{seriesWeek.routeName}</b>{seriesMessage?.speaker && <small>{seriesMessage.speaker}</small>}</div><div className="series-week-dots" aria-label={`${completedSeriesWeeks.length} of ${activeSeries.series.weeks.length} routes completed`}>{activeSeries.series.weeks.map((week, index) => { const locked = index > activeSeries.weekIndex; const state = [completedSeriesWeeks.includes(week.id) ? 'complete' : '', index === activeSeries.weekIndex ? 'current' : '', index === seriesWeekIndex ? 'selected' : ''].filter(Boolean).join(' '); return <button type="button" className={state} disabled={locked} aria-label={locked ? `Week ${index + 1} unlocks ${week.sunday}` : `Select week ${index + 1}: ${week.title}`} aria-pressed={index === seriesWeekIndex} onClick={() => setSeriesWeekIndex(index)} key={week.id}>{locked ? '—' : index + 1}</button>; })}</div></section><button className="series-play" type="button" onClick={() => { pendingSeriesStartRef.current = true; setSeriesMode(true); closeHomePanel(); }}>Play {seriesWeekIndex === activeSeries.weekIndex ? 'This Week' : `Week ${seriesWeekIndex + 1}`} ▶</button><section className="series-results" aria-labelledby="series-results-title"><header><div><small>SELECTED ROUTE</small><h3 id="series-results-title">Top Results</h3></div><b>{seriesCompletions} {seriesCompletions === 1 ? 'FINISHER' : 'FINISHERS'}</b></header><div className="series-result-legend" aria-hidden="true"><span>RANK</span><span>RUNNER</span><span>TIME</span><span>LIGHT</span></div><ol>{seriesBoardStatus === 'loading' && <li className="series-result-message">LOADING RESULTS…</li>}{seriesBoardStatus === 'offline' && <li className="series-result-message">RESULTS ARE TEMPORARILY OFFLINE.</li>}{seriesBoardStatus === 'ready' && seriesEntries.length === 0 && <li className="series-result-message">BE THE FIRST TO FINISH THIS ROUTE.</li>}{seriesBoardStatus === 'ready' && seriesEntries.slice(0, 5).map((entry) => <li className={entry.isPlayer ? 'you' : ''} key={`${entry.rank}-${entry.name}`}><b>#{entry.rank}</b><span>{entry.name}</span><time>{formatTime(entry.timeMs / 1000)}</time><small>{entry.lights}◆</small></li>)}</ol><p>Each runner appears once with their fastest finish. Light breaks an exact tie.</p></section><div className="series-resources"><button className="message-link" type="button" onClick={() => { track('message_open'); openSeriesResource(seriesMessage?.title || 'This Week\'s Message', seriesMessage?.appUrl || seriesMessage?.url || activeSeries.series.messageUrl); }}>{seriesMessage ? "Watch This Week's Message" : 'Message Details'}</button>{seriesMessage?.discussionGuideUrl && <button type="button" onClick={() => openSeriesResource('Discussion Guide', seriesMessage.discussionGuideUrl!)}>Discussion Guide</button>}{seriesMessage?.readingGuideUrl && <button type="button" onClick={() => openSeriesResource('Reading Guide', seriesMessage.readingGuideUrl!)}>Reading Guide</button>}</div></> : <p>No Series Route is active today. The daily Crestbound route is still ready to run.</p>}
               <button className="panel-close" type="button" onClick={closeHomePanel}>Close</button>
             </aside>}
             {homePanel === 'resource' && seriesResource && <aside ref={homePanelRef} className="message-viewer home-panel" role="dialog" aria-modal="true" aria-labelledby="resource-title" tabIndex={-1}>
