@@ -1,5 +1,5 @@
 export type MessageSummary = { title: string; date: string; speaker: string; url: string };
-export type MessageDetails = MessageSummary & { description: string; discussionGuideUrl: string | null; readingGuideUrl: string | null };
+export type MessageDetails = MessageSummary & { appUrl: string | null; description: string; discussionGuideUrl: string | null; readingGuideUrl: string | null };
 
 const decode = (value: string) => value
   .replace(/&nbsp;/g, ' ')
@@ -31,5 +31,8 @@ export function parseMessageDetails(html: string, summary: MessageSummary): Mess
   const canonical = html.match(/<link rel="canonical" href="([^"]+)"/)?.[1] ?? summary.url;
   const guide = (label: string) => html.match(new RegExp(`<a[^>]+href="([^"]+)"[^>]+data-label="${label}"`, 'i'))?.[1] ?? null;
   const description = decode(meta).replace(/([.!?])([A-Z])/g, '$1 $2');
-  return { ...summary, url: decode(canonical), description, discussionGuideUrl: guide('Discussion Guide'), readingGuideUrl: guide('Reading Guide') };
+  const url = decode(canonical);
+  const mediaId = new URL(url).pathname.match(/^\/media\/([a-z0-9]+)/i)?.[1] ?? null;
+  const appUrl = mediaId ? `https://suncrestchurch.subspla.sh/${mediaId}` : null;
+  return { ...summary, url, appUrl, description, discussionGuideUrl: guide('Discussion Guide'), readingGuideUrl: guide('Reading Guide') };
 }

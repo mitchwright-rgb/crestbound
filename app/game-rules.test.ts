@@ -132,6 +132,7 @@ test('Suncrest message pages expose the exact weekly content and resource links'
   assert.deepEqual(summaries, [{ title: 'Be Consistent', date: '2026-08-23', speaker: 'Greg Lee', url: 'https://suncrest.org/media/87drmvz/be-consistent' }]);
   const details = parseMessageDetails(`<meta name="description" content="Everyday faithfulness &amp; courage." /><link rel="canonical" href="https://suncrest.org/media/87drmvz/be-consistent" /><a href="https://page.church/discuss" data-label="Discussion Guide">Discussion Guide</a><a href="https://page.church/read" data-label="Reading Guide">Reading Guide</a>`, summaries[0]);
   assert.equal(details.description, 'Everyday faithfulness & courage.');
+  assert.equal(details.appUrl, 'https://suncrestchurch.subspla.sh/87drmvz');
   assert.equal(details.discussionGuideUrl, 'https://page.church/discuss');
   assert.equal(details.readingGuideUrl, 'https://page.church/read');
 });
