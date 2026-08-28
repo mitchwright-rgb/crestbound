@@ -482,73 +482,99 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   width: 22%;
   aspect-ratio: 1;
   opacity: 0;
+  transform-origin: 50% 100%;
+  animation: sunny-cover-path 5.6s linear infinite;
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+.sunny-cover-sprite {
+  position: absolute;
+  inset: 0;
   background: url('/sunny-cover-motion-v2.png') 0 center / 1600% 100% no-repeat;
   image-rendering: pixelated;
   transform-origin: 50% 100%;
-  animation: sunny-cover-path 10.4s linear infinite, sunny-cover-frames 10.4s steps(1, end) infinite;
-  will-change: transform, opacity, background-position;
-  pointer-events: none;
+  animation: sunny-cover-frames 5.6s steps(1, end) infinite, sunny-cover-body 5.6s linear infinite;
+  will-change: transform, background-position;
 }
-.sunny-cover-intro {
+.sunny-cover-name {
   position: absolute;
   z-index: 3;
-  left: 66%;
-  top: 27%;
+  left: 50%;
+  top: 19%;
   opacity: 0;
-  color: #fff4cb;
-  text-shadow: 3px 3px 0 #082b31, -2px 0 0 #082b31, 0 -2px 0 #082b31;
-  font: 900 clamp(18px, 2.4vw, 34px)/1 var(--font-pixel), monospace;
-  letter-spacing: .08em;
+  padding: .42em .62em .34em;
+  border: 3px solid #fff4cb;
+  color: #082b31;
+  background: #f6bd24;
+  box-shadow: 4px 4px 0 #082b31;
+  font: 900 clamp(16px, 2vw, 30px)/1 var(--font-pixel), monospace;
+  letter-spacing: .1em;
   white-space: nowrap;
-  animation: sunny-cover-hello 10.4s cubic-bezier(.2, .76, .25, 1) infinite;
+  transform-origin: 50% 100%;
+  animation: sunny-cover-name-pop 5.6s cubic-bezier(.18, .82, .22, 1) infinite;
   pointer-events: none;
 }
 @keyframes sunny-cover-path {
-  0%, 2% { opacity: 0; transform: translate(-250%, 20%) scale(.82); }
+  0%, 2% { opacity: 0; transform: translate(-250%, -3%) scale(.82); }
   3% { opacity: 1; }
-  8% { opacity: 1; transform: translate(-190%, 14%) scale(.86); }
-  14% { opacity: 1; transform: translate(-132%, 8%) scale(.9); }
-  20% { opacity: 1; transform: translate(-76%, 3%) scale(.95); }
-  26% { opacity: 1; transform: translate(-30%, 0) scale(1); }
-  31% { opacity: 1; transform: translate(-13%, -42%) rotate(-2deg) scale(1); }
-  37% { opacity: 1; transform: translate(-3%, -87%) rotate(1deg) scale(1); }
-  42% { opacity: 1; transform: translate(0, -104%) rotate(2deg) scale(1); }
-  47% { opacity: 1; transform: translate(0, -76%) rotate(1deg) scale(1); }
-  53% { opacity: 1; transform: translate(0, -30%) scale(1); }
-  57% { opacity: 1; transform: translate(0, 0) scale(1.03, .97); }
-  61%, 79% { opacity: 1; transform: translate(0, 0) scale(1); }
-  83% { opacity: 1; transform: translate(4%, 0) scale(1); }
-  88% { opacity: 1; transform: translate(28%, -46%) rotate(2deg) scale(.98); }
-  94% { opacity: 1; transform: translate(105%, -118%) rotate(5deg) scale(.88); }
-  100% { opacity: 0; transform: translate(205%, -176%) rotate(7deg) scale(.76); }
+  9% { opacity: 1; transform: translate(-184%, -8%) scale(.86); }
+  18% { opacity: 1; transform: translate(-108%, -14%) scale(.92); }
+  27% { opacity: 1; transform: translate(-36%, -28%) scale(.98); animation-timing-function: cubic-bezier(.18, .72, .25, 1); }
+  30% { opacity: 1; transform: translate(-27%, -31%) scale(1); }
+  36% { opacity: 1; transform: translate(-9%, -76%) rotate(-2deg) scale(1); }
+  42% { opacity: 1; transform: translate(-1%, -116%) rotate(1deg) scale(1); animation-timing-function: cubic-bezier(.58, 0, .82, .35); }
+  45% { opacity: 1; transform: translate(0, -119%) rotate(1deg) scale(1); }
+  50% { opacity: 1; transform: translate(0, -82%) scale(1); }
+  54% { opacity: 1; transform: translate(0, -30%) scale(1); }
+  58%, 78% { opacity: 1; transform: translate(0, -30%) scale(1); }
+  82% { opacity: 1; transform: translate(3%, -32%) scale(1); animation-timing-function: cubic-bezier(.18, .7, .22, 1); }
+  89% { opacity: 1; transform: translate(48%, -82%) rotate(2deg) scale(.96); }
+  95% { opacity: 1; transform: translate(126%, -143%) rotate(4deg) scale(.86); }
+  100% { opacity: 0; transform: translate(220%, -190%) rotate(6deg) scale(.75); }
 }
 @keyframes sunny-cover-frames {
-  0%, 7.99% { background-position: 0 center; }
-  8%, 13.99% { background-position: 6.6667% center; }
-  14%, 19.99% { background-position: 13.3333% center; }
-  20%, 25.99% { background-position: 20% center; }
-  26%, 30.99% { background-position: 26.6667% center; }
-  31%, 36.99% { background-position: 33.3333% center; }
-  37%, 41.99% { background-position: 40% center; }
-  42%, 46.99% { background-position: 46.6667% center; }
-  47%, 52.99% { background-position: 53.3333% center; }
-  53%, 56.99% { background-position: 60% center; }
-  57%, 60.99% { background-position: 66.6667% center; }
-  61%, 64.99% { background-position: 73.3333% center; }
-  65%, 70.99% { background-position: 80% center; }
-  71%, 78.99% { background-position: 86.6667% center; }
-  79%, 83.99% { background-position: 93.3333% center; }
+  0%, 5.99% { background-position: 0 center; }
+  6%, 8.99% { background-position: 6.6667% center; }
+  9%, 11.99% { background-position: 13.3333% center; }
+  12%, 14.99% { background-position: 20% center; }
+  15%, 17.99% { background-position: 0 center; }
+  18%, 20.99% { background-position: 6.6667% center; }
+  21%, 23.99% { background-position: 13.3333% center; }
+  24%, 26.99% { background-position: 20% center; }
+  27%, 29.99% { background-position: 26.6667% center; }
+  30%, 35.99% { background-position: 33.3333% center; }
+  36%, 41.99% { background-position: 40% center; }
+  42%, 44.99% { background-position: 46.6667% center; }
+  45%, 49.99% { background-position: 53.3333% center; }
+  50%, 53.99% { background-position: 60% center; }
+  54%, 56.99% { background-position: 66.6667% center; }
+  57%, 60.99% { background-position: 73.3333% center; }
+  61%, 67.99% { background-position: 80% center; }
+  68%, 77.99% { background-position: 86.6667% center; }
+  78%, 83.99% { background-position: 93.3333% center; }
   84%, 100% { background-position: 100% center; }
 }
-@keyframes sunny-cover-hello {
-  0%, 63% { opacity: 0; transform: translateY(8px) scale(.72) rotate(-2deg); }
-  66% { opacity: 1; transform: translateY(0) scale(1.08) rotate(1deg); }
-  70%, 78% { opacity: 1; transform: translateY(0) scale(1) rotate(0); }
-  82%, 100% { opacity: 0; transform: translateY(-7px) scale(.94); }
+@keyframes sunny-cover-body {
+  0%, 26% { transform: scale(1); }
+  29% { transform: scale(1.08, .92); }
+  34% { transform: scale(.96, 1.06); }
+  45% { transform: scale(1); }
+  53% { transform: scale(.96, 1.04); }
+  55% { transform: scale(1.1, .9); }
+  59%, 78% { transform: scale(1); }
+  81% { transform: scale(1.07, .93); }
+  88% { transform: scale(.96, 1.05); }
+  100% { transform: scale(1); }
+}
+@keyframes sunny-cover-name-pop {
+  0%, 53% { opacity: 0; transform: translate(-50%, 10px) scale(.55) rotate(-3deg); }
+  57% { opacity: 1; transform: translate(-50%, 0) scale(1.12) rotate(1deg); }
+  61%, 77% { opacity: 1; transform: translate(-50%, 0) scale(1) rotate(0); }
+  81%, 100% { opacity: 0; transform: translate(-50%, -8px) scale(.88); }
 }
 @media (orientation: landscape) {
   .sunny-cover-character { left: 31%; top: -1%; width: 13%; }
-  .sunny-cover-intro { left: 16%; top: 11%; font-size: clamp(18px, 2vw, 30px); }
+  .sunny-cover-name { top: 5%; font-size: clamp(15px, 1.7vw, 26px); }
 }
 .home-dashboard {
   position: absolute;
@@ -669,6 +695,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .home-cover-scene, .home-cover-scene img { width: 100%; height: 100%; }
   .home-cover-scene img { object-fit: cover; object-position: center; }
   .sunny-cover-character { top: 28.5%; }
+  .sunny-cover-name { top: 17%; }
   .home-dashboard {
     position: static;
     height: auto;
@@ -705,7 +732,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .home-cover-scene, .home-cover-scene img { width: 100%; height: 100%; }
   .home-cover-scene img { object-fit: cover; object-position: center center; }
   .sunny-cover-character { left: 31%; top: -5%; width: 13%; }
-  .sunny-cover-intro { left: 16%; top: 11%; font-size: clamp(18px, 2vw, 30px); }
+  .sunny-cover-name { top: 3%; font-size: clamp(15px, 1.7vw, 26px); }
   .home-dashboard {
     min-height: 174px;
     grid-template-columns: .85fr 1.1fr 1fr;
@@ -1024,6 +1051,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sunny-cover-character { opacity: 1; background-position: 86.6667% center; transform: none; animation: none; }
-  .sunny-cover-intro { display: none; animation: none; }
+  .sunny-cover-character { opacity: 1; transform: translateY(-30%); animation: none; }
+  .sunny-cover-sprite { background-position: 86.6667% center; transform: none; animation: none; }
+  .sunny-cover-name { display: none; animation: none; }
 }
