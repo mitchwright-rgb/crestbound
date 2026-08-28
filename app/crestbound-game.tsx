@@ -1257,12 +1257,12 @@ export default function Home({ initialDay }: { initialDay: string }) {
                 </picture>
                 <div className="sunny-cover-character" aria-hidden="true">
                   <span className="sunny-cover-sprite" />
+                  <span className="sunny-cover-name">SUNNY</span>
                 </div>
                 <picture className="home-cover-title-foreground">
                   <source media="(orientation: landscape)" srcSet="/crestbound-landscape-title-foreground-v1.png" />
                   <img src="/crestbound-square-title-foreground-v1.png" width="1254" height="1254" alt="" />
                 </picture>
-                <span className="sunny-cover-name" aria-hidden="true">SUNNY</span>
                 <span className="sr-only">Sunny jumps out from behind the Crestbound title, lands on it, and waves.</span>
               </div>
               <div className="home-dashboard">
