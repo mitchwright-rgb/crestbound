@@ -1251,10 +1251,13 @@ export default function Home({ initialDay }: { initialDay: string }) {
           <div className="title-screen">
             <div className="home-hero">
               <div className="home-cover">
-                <picture>
-                  <source media="(orientation: landscape)" srcSet="/crestbound-home-hero.svg" />
-                  <img src="/crestbound-square-key-art.svg" width="1254" height="1254" alt="Sunny runs across the golden-hour Crestbound skyline beneath the A Daily Skyline Run tagline" />
+                <picture className="home-cover-scene">
+                  <source media="(orientation: landscape)" srcSet="/crestbound-landscape-background-v1.png" />
+                  <img src="/crestbound-square-background-v1.png" width="1254" height="1254" alt="The golden-hour Crestbound skyline beneath the A Daily Skyline Run title" />
                 </picture>
+                <div className="sunny-cover-character" aria-hidden="true" />
+                <span className="sunny-cover-intro" aria-hidden="true">I&apos;M SUNNY!</span>
+                <span className="sr-only">Sunny jumps into the Crestbound skyline, introduces himself, and jumps away.</span>
               </div>
               <div className="home-dashboard">
                 <div className="daily-course">

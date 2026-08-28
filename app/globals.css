@@ -472,16 +472,52 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   background: #071b20;
 }
 .home-cover { position: relative; width: 100%; height: 100%; min-width: 0; min-height: 0; overflow: hidden; background: #66c8c5; }
-.home-cover picture, .home-cover img { width: 100%; height: 100%; display: block; }
-.home-cover picture { transform-origin: center center; animation: crestbound-cover-alive 9s cubic-bezier(.2, .72, .2, 1) infinite; will-change: transform; }
-.home-cover img { object-fit: cover; object-position: center center; image-rendering: pixelated; }
-@keyframes crestbound-cover-alive {
-  0%, 100% { transform: scale(1.02) translateY(0); }
-  8% { transform: scale(1.045) translateY(1.4%); }
-  14% { transform: scale(1.035) translateY(-1.2%); }
-  20%, 68% { transform: scale(1.025) translateY(0); }
-  74% { transform: scale(1.035) translateY(-1%); }
-  80% { transform: scale(1.025) translateY(0); }
+.home-cover-scene, .home-cover-scene img { width: 100%; height: 100%; display: block; }
+.home-cover-scene img { object-fit: cover; object-position: center center; image-rendering: pixelated; }
+.sunny-cover-character {
+  position: absolute;
+  z-index: 2;
+  left: 32.3%;
+  top: 16.3%;
+  width: 34.3%;
+  aspect-ratio: 430 / 465;
+  background: url('/sunny-cover-exact-v2.png') center / contain no-repeat;
+  image-rendering: pixelated;
+  transform-origin: 50% 88%;
+  animation: sunny-cover-jump 8.5s cubic-bezier(.22, .7, .24, 1) infinite;
+  will-change: transform, opacity;
+  pointer-events: none;
+}
+.sunny-cover-intro {
+  position: absolute;
+  z-index: 3;
+  left: 67%;
+  top: 31%;
+  opacity: 0;
+  color: #fff4cb;
+  text-shadow: 3px 3px 0 #082b31, -2px 0 0 #082b31, 0 -2px 0 #082b31;
+  font: 900 clamp(8px, 1.1vw, 15px)/1 var(--font-pixel), monospace;
+  letter-spacing: .08em;
+  white-space: nowrap;
+  animation: sunny-cover-hello 8.5s steps(1, end) infinite;
+  pointer-events: none;
+}
+@keyframes sunny-cover-jump {
+  0%, 5% { opacity: 0; transform: translate(-72%, 55%) rotate(-9deg) scale(.72); }
+  6% { opacity: 1; }
+  15% { opacity: 1; transform: translate(-18%, -12%) rotate(5deg) scale(.94); }
+  21% { opacity: 1; transform: translate(0, 3%) rotate(-2deg) scale(1.03, .96); }
+  25%, 39% { opacity: 1; transform: translate(0, 0) rotate(0) scale(1); }
+  43% { opacity: 1; transform: translate(0, -2%) rotate(-4deg) scale(1); }
+  48% { opacity: 1; transform: translate(0, 0) rotate(2deg) scale(1); }
+  53%, 70% { opacity: 1; transform: translate(0, 0) rotate(0) scale(1); }
+  75% { opacity: 1; transform: translate(8%, -18%) rotate(6deg) scale(.98); }
+  86%, 100% { opacity: 0; transform: translate(58%, -95%) rotate(12deg) scale(.76); }
+}
+@keyframes sunny-cover-hello {
+  0%, 38% { opacity: 0; transform: translateY(5px); }
+  39%, 58% { opacity: 1; transform: translateY(0); }
+  59%, 100% { opacity: 0; transform: translateY(-4px); }
 }
 .home-dashboard {
   position: absolute;
@@ -599,8 +635,8 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .title-screen { height: 100svh; overflow: hidden; padding: 0; }
   .home-hero { height: 100%; min-height: 0; max-height: none; display: flex; flex-direction: column; overflow: hidden; }
   .home-cover { width: 100%; height: min(34svh, 290px); aspect-ratio: auto; flex: 0 0 auto; }
-  .home-cover picture, .home-cover img { width: 100%; height: 100%; }
-  .home-cover img { object-fit: cover; object-position: center; }
+  .home-cover-scene, .home-cover-scene img { width: 100%; height: 100%; }
+  .home-cover-scene img { object-fit: cover; object-position: center; }
   .home-dashboard {
     position: static;
     height: auto;
@@ -634,8 +670,10 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 @media (max-height: 560px) and (orientation: landscape) {
   html, body, .shell, .game-frame, .title-screen { width: 100vw; width: 100dvw; min-width: 100vw; min-width: 100dvw; height: 100svh; }
   .home-panel { width: min(700px, calc(100% - 24px)); max-height: calc(100svh - 16px); overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }
-  .home-cover picture, .home-cover img { width: 100%; height: 100%; }
-  .home-cover img { object-fit: cover; object-position: center center; }
+  .home-cover-scene, .home-cover-scene img { width: 100%; height: 100%; }
+  .home-cover-scene img { object-fit: cover; object-position: center center; }
+  .sunny-cover-character { left: 3%; top: 8%; width: 31%; }
+  .sunny-cover-intro { left: 24%; top: 13%; font-size: clamp(8px, 1vw, 13px); }
   .home-dashboard {
     min-height: 174px;
     grid-template-columns: .85fr 1.1fr 1fr;
@@ -683,7 +721,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .game-modal > button, .game-modal .secondary, .panel-close { min-height: 44px; }
 
 @media (max-height: 560px) and (orientation: landscape) {
-  .home-cover img { object-position: center top; }
+  .home-cover-scene img { object-position: center top; }
   .home-dashboard { min-height: 168px; grid-template-rows: 88px 50px; gap: 8px 16px; padding-block: 8px 7px; }
   .home-dashboard .daily-course, .home-dashboard .daily-glance, .home-dashboard .play-button { min-height: 86px; padding-block: 8px; }
   .home-dashboard .daily-course { height: 86px; gap: 3px 8px; overflow: hidden; }
@@ -927,5 +965,6 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .home-cover picture { transform: none; animation: none; }
+  .sunny-cover-character { opacity: 1; transform: none; animation: none; }
+  .sunny-cover-intro { display: none; animation: none; }
 }
