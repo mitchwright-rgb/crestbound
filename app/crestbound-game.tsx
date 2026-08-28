@@ -13,7 +13,7 @@ type Screen = 'title' | 'playing' | 'paused' | 'won' | 'over';
 type Hud = { sparks: number; total: number; lives: number; hits: number; time: number; best: number | null; checkpoint: number; progress: number; dashReady: boolean; shield: number };
 type Board = 'daily' | 'weekly' | 'all';
 type BoardEntry = { rank: number; name: string; timeMs: number; sparks: number; points?: number; runs?: number };
-type HomePanel = 'none' | 'leaderboard' | 'help' | 'series';
+type HomePanel = 'none' | 'leaderboard' | 'help' | 'series' | 'resource';
 type GameNotice = { text: string; kind: 'checkpoint' | 'power' };
 type SeriesMessage = { title: string; date: string; speaker: string; url: string; appUrl: string | null; description: string; discussionGuideUrl: string | null; readingGuideUrl: string | null };
 
@@ -125,6 +125,7 @@ export default function Home() {
   const [seriesCompletions, setSeriesCompletions] = useState(0);
   const [completedSeriesWeeks, setCompletedSeriesWeeks] = useState<string[]>([]);
   const [seriesMessage, setSeriesMessage] = useState<SeriesMessage | null>(null);
+  const [seriesResource, setSeriesResource] = useState<{ title: string; url: string } | null>(null);
   const pendingSeriesStartRef = useRef(false);
 
   const showGameNotice = useCallback((text: string, kind: GameNotice['kind']) => {
@@ -332,6 +333,11 @@ export default function Home() {
       if (homePanelTriggerRef.current?.isConnected) homePanelTriggerRef.current.focus();
       else document.querySelector<HTMLElement>('.play-button')?.focus();
     });
+  }
+
+  function openSeriesResource(title: string, url: string) {
+    setSeriesResource({ title, url });
+    openHomePanel('resource');
   }
 
   function postTelemetry(payload: { eventName: string; playerId: string; courseId: string; metadata: Record<string, string | number> }) {
@@ -1267,8 +1273,12 @@ export default function Home() {
             {homePanel === 'series' && <aside ref={homePanelRef} className="course-picker series-picker home-panel" role="dialog" aria-modal="true" aria-labelledby="series-title" tabIndex={-1}>
               <button className="panel-dismiss" type="button" aria-label="Close Series Routes" onClick={closeHomePanel}>X</button>
               <p className="kicker">NOW AT SUNCREST</p><h2 id="series-title">Series Routes</h2>
-              {activeSeries && seriesWeek ? <><section className="series-feature"><div className="series-wordmark"><small>TAKE A STAND</small><b>DECLARATIONS</b></div><p>{seriesMessage?.description || activeSeries.series.description}</p><div className="series-week"><span>{seriesWeekIndex === activeSeries.weekIndex ? 'THIS WEEK' : `WEEK ${seriesWeekIndex + 1} ARCHIVE`} · {seriesMessage?.title || seriesWeek.title}</span><b>{seriesWeek.routeName}</b>{seriesMessage?.speaker && <small>{seriesMessage.speaker}</small>}</div><div className="series-week-dots" aria-label={`${completedSeriesWeeks.length} of ${activeSeries.series.weeks.length} routes completed`}>{activeSeries.series.weeks.map((week, index) => { const locked = index > activeSeries.weekIndex; const state = [completedSeriesWeeks.includes(week.id) ? 'complete' : '', index === activeSeries.weekIndex ? 'current' : '', index === seriesWeekIndex ? 'selected' : ''].filter(Boolean).join(' '); return <button type="button" className={state} disabled={locked} aria-label={locked ? `Week ${index + 1} unlocks ${week.sunday}` : `Select week ${index + 1}: ${week.title}`} aria-pressed={index === seriesWeekIndex} onClick={() => setSeriesWeekIndex(index)} key={week.id}>{locked ? '—' : index + 1}</button>; })}</div></section><button className="series-play" type="button" onClick={() => { pendingSeriesStartRef.current = true; setSeriesMode(true); closeHomePanel(); }}>Play {seriesWeekIndex === activeSeries.weekIndex ? 'This Week' : `Week ${seriesWeekIndex + 1}`} ▶</button><div className="series-resources"><a className="message-link" href={seriesMessage?.appUrl || seriesMessage?.url || activeSeries.series.messageUrl} onClick={() => track('message_open')}>{seriesMessage ? "Open This Message in the App ↗" : 'Message Details ↗'}</a>{seriesMessage?.discussionGuideUrl && <a href={seriesMessage.discussionGuideUrl} target="_blank" rel="noreferrer">Discussion Guide ↗</a>}{seriesMessage?.readingGuideUrl && <a href={seriesMessage.readingGuideUrl} target="_blank" rel="noreferrer">Reading Guide ↗</a>}</div></> : <p>No Series Route is active today. The daily Crestbound route is still ready to run.</p>}
+              {activeSeries && seriesWeek ? <><section className="series-feature"><div className="series-wordmark"><small>TAKE A STAND</small><b>DECLARATIONS</b></div><p>{seriesMessage?.description || activeSeries.series.description}</p><div className="series-week"><span>{seriesWeekIndex === activeSeries.weekIndex ? 'THIS WEEK' : `WEEK ${seriesWeekIndex + 1} ARCHIVE`} · {seriesMessage?.title || seriesWeek.title}</span><b>{seriesWeek.routeName}</b>{seriesMessage?.speaker && <small>{seriesMessage.speaker}</small>}</div><div className="series-week-dots" aria-label={`${completedSeriesWeeks.length} of ${activeSeries.series.weeks.length} routes completed`}>{activeSeries.series.weeks.map((week, index) => { const locked = index > activeSeries.weekIndex; const state = [completedSeriesWeeks.includes(week.id) ? 'complete' : '', index === activeSeries.weekIndex ? 'current' : '', index === seriesWeekIndex ? 'selected' : ''].filter(Boolean).join(' '); return <button type="button" className={state} disabled={locked} aria-label={locked ? `Week ${index + 1} unlocks ${week.sunday}` : `Select week ${index + 1}: ${week.title}`} aria-pressed={index === seriesWeekIndex} onClick={() => setSeriesWeekIndex(index)} key={week.id}>{locked ? '—' : index + 1}</button>; })}</div></section><button className="series-play" type="button" onClick={() => { pendingSeriesStartRef.current = true; setSeriesMode(true); closeHomePanel(); }}>Play {seriesWeekIndex === activeSeries.weekIndex ? 'This Week' : `Week ${seriesWeekIndex + 1}`} ▶</button><div className="series-resources"><button className="message-link" type="button" onClick={() => { track('message_open'); openSeriesResource(seriesMessage?.title || 'This Week\'s Message', seriesMessage?.appUrl || seriesMessage?.url || activeSeries.series.messageUrl); }}>{seriesMessage ? "Watch This Week's Message" : 'Message Details'}</button>{seriesMessage?.discussionGuideUrl && <button type="button" onClick={() => openSeriesResource('Discussion Guide', seriesMessage.discussionGuideUrl!)}>Discussion Guide</button>}{seriesMessage?.readingGuideUrl && <button type="button" onClick={() => openSeriesResource('Reading Guide', seriesMessage.readingGuideUrl!)}>Reading Guide</button>}</div></> : <p>No Series Route is active today. The daily Crestbound route is still ready to run.</p>}
               <button className="panel-close" type="button" onClick={closeHomePanel}>Close</button>
+            </aside>}
+            {homePanel === 'resource' && seriesResource && <aside ref={homePanelRef} className="message-viewer home-panel" role="dialog" aria-modal="true" aria-labelledby="resource-title" tabIndex={-1}>
+              <header><button type="button" onClick={() => setHomePanel('series')} aria-label="Back to Series Routes">← Back</button><div><small>FROM SERIES ROUTES</small><strong id="resource-title">{seriesResource.title}</strong></div></header>
+              <iframe src={seriesResource.url} title={seriesResource.title} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
             </aside>}
           </div>
         )}
