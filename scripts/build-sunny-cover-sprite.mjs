@@ -36,6 +36,43 @@ function removeChromaBackground(data, width, height) {
   return data;
 }
 
+function keepLargestCharacter(data, width, height) {
+  const pixels = width * height;
+  const visited = new Uint8Array(pixels);
+  let largest = [];
+
+  for (let start = 0; start < pixels; start += 1) {
+    if (visited[start] || data[start * 4 + 3] === 0) continue;
+    const component = [];
+    const queue = [start];
+    visited[start] = 1;
+
+    for (let cursor = 0; cursor < queue.length; cursor += 1) {
+      const index = queue[cursor];
+      component.push(index);
+      const x = index % width;
+      const y = Math.floor(index / width);
+      for (let yy = Math.max(0, y - 1); yy <= Math.min(height - 1, y + 1); yy += 1) {
+        for (let xx = Math.max(0, x - 1); xx <= Math.min(width - 1, x + 1); xx += 1) {
+          const neighbor = yy * width + xx;
+          if (visited[neighbor] || data[neighbor * 4 + 3] === 0) continue;
+          visited[neighbor] = 1;
+          queue.push(neighbor);
+        }
+      }
+    }
+
+    if (component.length > largest.length) largest = component;
+  }
+
+  const keep = new Uint8Array(pixels);
+  for (const index of largest) keep[index] = 1;
+  for (let index = 0; index < pixels; index += 1) {
+    if (!keep[index]) data[index * 4 + 3] = 0;
+  }
+  return data;
+}
+
 const rendered = [];
 for (let frame = 0; frame < columns * rows; frame += 1) {
   const column = frame % columns;
@@ -51,7 +88,11 @@ for (let frame = 0; frame < columns * rows; frame += 1) {
     .raw()
     .toBuffer({ resolveWithObject: true });
 
-  const cleaned = removeChromaBackground(data, info.width, info.height);
+  const cleaned = keepLargestCharacter(
+    removeChromaBackground(data, info.width, info.height),
+    info.width,
+    info.height,
+  );
   const frameBuffer = await sharp(cleaned, {
     raw: { width: info.width, height: info.height, channels: 4 },
   })
