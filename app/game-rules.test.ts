@@ -8,6 +8,7 @@ import { buildDeclarationsCourse } from './series-course-generator.ts';
 import { activeSeriesForDay, completedSeriesWeekIds, declarationsSeries, seriesWeekSeed } from './series-routes.ts';
 import { checkNickname, publicNickname } from '../lib/nickname.ts';
 import { normalizeEventMetadata } from '../lib/telemetry.ts';
+import { parseMessageDetails, parseSeriesMessages } from '../lib/suncrest-messages.ts';
 
 test('Moonstep lowers gravity while other twists preserve standard gravity', () => {
   assert.equal(gravityForModifier('moonstep'), 1350);
@@ -124,6 +125,15 @@ test('Declarations rolls to a new weekly route every Sunday and remains availabl
   assert.equal(activeSeriesForDay('2026-09-13')?.week.id, 'declarations-2026-w5');
   assert.equal(activeSeriesForDay('2026-09-19')?.week.id, 'declarations-2026-w5');
   assert.equal(activeSeriesForDay('2026-09-20'), null);
+});
+
+test('Suncrest message pages expose the exact weekly content and resource links', () => {
+  const summaries = parseSeriesMessages(`<a class="sp-media-item" href="/media/87drmvz/be-consistent"><div class="sp-media-title">Be Consistent</div><div class="sp-media-subtitle">Aug 23, 2026 &nbsp;<span>&bull;</span>&nbsp; Greg Lee</div></a>`);
+  assert.deepEqual(summaries, [{ title: 'Be Consistent', date: '2026-08-23', speaker: 'Greg Lee', url: 'https://suncrest.org/media/87drmvz/be-consistent' }]);
+  const details = parseMessageDetails(`<meta name="description" content="Everyday faithfulness &amp; courage." /><link rel="canonical" href="https://suncrest.org/media/87drmvz/be-consistent" /><a href="https://page.church/discuss" data-label="Discussion Guide">Discussion Guide</a><a href="https://page.church/read" data-label="Reading Guide">Reading Guide</a>`, summaries[0]);
+  assert.equal(details.description, 'Everyday faithfulness & courage.');
+  assert.equal(details.discussionGuideUrl, 'https://page.church/discuss');
+  assert.equal(details.readingGuideUrl, 'https://page.church/read');
 });
 
 test('Series Route completion progress safely reads local storage', () => {

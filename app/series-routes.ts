@@ -16,6 +16,7 @@ export type SeriesRoute = {
   startsOn: string;
   endsOn: string;
   messageUrl: string;
+  seriesUrl: string;
   weeks: readonly SeriesWeek[];
 };
 
@@ -27,9 +28,10 @@ export const declarationsSeries: SeriesRoute = {
   startsOn: '2026-08-16',
   endsOn: '2026-09-19',
   messageUrl: 'https://suncrest.org/messages',
+  seriesUrl: 'https://suncrest.org/media/series/vjn62f2/declarations',
   weeks: [
-    { id: 'declarations-2026-w1', sunday: '2026-08-16', title: 'Be Consistent', routeName: 'The First Word', objective: 'clean_run' },
-    { id: 'declarations-2026-w2', sunday: '2026-08-23', title: 'Take Responsibility', routeName: 'Own the Rooftops', objective: 'skyline_mastery' },
+    { id: 'declarations-2026-w1', sunday: '2026-08-16', title: 'Take Responsibility', routeName: 'Own the Rooftops', objective: 'skyline_mastery' },
+    { id: 'declarations-2026-w2', sunday: '2026-08-23', title: 'Be Consistent', routeName: 'The First Word', objective: 'clean_run' },
     { id: 'declarations-2026-w3', sunday: '2026-08-30', title: 'Forgive', routeName: 'Release the Weight', objective: 'light_hunt' },
     { id: 'declarations-2026-w4', sunday: '2026-09-06', title: 'Seek Wisdom', routeName: 'Choose the High Road', objective: 'sprint' },
     { id: 'declarations-2026-w5', sunday: '2026-09-13', title: 'The One', routeName: 'Make It Count', objective: 'skyline_mastery' },

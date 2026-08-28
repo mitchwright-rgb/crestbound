@@ -15,6 +15,7 @@ type Board = 'daily' | 'weekly' | 'all';
 type BoardEntry = { rank: number; name: string; timeMs: number; sparks: number; points?: number; runs?: number };
 type HomePanel = 'none' | 'leaderboard' | 'help' | 'series';
 type GameNotice = { text: string; kind: 'checkpoint' | 'power' };
+type SeriesMessage = { title: string; date: string; speaker: string; url: string; description: string; discussionGuideUrl: string | null; readingGuideUrl: string | null };
 
 type Community = { players: number; lights: number; goal: number; nearby: BoardEntry[]; playerRank: number | null; recent: string[] };
 
@@ -121,6 +122,7 @@ export default function Home() {
   const gameNoticeTimerRef = useRef(0);
   const [seriesCompletions, setSeriesCompletions] = useState(0);
   const [completedSeriesWeeks, setCompletedSeriesWeeks] = useState<string[]>([]);
+  const [seriesMessage, setSeriesMessage] = useState<SeriesMessage | null>(null);
 
   const showGameNotice = useCallback((text: string, kind: GameNotice['kind']) => {
     window.clearTimeout(gameNoticeTimerRef.current);
@@ -200,6 +202,10 @@ export default function Home() {
           setSeriesCompletions(data.completions ?? 0);
           setCompletedSeriesWeeks([...new Set([...localCompleted, ...(data.completedWeeks ?? [])])]);
         })
+        .catch(() => undefined);
+      void fetch('/api/series-content', { cache: 'no-store' })
+        .then(async (response) => response.ok ? response.json() as Promise<{ available?: boolean; message?: SeriesMessage }> : null)
+        .then((data) => { if (data?.available && data.message) setSeriesMessage(data.message); })
         .catch(() => undefined);
     }
     const syncStoredState = window.setTimeout(() => {
@@ -1234,7 +1240,7 @@ export default function Home() {
             {homePanel === 'series' && <aside ref={homePanelRef} className="course-picker series-picker home-panel" role="dialog" aria-modal="true" aria-labelledby="series-title" tabIndex={-1}>
               <button className="panel-dismiss" type="button" aria-label="Close Series Routes" onClick={closeHomePanel}>X</button>
               <p className="kicker">NOW AT SUNCREST</p><h2 id="series-title">Series Routes</h2>
-              {activeSeries ? <><section className="series-feature"><div className="series-wordmark"><small>TAKE A STAND</small><b>DECLARATIONS</b></div><p>{activeSeries.series.description}</p><div className="series-week"><span>THIS WEEK · {activeSeries.week.title}</span><b>{activeSeries.week.routeName}</b></div><div className="series-week-dots" aria-label={`${completedSeriesWeeks.length} of ${activeSeries.series.weeks.length} routes completed`}>{activeSeries.series.weeks.map((week, index) => <i className={completedSeriesWeeks.includes(week.id) ? 'complete' : index === activeSeries.weekIndex ? 'current' : ''} key={week.id}>{index + 1}</i>)}</div></section><button className="series-play" type="button" onClick={() => { setSeriesMode(true); closeHomePanel(); }}>Play This Week&apos;s Route ▶</button><a className="message-link" href={activeSeries.series.messageUrl} target="_blank" rel="noreferrer" onClick={() => track('message_open')}>Explore This Week&apos;s Message ↗</a>{isSeries && <button className="today-course" type="button" onClick={() => { setSeriesMode(false); closeHomePanel(); }}>Return to Today&apos;s Run</button>}</> : <p>No Series Route is active today. The daily Crestbound route is still ready to run.</p>}
+              {activeSeries ? <><section className="series-feature"><div className="series-wordmark"><small>TAKE A STAND</small><b>DECLARATIONS</b></div><p>{seriesMessage?.description || activeSeries.series.description}</p><div className="series-week"><span>THIS WEEK · {seriesMessage?.title || activeSeries.week.title}</span><b>{activeSeries.week.routeName}</b>{seriesMessage?.speaker && <small>{seriesMessage.speaker}</small>}</div><div className="series-week-dots" aria-label={`${completedSeriesWeeks.length} of ${activeSeries.series.weeks.length} routes completed`}>{activeSeries.series.weeks.map((week, index) => <i className={completedSeriesWeeks.includes(week.id) ? 'complete' : index === activeSeries.weekIndex ? 'current' : ''} key={week.id}>{index + 1}</i>)}</div></section><button className="series-play" type="button" onClick={() => { setSeriesMode(true); closeHomePanel(); }}>Play This Week&apos;s Route ▶</button><div className="series-resources"><a className="message-link" href={seriesMessage?.url || activeSeries.series.messageUrl} target="_blank" rel="noreferrer" onClick={() => track('message_open')}>{seriesMessage ? "Watch This Week's Message ↗" : 'Message Details ↗'}</a>{seriesMessage?.discussionGuideUrl && <a href={seriesMessage.discussionGuideUrl} target="_blank" rel="noreferrer">Discussion Guide ↗</a>}{seriesMessage?.readingGuideUrl && <a href={seriesMessage.readingGuideUrl} target="_blank" rel="noreferrer">Reading Guide ↗</a>}</div>{isSeries && <button className="today-course" type="button" onClick={() => { setSeriesMode(false); closeHomePanel(); }}>Return to Today&apos;s Run</button>}</> : <p>No Series Route is active today. The daily Crestbound route is still ready to run.</p>}
               <section className="upcoming-series"><h3>Coming to Series Routes</h3>{upcomingSeries.map((item) => <div key={item.name}><b>{item.name}</b><span>{new Date(`${item.startsOn}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span></div>)}</section>
               <button className="panel-close" type="button" onClick={closeHomePanel}>Close</button>
             </aside>}
