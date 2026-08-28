@@ -1186,9 +1186,9 @@ export default function Home() {
             <p>LIGHT RESTORED // {earnedMedal} MEDAL</p><h2 id="win-title">Skyline cleared.</h2>
             <div className="result-grid"><span><b>{formatTime(resultHud.time)}</b><small>FINISH</small></span><span><b>{resultHud.sparks}/{resultHud.total}</b><small>LIGHT</small></span><span><b>{resultHud.best ? formatTime(resultHud.best) : '—'}</b><small>BEST</small></span></div>
             <div className={`challenge-result ${earnedMedal.toLowerCase()}`}><b>{objective.name}</b><span>{objectiveResult}</span></div>
-            {isPractice ? <div className="rank-callout">PRACTICE COMPLETE // PERSONAL BESTS STAY ON THIS DEVICE</div> : submitState !== 'saved' ? <form className="score-form" onSubmit={submitRun}>
+            {isPractice ? <div className="rank-callout">PRACTICE COMPLETE // PERSONAL BESTS STAY ON THIS DEVICE</div> : submitState !== 'saved' ? <form className="score-form" onSubmit={submitRun} noValidate>
               <label htmlFor="nickname">POST TO TODAY&apos;S BOARD</label>
-              <div><input id="nickname" value={nickname} onChange={(event) => setNickname(event.target.value)} minLength={2} maxLength={12} pattern="[A-Za-z0-9 _-]{2,12}" placeholder="NICKNAME" autoComplete="nickname" /><button type="submit" disabled={submitState === 'saving' || !runIdRef.current}>{submitState === 'saving' ? 'SAVING...' : 'POST RUN'}</button></div>
+              <div><input id="nickname" value={nickname} onChange={(event) => setNickname(event.target.value)} minLength={2} maxLength={12} placeholder="NICKNAME" autoComplete="nickname" autoCapitalize="characters" spellCheck={false} /><button type="submit" disabled={submitState === 'saving' || !runIdRef.current}>{submitState === 'saving' ? 'SAVING...' : 'POST RUN'}</button></div>
               <small>Family-friendly nicknames only. Don&apos;t use your real name.{!runIdRef.current ? ' Online posting is unavailable for this run.' : ''}</small>
               {submitState === 'error' && <em role="alert">{submitError || 'COULDN\'T POST. TRY AGAIN.'}</em>}
             </form> : <div className="rank-callout">RUN POSTED {rank ? `// TODAY #${rank}` : '// TO TODAY'}</div>}

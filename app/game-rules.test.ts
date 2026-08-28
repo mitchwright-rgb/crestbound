@@ -76,6 +76,7 @@ test('releasing Jump cannot cancel or stick a separately held direction', () => 
 });
 
 test('family-safe nicknames pass after normalization', () => {
+  assert.deepEqual(checkNickname('JL'), { ok: true, name: 'JL' });
   assert.deepEqual(checkNickname('  Sunny Dad  '), { ok: true, name: 'SUNNY DAD' });
   assert.deepEqual(checkNickname('Light-Runner'), { ok: true, name: 'LIGHT-RUNNER' });
   assert.deepEqual(checkNickname('Classy Grape'), { ok: true, name: 'CLASSY GRAPE' });
