@@ -1,10 +1,10 @@
 import sharp from 'sharp';
 import { fileURLToPath } from 'node:url';
 
-const source = fileURLToPath(new URL('../art-source/sunny-cover-motion-source-v2.png', import.meta.url));
-const output = fileURLToPath(new URL('../public/sunny-cover-motion-v2.png', import.meta.url));
-const columns = 4;
-const rows = 4;
+const source = fileURLToPath(new URL('../art-source/sunny-cover-motion-source-v3.png', import.meta.url));
+const output = fileURLToPath(new URL('../public/sunny-cover-motion-v3.png', import.meta.url));
+const columns = 5;
+const rows = 5;
 const frameSize = 240;
 
 const metadata = await sharp(source).metadata();
