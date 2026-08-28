@@ -112,6 +112,14 @@ test('daily reset countdown targets the next Chicago calendar day', () => {
   assert.equal(formatDailyReset(millisecondsUntilNextChicagoDay(beforeFallMidnight)), '0H 45M');
 });
 
+test('server and client share one authoritative Chicago day during hydration', () => {
+  const pageSource = readFileSync(new URL('./page.tsx', import.meta.url), 'utf8');
+  const gameSource = readFileSync(new URL('./crestbound-game.tsx', import.meta.url), 'utf8');
+  assert.match(pageSource, /<CrestboundGame initialDay=\{chicagoDayKey\(\)\}/);
+  assert.match(gameSource, /function Home\(\{ initialDay \}/);
+  assert.doesNotMatch(gameSource, /^const localDay\s*=/m);
+});
+
 test('event metadata keeps useful product signals without accepting arbitrary data', () => {
   assert.equal(normalizeEventMetadata({ mode: 'practice', reason: 'fall', lives: 2, secret: 'nope' }), '{"mode":"practice","reason":"fall","lives":2}');
   assert.equal(normalizeEventMetadata({ reason: 'x'.repeat(40) }), null);

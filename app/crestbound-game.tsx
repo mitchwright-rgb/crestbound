@@ -2,7 +2,7 @@
 
 import { FormEvent, PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SoundKind, soundSources, soundVolumes } from './audio-assets';
-import { challengeMedal, chicagoDayKey, collectLightPower, dailyObjectiveForSerial, dailyObjectiveSpecs, formatDailyReset, gravityForModifier, horizontalSpeedLimit, lightHuntTargets, millisecondsUntilNextChicagoDay, musicTrackForCourse, musicTrackForSeries, objectiveResultLabel, resetRunTiming, resolveDamage, runStorageKey, tailwindAcceleration, touchInputFromControls } from './game-rules';
+import { challengeMedal, chicagoDayKey, collectLightPower, dailyObjectiveForSerial, dailyObjectiveSpecs, formatDailyReset, gravityForModifier, horizontalSpeedLimit, millisecondsUntilNextChicagoDay, musicTrackForCourse, musicTrackForSeries, objectiveResultLabel, resetRunTiming, resolveDamage, runStorageKey, tailwindAcceleration, touchInputFromControls } from './game-rules';
 import { buildSeededCourse } from './course-generator';
 import { buildDeclarationsCourse } from './series-course-generator';
 import { activeSeriesForDay, completedSeriesWeekIds, seriesWeekSeed } from './series-routes';
@@ -24,10 +24,6 @@ const FINISH_X = 15135;
 const VIEW_W = 1280;
 const VIEW_H = 720;
 
-const localDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(new Date());
-const daySerial = Math.floor(new Date(`${localDay}T12:00:00Z`).getTime() / 86400000);
-const dailyChallengeId = dailyChallengeIdForDay(localDay);
-const dailyCourseIndex = ((daySerial % 3) + 3) % 3;
 const courseSpecs = [
   { id: 'goldline', name: 'Goldline Rooftops', short: 'GOLDLINE', accent: '#f5d263', description: 'Balanced rooftops, branching high paths, and precision shortcuts.' },
   { id: 'crosswind', name: 'Crosswind Heights', short: 'CROSSWIND', accent: '#78d7d2', description: 'Long aerial chains, moving platforms, and dash-heavy gaps.' },
@@ -39,10 +35,6 @@ const modifierSpecs = [
   { id: 'moonstep', name: 'Moonstep', description: 'Low gravity makes every jump dramatically higher and keeps Sunny airborne longer.' },
   { id: 'sparkstorm', name: 'Spark Storm', description: 'Extra teal Storm Lights appear throughout the route. Each recharges Dash and shields one hit for seven seconds.' },
 ] as const;
-const dailyCourse = courseSpecs[dailyCourseIndex];
-const dailyModifier = modifierSpecs[((daySerial + dailyCourseIndex) % modifierSpecs.length + modifierSpecs.length) % modifierSpecs.length];
-const dailyObjectiveId = dailyObjectiveForSerial(daySerial, dailyCourseIndex);
-const activeSeries = activeSeriesForDay(localDay);
 
 
 function formatTime(seconds: number) {
@@ -51,7 +43,15 @@ function formatTime(seconds: number) {
   return `${minutes}:${remainder}`;
 }
 
-export default function Home() {
+export default function Home({ initialDay }: { initialDay: string }) {
+  const [localDay, setLocalDay] = useState(initialDay);
+  const daySerial = Math.floor(new Date(`${localDay}T12:00:00Z`).getTime() / 86400000);
+  const dailyChallengeId = dailyChallengeIdForDay(localDay);
+  const dailyCourseIndex = ((daySerial % courseSpecs.length) + courseSpecs.length) % courseSpecs.length;
+  const dailyCourse = courseSpecs[dailyCourseIndex];
+  const dailyModifier = modifierSpecs[((daySerial + dailyCourseIndex) % modifierSpecs.length + modifierSpecs.length) % modifierSpecs.length];
+  const dailyObjectiveId = dailyObjectiveForSerial(daySerial, dailyCourseIndex);
+  const activeSeries = useMemo(() => activeSeriesForDay(localDay), [localDay]);
   const [seriesMode, setSeriesMode] = useState(false);
   const [seriesWeekIndex, setSeriesWeekIndex] = useState(activeSeries?.weekIndex ?? 0);
   const seriesWeek = activeSeries?.series.weeks[seriesWeekIndex] ?? null;
@@ -67,7 +67,7 @@ export default function Home() {
   const routeSeed = isSeries ? seriesWeekSeed(seriesWeek!.sunday) : daySerial;
   const courseData = useMemo(() => isSeries
     ? buildDeclarationsCourse(seriesWeekIndex, routeSeed)
-    : buildSeededCourse(activeCourseIndex, modifier.id, routeSeed), [activeCourseIndex, isSeries, modifier.id, routeSeed]);
+    : buildSeededCourse(activeCourseIndex, modifier.id, routeSeed), [activeCourseIndex, isSeries, modifier.id, routeSeed, seriesWeekIndex]);
   const { platforms, spikeZones, sparkSeed, enemySeed, checkpoints } = courseData;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const touchControlsRef = useRef<HTMLDivElement>(null);
@@ -87,10 +87,6 @@ export default function Home() {
   const resultHud = finalResult ?? hud;
   const earnedMedal = challengeMedal(objectiveId, resultHud);
   const objectiveResult = objectiveResultLabel(objectiveId, resultHud);
-  const lightTargets = lightHuntTargets(sparkSeed.length);
-  const objectiveDescription = objectiveId === 'light_hunt'
-    ? `Gold ${lightTargets.gold}/${sparkSeed.length} Light · Silver ${lightTargets.silver}/${sparkSeed.length}`
-    : objective.description;
   const routeChallengeId = isSeries ? seriesWeek!.id : dailyChallengeId;
   const bestStorageKey = runStorageKey('best', { courseId: course.id, challengeId: routeChallengeId, modifierId: modifier.id, practice: isPractice });
   const ghostStorageKey = runStorageKey('ghost', { courseId: course.id, challengeId: routeChallengeId, modifierId: modifier.id, practice: isPractice });
@@ -100,7 +96,7 @@ export default function Home() {
   const telemetryQueueRef = useRef<Array<{ eventName: string; playerId: string; courseId: string; metadata: Record<string, string | number> }>>([]);
   const runIdRef = useRef<string | null>(null);
   const playerIdRef = useRef('');
-  const homeTrackedRef = useRef(false);
+  const homeTrackedRef = useRef<string | null>(null);
   const dashCoachRef = useRef(false);
   const [board, setBoard] = useState<Board>('daily');
   const [entries, setEntries] = useState<BoardEntry[]>([]);
@@ -178,16 +174,17 @@ export default function Home() {
     const AudioContextConstructor = window.AudioContext ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AudioContextConstructor) return;
     const audioContext = new AudioContextConstructor({ latencyHint: 'interactive' });
+    const buffers = sfxBuffersRef.current;
     sfxContextRef.current = audioContext;
     let cancelled = false;
     void Promise.all((Object.entries(soundSources) as Array<[SoundKind, string]>).map(async ([kind, src]) => {
       const response = await fetch(src);
       const buffer = await audioContext.decodeAudioData(await response.arrayBuffer());
-      if (!cancelled) sfxBuffersRef.current.set(kind, buffer);
+      if (!cancelled) buffers.set(kind, buffer);
     })).catch(() => undefined);
     return () => {
       cancelled = true;
-      sfxBuffersRef.current.clear();
+      buffers.clear();
       sfxContextRef.current = null;
       void audioContext.close().catch(() => undefined);
     };
@@ -213,13 +210,13 @@ export default function Home() {
       if (stored) setHud((current) => ({ ...current, best: Number(stored) }));
       setNickname(window.localStorage.getItem('crestbound-nickname') ?? '');
     }, 0);
-    if (!homeTrackedRef.current) {
-      homeTrackedRef.current = true;
+    if (homeTrackedRef.current !== localDay) {
+      homeTrackedRef.current = localDay;
       const metadata = { mode: 'ranked', modifierId: dailyModifier.id, orientation: window.matchMedia('(orientation: portrait)').matches ? 'portrait' : 'landscape', device: window.matchMedia('(pointer: coarse)').matches ? 'touch' : 'desktop' };
       void fetch('/api/event', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ eventName: 'home_view', playerId, courseId: dailyCourse.id, metadata }) }).catch(() => undefined);
     }
     return () => window.clearTimeout(syncStoredState);
-  }, []);
+  }, [activeSeries, dailyChallengeId, dailyCourse.id, dailyModifier.id, localDay]);
 
   useEffect(() => {
     if (!activeSeries || !seriesWeek) return;
@@ -236,22 +233,29 @@ export default function Home() {
         .then((data) => { if (data) setSeriesCompletions(data.completions ?? 0); })
         .catch(() => undefined);
     }
-  }, [seriesWeek]);
+  }, [activeSeries, seriesWeek]);
 
   useEffect(() => {
-    const initialDay = chicagoDayKey();
     const syncReturnLoop = () => {
-      if (chicagoDayKey() !== initialDay) {
-        window.location.reload();
-        return;
-      }
       setStreak(Number(window.localStorage.getItem('crestbound-streak')) || 0);
       setDailyReset(formatDailyReset(millisecondsUntilNextChicagoDay()));
+      const currentDay = chicagoDayKey();
+      if (currentDay !== localDay && screenRef.current === 'title') setLocalDay(currentDay);
     };
     syncReturnLoop();
     const timer = window.setInterval(syncReturnLoop, 30_000);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [localDay]);
+
+  useEffect(() => {
+    if (screen !== 'title') return;
+    const currentDay = chicagoDayKey();
+    if (currentDay !== localDay) setLocalDay(currentDay);
+  }, [localDay, screen]);
+
+  useEffect(() => {
+    if (activeSeries) setSeriesWeekIndex(activeSeries.weekIndex);
+  }, [activeSeries]);
 
   const loadBoard = useCallback(async (nextBoard: Board) => {
     setBoardStatus('loading');
@@ -267,7 +271,7 @@ export default function Home() {
       setEntries([]);
       setBoardStatus('offline');
     }
-  }, []);
+  }, [dailyCourse.id]);
 
   useEffect(() => {
     const load = window.setTimeout(() => { void loadBoard(board); }, 0);
@@ -518,7 +522,10 @@ export default function Home() {
   }
 
   useEffect(() => {
-    const releasePointer = (event: PointerEvent) => releaseTouchPointer(event.pointerId);
+    const releasePointer = (event: PointerEvent) => {
+      activeTouchPointersRef.current.delete(event.pointerId);
+      inputRef.current = touchInputFromControls(activeTouchPointersRef.current.values());
+    };
     const clearTouchInput = () => { activeTouchPointersRef.current.clear(); inputRef.current = { left: false, right: false, jump: false, dash: false }; };
     window.addEventListener('blur', clearTouchInput);
     window.addEventListener('pointerup', releasePointer, true);
@@ -1252,7 +1259,7 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="home-links">
-                  <button className="series-routes-link" type="button" onClick={() => { setSeriesWeekIndex(activeSeries?.weekIndex ?? 0); openHomePanel('series'); track('series_open'); }}><strong>Declarations</strong><small>Explore Series Routes →</small></button>
+                  <button className="series-routes-link" type="button" onClick={() => { setSeriesWeekIndex(activeSeries?.weekIndex ?? 0); openHomePanel('series'); track('series_open'); }}><strong>{activeSeries?.series.name ?? 'Series Routes'}</strong><small>{activeSeries ? 'Explore Series Routes →' : 'No active route today'}</small></button>
                   <button type="button" onClick={() => { openHomePanel('leaderboard'); track('leaderboard_open'); }}>Leaderboard</button>
                   <button type="button" onClick={() => openHomePanel('help')}>How to Play</button>
                 </div>

@@ -842,9 +842,9 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .home-social-stats > span { display: grid; gap: 3px; min-width: 0; }
 .home-social-stats > span:last-child { padding-left: 10px; border-left: 2px solid #17444b; }
 .home-dashboard .home-social-stats small { color: #ff8767; font: 7px/1.2 var(--font-pixel), monospace; }
-.home-dashboard .home-social-stats b { overflow: hidden; font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.home-dashboard .home-social-stats b { overflow: hidden; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .home-dashboard .daily-glance .community-progress { margin: 0; padding-top: 5px; }
-.home-dashboard .daily-glance .community-progress > div { font-size: 8px; }
+.home-dashboard .daily-glance .community-progress > div { font-size: 9px; }
 .home-dashboard .daily-glance .community-progress progress { height: 7px; margin: 3px 0 0; }
 .home-dashboard .home-links { grid-template-columns: 1.45fr 1fr 1fr; gap: 12px; }
 .home-dashboard .home-links button { min-height: 46px; }
@@ -853,26 +853,29 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .home-dashboard .series-routes-link small { font-size: 8px; }
 
 @media (max-width: 700px) and (orientation: portrait) {
+  .home-cover { height: min(40svh, 340px); }
   .home-dashboard {
     justify-content: center;
     gap: 8px;
     padding: 10px 14px max(10px, env(safe-area-inset-bottom));
   }
   .home-dashboard .daily-course { min-height: 68px; padding: 8px 11px; }
-  .home-dashboard .daily-course span { font-size: 9px; }
-  .home-dashboard .daily-course b { font-size: 14px; }
-  .home-dashboard .daily-course em { font-size: 10px; }
+  .home-dashboard .daily-course span { font-size: 10px; }
+  .home-dashboard .daily-course b { font-size: 15px; }
+  .home-dashboard .daily-course em { font-size: 11px; }
   .home-dashboard .streak-badge { top: 7px; right: 8px; font-size: 7px; }
   .home-dashboard .play-button { min-height: 58px; font-size: 13px; }
   .home-dashboard .daily-glance { min-height: 78px; gap: 6px; padding: 8px 11px; }
-  .home-dashboard .home-social-stats small { font-size: 8px; }
-  .home-dashboard .home-social-stats b { font-size: 10px; }
-  .home-dashboard .daily-glance .community-progress > div { font-size: 9px; }
+  .home-social-stats { grid-template-columns: 1fr 1fr; }
+  .home-social-stats > span:last-child { padding-left: 8px; }
+  .home-dashboard .home-social-stats small { font-size: 9px; }
+  .home-dashboard .home-social-stats b { font-size: 11px; }
+  .home-dashboard .daily-glance .community-progress > div { font-size: 10px; }
   .home-dashboard .home-links { grid-template-columns: 1fr 1fr; gap: 7px; }
   .home-dashboard .home-links .series-routes-link { grid-column: 1 / -1; min-height: 52px; }
-  .home-dashboard .home-links button { min-height: 44px; padding: 6px; font-size: 10px; }
-  .home-dashboard .series-routes-link strong { font-size: 12px; }
-  .home-dashboard .series-routes-link small { font-size: 8px; }
+  .home-dashboard .home-links button { min-height: 44px; padding: 6px; font-size: 11px; }
+  .home-dashboard .series-routes-link strong { font-size: 13px; }
+  .home-dashboard .series-routes-link small { font-size: 9px; }
 }
 
 @media (max-height: 560px) and (orientation: landscape) {
@@ -890,9 +893,9 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .home-dashboard .daily-course b { font-size: 13px; }
   .home-dashboard .daily-course em { font-size: 9px; }
   .home-dashboard .daily-glance { font-size: 10px; }
-  .home-dashboard .home-social-stats small { font-size: 7px; }
-  .home-dashboard .home-social-stats b { font-size: 9px; }
-  .home-dashboard .daily-glance .community-progress > div { font-size: 8px; }
+  .home-dashboard .home-social-stats small { font-size: 8px; }
+  .home-dashboard .home-social-stats b { font-size: 10px; }
+  .home-dashboard .daily-glance .community-progress > div { font-size: 9px; }
   .home-dashboard .home-links { gap: 10px; }
-  .home-dashboard .home-links button { min-height: 46px; font-size: 10px; }
+  .home-dashboard .home-links button { min-height: 46px; font-size: 11px; }
 }
