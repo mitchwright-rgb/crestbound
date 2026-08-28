@@ -80,6 +80,11 @@ export function resetRunTiming() {
   return { elapsed: 0, lastHud: 0 };
 }
 
+export function runStorageKey(kind: 'best' | 'ghost', context: { courseId: string; challengeId: string; modifierId: ModifierId; practice: boolean }) {
+  const mode = context.practice ? 'practice' : 'ranked';
+  return `crestbound-${kind}-${mode}-${context.courseId}-${context.challengeId}-${context.modifierId}`;
+}
+
 export function gravityForModifier(modifierId: ModifierId) {
   return modifierId === 'moonstep' ? 1350 : 1850;
 }

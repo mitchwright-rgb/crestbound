@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { soundSources } from './audio-assets.ts';
-import { challengeMedal, chicagoDayKey, collectLightPower, dailyObjectiveForSerial, formatDailyReset, gravityForModifier, horizontalSpeedLimit, lightHuntTargets, millisecondsUntilNextChicagoDay, musicTrackForCourse, objectiveResultLabel, resetRunTiming, resolveDamage, tailwindAcceleration, touchInputFromControls } from './game-rules.ts';
+import { challengeMedal, chicagoDayKey, collectLightPower, dailyObjectiveForSerial, formatDailyReset, gravityForModifier, horizontalSpeedLimit, lightHuntTargets, millisecondsUntilNextChicagoDay, musicTrackForCourse, objectiveResultLabel, resetRunTiming, resolveDamage, runStorageKey, tailwindAcceleration, touchInputFromControls } from './game-rules.ts';
 import { buildSeededCourse, checkpointHasClearLanding, checkpointIsSupported, courseSignature, maximumGroundGap } from './course-generator.ts';
 import { checkNickname, publicNickname } from '../lib/nickname.ts';
 import { normalizeEventMetadata } from '../lib/telemetry.ts';
@@ -67,6 +67,13 @@ test('every player action has a playable retro sound effect', () => {
 
 test('restarting a run resets both gameplay time and HUD refresh time', () => {
   assert.deepEqual(resetRunTiming(), { elapsed: 0, lastHud: 0 });
+});
+
+test('personal bests and ghosts stay scoped to the exact daily route and mode', () => {
+  const ranked = { courseId: 'crosswind', challengeId: '2026-08-27-layout-1', modifierId: 'tailwind' as const, practice: false };
+  assert.equal(runStorageKey('best', ranked), 'crestbound-best-ranked-crosswind-2026-08-27-layout-1-tailwind');
+  assert.notEqual(runStorageKey('ghost', ranked), runStorageKey('ghost', { ...ranked, challengeId: '2026-08-28-layout-1' }));
+  assert.notEqual(runStorageKey('best', ranked), runStorageKey('best', { ...ranked, practice: true }));
 });
 
 test('releasing Jump cannot cancel or stick a separately held direction', () => {

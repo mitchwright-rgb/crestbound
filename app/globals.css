@@ -100,11 +100,11 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .how-to > p:not(.kicker) { color: #8eb0af; font-size: 13px; line-height: 1.45; }
 .how-to .app-tip { margin: 12px 0 0; padding: 10px 12px; border: 2px solid #31575a; color: #b9d7d5; background: #092329; }
 .how-to .app-tip b { color: var(--gold-light); }
-.world-rules, .twist-directory, .challenge-directory { display: grid; gap: 8px; margin: 18px 0; }
-.world-rules h3, .twist-directory h3, .challenge-directory h3 { margin: 0 0 3px; color: var(--gold-light); font-family: var(--font-pixel), monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
-.world-rules article, .twist-directory article, .challenge-directory article { display: grid; grid-template-columns: minmax(100px, .35fr) 1fr; gap: 12px; align-items: start; padding: 9px 10px; border: 2px solid #23474d; background: #082329; }
-.world-rules article b, .twist-directory article b, .challenge-directory article b { color: var(--teal-light); line-height: 1.4; }
-.world-rules article span, .twist-directory article span, .challenge-directory article span { line-height: 1.4; }
+.world-rules, .twist-directory, .challenge-directory, .scoring-directory { display: grid; gap: 8px; margin: 18px 0; }
+.world-rules h3, .twist-directory h3, .challenge-directory h3, .scoring-directory h3 { margin: 0 0 3px; color: var(--gold-light); font-family: var(--font-pixel), monospace; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+.world-rules article, .twist-directory article, .challenge-directory article, .scoring-directory article { display: grid; grid-template-columns: minmax(100px, .35fr) 1fr; gap: 12px; align-items: start; padding: 9px 10px; border: 2px solid #23474d; background: #082329; }
+.world-rules article b, .twist-directory article b, .challenge-directory article b, .scoring-directory article b { color: var(--teal-light); line-height: 1.4; }
+.world-rules article span, .twist-directory article span, .challenge-directory article span, .scoring-directory article span { line-height: 1.4; }
 .challenge-directory p { margin: 0; color: #a9c0bf; font-size: 11px; line-height: 1.45; }
 .twist-directory article.today { border-color: var(--gold); background: #172d2c; }
 .twist-directory { display: grid; gap: 7px; margin: 16px 0; padding: 12px; border: 2px solid #31575a; background: #06161a; text-align: left; }
@@ -677,4 +677,50 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .home-dashboard .daily-glance .community-progress small { display: none; }
   .home-dashboard .play-button { font-size: 14px; }
   .home-dashboard .home-links button { min-height: 48px; font-size: 11px; }
+}
+
+/* Scoring hierarchy and final small-copy legibility. */
+.board-legend {
+  display: grid;
+  grid-template-columns: 34px 1fr 70px 34px;
+  gap: 4px;
+  padding: 8px 10px 6px;
+  border-bottom: 2px solid #123137;
+  color: #78aaa9;
+  font-family: var(--font-pixel), monospace;
+  font-size: 8px;
+  letter-spacing: .06em;
+}
+.board-legend span:nth-child(3), .board-legend span:nth-child(4) { text-align: right; }
+.result-priority {
+  display: grid;
+  gap: 5px;
+  margin: -5px 0 14px;
+  padding: 11px 12px;
+  border-left: 4px solid var(--gold);
+  color: #c9dcda;
+  background: #071b20;
+  font-family: var(--font-pixel), monospace;
+  font-size: 10px;
+  line-height: 1.4;
+  text-align: left;
+}
+.result-priority b { color: var(--gold-light); }
+.leaderboard > p { font-size: 10px; line-height: 1.45; }
+.result-grid small, .score-form small, .score-form em { font-size: 10px; line-height: 1.35; }
+.challenge-result { font-size: 11px; }
+
+@media (max-width: 700px) {
+  .board-legend { grid-template-columns: 38px 1fr 76px 38px; font-size: 10px; }
+  .scoring-directory article { grid-template-columns: 1fr; gap: 4px; }
+}
+
+@media (max-width: 700px) and (orientation: portrait) {
+  .home-dashboard .daily-glance .community-progress small { font-size: 10px; }
+}
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .daily-challenge strong, .daily-challenge small { font-size: 10px; }
+  .home-dashboard .daily-glance .community-progress > div { font-size: 10px; }
+  .board-legend { font-size: 9px; }
 }

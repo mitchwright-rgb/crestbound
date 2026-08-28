@@ -16,24 +16,53 @@ export async function GET(request: Request) {
   let rows: Row[] = [];
 
   if (board === 'weekly') {
-    const result = await db.prepare(`WITH daily AS (
-      SELECT player_id, MAX(player_name) player_name, day_key, MIN(score_ms) score_ms, MAX(sparks) sparks
-      FROM crest_scores WHERE week_key = ? GROUP BY player_id, day_key
-    ) SELECT player_id, MAX(player_name) player_name, MIN(score_ms) score_ms, MAX(sparks) sparks,
-      SUM(CASE WHEN score_ms < 60000 THEN 120 WHEN score_ms < 85000 THEN 90 WHEN score_ms < 120000 THEN 65 ELSE 40 END + sparks) points,
-      COUNT(*) runs FROM daily GROUP BY player_id ORDER BY points DESC, score_ms ASC LIMIT 10`).bind(keys.week).all<Row>();
+    const result = await db.prepare(`WITH ranked_runs AS (
+      SELECT cs.*, ROW_NUMBER() OVER (
+        PARTITION BY cs.player_id, cs.day_key
+        ORDER BY cs.score_ms ASC, cs.sparks DESC, cs.created_at DESC, cs.id DESC
+      ) daily_run_rank
+      FROM crest_scores cs WHERE cs.week_key = ?
+    ), daily AS (
+      SELECT * FROM ranked_runs WHERE daily_run_rank = 1
+    ), totals AS (
+      SELECT player_id, MIN(score_ms) score_ms, MAX(sparks) sparks,
+        SUM(CASE WHEN score_ms < 60000 THEN 120 WHEN score_ms < 85000 THEN 90 WHEN score_ms < 120000 THEN 65 ELSE 40 END + sparks) points,
+        COUNT(*) runs
+      FROM daily GROUP BY player_id
+    ) SELECT totals.player_id, COALESCE(players.nickname, 'SUNCRESTER') player_name,
+      totals.score_ms, totals.sparks, totals.points, totals.runs
+      FROM totals LEFT JOIN players ON players.player_id = totals.player_id
+      ORDER BY totals.points DESC, totals.score_ms ASC LIMIT 10`).bind(keys.week).all<Row>();
     rows = result.results;
   } else {
-    const where = board === 'daily' ? 'WHERE day_key = ? AND course_id = ? AND challenge_id = ?' : '';
-    const query = db.prepare(`SELECT player_id, MAX(player_name) player_name, MIN(score_ms) score_ms, MAX(sparks) sparks, COUNT(*) runs
-      FROM crest_scores ${where} GROUP BY player_id ORDER BY score_ms ASC, sparks DESC LIMIT 10`);
+    const where = board === 'daily' ? 'WHERE cs.day_key = ? AND cs.course_id = ? AND cs.challenge_id = ?' : '';
+    const query = db.prepare(`WITH ranked_runs AS (
+      SELECT cs.*, COUNT(*) OVER (PARTITION BY cs.player_id) runs,
+        ROW_NUMBER() OVER (
+          PARTITION BY cs.player_id
+          ORDER BY cs.score_ms ASC, cs.sparks DESC, cs.created_at DESC, cs.id DESC
+        ) player_run_rank
+      FROM crest_scores cs ${where}
+    ) SELECT ranked_runs.player_id, COALESCE(players.nickname, ranked_runs.player_name) player_name,
+      ranked_runs.score_ms, ranked_runs.sparks, ranked_runs.runs
+      FROM ranked_runs LEFT JOIN players ON players.player_id = ranked_runs.player_id
+      WHERE ranked_runs.player_run_rank = 1
+      ORDER BY ranked_runs.score_ms ASC, ranked_runs.sparks DESC LIMIT 10`);
     const result = board === 'daily' ? await query.bind(keys.day, courseId, challengeId).all<Row>() : await query.all<Row>();
     rows = result.results;
   }
 
-  const dailyRanked = await db.prepare(`WITH best AS (
-    SELECT player_id, MAX(player_name) player_name, MIN(score_ms) score_ms, MAX(sparks) sparks
-    FROM crest_scores WHERE day_key = ? AND course_id = ? AND challenge_id = ? GROUP BY player_id
+  const dailyRanked = await db.prepare(`WITH player_runs AS (
+    SELECT cs.*, ROW_NUMBER() OVER (
+      PARTITION BY cs.player_id
+      ORDER BY cs.score_ms ASC, cs.sparks DESC, cs.created_at DESC, cs.id DESC
+    ) player_run_rank
+    FROM crest_scores cs WHERE cs.day_key = ? AND cs.course_id = ? AND cs.challenge_id = ?
+  ), best AS (
+    SELECT player_runs.player_id, COALESCE(players.nickname, player_runs.player_name) player_name,
+      player_runs.score_ms, player_runs.sparks
+    FROM player_runs LEFT JOIN players ON players.player_id = player_runs.player_id
+    WHERE player_runs.player_run_rank = 1
   ), ranked AS (SELECT *, ROW_NUMBER() OVER (ORDER BY score_ms ASC, sparks DESC) rank FROM best)
   SELECT * FROM ranked ORDER BY rank`).bind(keys.day, courseId, challengeId).all<Row>();
   const ranked = dailyRanked.results;
@@ -42,7 +71,10 @@ export async function GET(request: Request) {
   const summary = await db.prepare(`WITH best AS (
     SELECT player_id, MAX(sparks) sparks FROM crest_scores WHERE day_key = ? AND course_id = ? AND challenge_id = ? GROUP BY player_id
   ) SELECT COUNT(*) players, COALESCE(SUM(sparks), 0) lights FROM best`).bind(keys.day, courseId, challengeId).first<{ players: number; lights: number }>();
-  const recent = await db.prepare(`SELECT player_name FROM crest_scores WHERE day_key = ? AND course_id = ? AND challenge_id = ? ORDER BY created_at DESC LIMIT 5`).bind(keys.day, courseId, challengeId).all<{ player_name: string }>();
+  const recent = await db.prepare(`SELECT COALESCE(players.nickname, crest_scores.player_name) player_name
+    FROM crest_scores LEFT JOIN players ON players.player_id = crest_scores.player_id
+    WHERE crest_scores.day_key = ? AND crest_scores.course_id = ? AND crest_scores.challenge_id = ?
+    ORDER BY crest_scores.created_at DESC LIMIT 5`).bind(keys.day, courseId, challengeId).all<{ player_name: string }>();
 
   return NextResponse.json({
     board,

@@ -68,9 +68,14 @@ export async function POST(request: Request) {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(runId, playerId, name, scoreMs, sparks, courseId, modifierId, challengeId, keys.day, keys.week, now),
     db.prepare('INSERT INTO game_events (player_id, event_name, course_id, day_key, created_at) VALUES (?, ?, ?, ?, ?)').bind(playerId, 'run_finish', courseId, keys.day, now),
   ]);
-  const rank = await db.prepare(`SELECT COUNT(*) + 1 AS rank FROM (
-    SELECT player_id, MIN(score_ms) AS best_time FROM crest_scores
-    WHERE day_key = ? AND course_id = ? AND challenge_id = ? GROUP BY player_id HAVING best_time < ?
-  )`).bind(keys.day, courseId, challengeId, scoreMs).first<{ rank: number }>();
+  const rank = await db.prepare(`WITH player_runs AS (
+    SELECT player_id, score_ms, sparks, ROW_NUMBER() OVER (
+      PARTITION BY player_id
+      ORDER BY score_ms ASC, sparks DESC, created_at DESC, id DESC
+    ) player_run_rank
+    FROM crest_scores WHERE day_key = ? AND course_id = ? AND challenge_id = ?
+  ) SELECT COUNT(*) + 1 AS rank FROM player_runs
+    WHERE player_run_rank = 1 AND (score_ms < ? OR (score_ms = ? AND sparks > ?))`
+  ).bind(keys.day, courseId, challengeId, scoreMs, scoreMs, sparks).first<{ rank: number }>();
   return NextResponse.json({ ok: true, rank: rank?.rank ?? 1 });
 }
