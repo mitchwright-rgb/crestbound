@@ -70,10 +70,19 @@ const musicTracks: readonly MusicTrack[] = [
     melody: [440, 0, 523, 0, 587, 523, 466, 0, 392, 0, 440, 523, 349, 0, 392, 0, 440, 523, 622, 0, 587, 523, 466, 392, 349, 0, 311, 349, 392, 0, 330, 0],
     bass: [110, 131, 98, 117, 110, 147, 131, 98],
   },
+  {
+    name: 'Raise Your Voice', src: '/audio/declarations-theme.wav', tempoMs: 102, lead: 'square', bassVoice: 'square',
+    melody: [523, 523, 0, 659, 784, 0, 659, 587, 523, 0, 523, 659, 698, 0, 659, 0, 523, 523, 0, 784, 880, 784, 698, 659, 587, 0, 659, 698, 523, 0, 392, 0],
+    bass: [131, 131, 165, 196, 131, 175, 165, 98],
+  },
 ] as const;
 
 export function musicTrackForCourse(courseIndex: number): MusicTrack {
-  return musicTracks[Math.max(0, Math.min(musicTracks.length - 1, Math.trunc(courseIndex)))];
+  return musicTracks[Math.max(0, Math.min(2, Math.trunc(courseIndex)))];
+}
+
+export function musicTrackForSeries(): MusicTrack {
+  return musicTracks[3];
 }
 
 export function resetRunTiming() {

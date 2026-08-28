@@ -2,8 +2,10 @@
 
 import { FormEvent, PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SoundKind, soundSources, soundVolumes } from './audio-assets';
-import { challengeMedal, chicagoDayKey, collectLightPower, dailyObjectiveForSerial, dailyObjectiveSpecs, formatDailyReset, gravityForModifier, horizontalSpeedLimit, lightHuntTargets, millisecondsUntilNextChicagoDay, musicTrackForCourse, objectiveResultLabel, resetRunTiming, resolveDamage, runStorageKey, tailwindAcceleration, touchInputFromControls } from './game-rules';
+import { challengeMedal, chicagoDayKey, collectLightPower, dailyObjectiveForSerial, dailyObjectiveSpecs, formatDailyReset, gravityForModifier, horizontalSpeedLimit, lightHuntTargets, millisecondsUntilNextChicagoDay, musicTrackForCourse, musicTrackForSeries, objectiveResultLabel, resetRunTiming, resolveDamage, runStorageKey, tailwindAcceleration, touchInputFromControls } from './game-rules';
 import { buildSeededCourse } from './course-generator';
+import { buildDeclarationsCourse } from './series-course-generator';
+import { activeSeriesForDay, completedSeriesWeekIds, upcomingSeries, seriesWeekSeed } from './series-routes';
 import { checkNickname } from '@/lib/nickname';
 import { dailyChallengeIdForDay } from '@/lib/daily-challenge';
 
@@ -11,7 +13,7 @@ type Screen = 'title' | 'playing' | 'paused' | 'won' | 'over';
 type Hud = { sparks: number; total: number; lives: number; hits: number; time: number; best: number | null; checkpoint: number; progress: number; dashReady: boolean; shield: number };
 type Board = 'daily' | 'weekly' | 'all';
 type BoardEntry = { rank: number; name: string; timeMs: number; sparks: number; points?: number; runs?: number };
-type HomePanel = 'none' | 'leaderboard' | 'help' | 'courses';
+type HomePanel = 'none' | 'leaderboard' | 'help' | 'series';
 type GameNotice = { text: string; kind: 'checkpoint' | 'power' };
 
 type Community = { players: number; lights: number; goal: number; nearby: BoardEntry[]; playerRank: number | null; recent: string[] };
@@ -39,6 +41,7 @@ const modifierSpecs = [
 const dailyCourse = courseSpecs[dailyCourseIndex];
 const dailyModifier = modifierSpecs[((daySerial + dailyCourseIndex) % modifierSpecs.length + modifierSpecs.length) % modifierSpecs.length];
 const dailyObjectiveId = dailyObjectiveForSerial(daySerial, dailyCourseIndex);
+const activeSeries = activeSeriesForDay(localDay);
 
 
 function formatTime(seconds: number) {
@@ -48,14 +51,20 @@ function formatTime(seconds: number) {
 }
 
 export default function Home() {
-  const [practiceCourseIndex, setPracticeCourseIndex] = useState<number | null>(null);
-  const isPractice = practiceCourseIndex !== null;
-  const activeCourseIndex = practiceCourseIndex ?? dailyCourseIndex;
-  const course = courseSpecs[activeCourseIndex];
-  const modifier = isPractice ? modifierSpecs[0] : dailyModifier;
-  const objectiveId = isPractice ? 'sprint' : dailyObjectiveId;
+  const [seriesMode, setSeriesMode] = useState(false);
+  const isSeries = seriesMode && Boolean(activeSeries);
+  const isPractice = isSeries;
+  const activeCourseIndex = isSeries ? activeSeries!.weekIndex % courseSpecs.length : dailyCourseIndex;
+  const course = isSeries
+    ? { id: 'declarations', name: activeSeries!.week.routeName, short: 'DECLARATIONS', accent: '#ef4638', description: activeSeries!.series.description }
+    : courseSpecs[activeCourseIndex];
+  const modifier = isSeries ? modifierSpecs[0] : dailyModifier;
+  const objectiveId = isSeries ? activeSeries!.week.objective : dailyObjectiveId;
   const objective = dailyObjectiveSpecs[objectiveId];
-  const courseData = useMemo(() => buildSeededCourse(activeCourseIndex, modifier.id, daySerial), [activeCourseIndex, modifier.id]);
+  const routeSeed = isSeries ? seriesWeekSeed(activeSeries!.week.sunday) : daySerial;
+  const courseData = useMemo(() => isSeries
+    ? buildDeclarationsCourse(activeSeries!.weekIndex, routeSeed)
+    : buildSeededCourse(activeCourseIndex, modifier.id, routeSeed), [activeCourseIndex, isSeries, modifier.id, routeSeed]);
   const { platforms, spikeZones, sparkSeed, enemySeed, checkpoints } = courseData;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const touchControlsRef = useRef<HTMLDivElement>(null);
@@ -79,8 +88,9 @@ export default function Home() {
   const objectiveDescription = objectiveId === 'light_hunt'
     ? `Gold ${lightTargets.gold}/${sparkSeed.length} Light · Silver ${lightTargets.silver}/${sparkSeed.length}`
     : objective.description;
-  const bestStorageKey = runStorageKey('best', { courseId: course.id, challengeId: dailyChallengeId, modifierId: modifier.id, practice: isPractice });
-  const ghostStorageKey = runStorageKey('ghost', { courseId: course.id, challengeId: dailyChallengeId, modifierId: modifier.id, practice: isPractice });
+  const routeChallengeId = isSeries ? activeSeries!.week.id : dailyChallengeId;
+  const bestStorageKey = runStorageKey('best', { courseId: course.id, challengeId: routeChallengeId, modifierId: modifier.id, practice: isPractice });
+  const ghostStorageKey = runStorageKey('ghost', { courseId: course.id, challengeId: routeChallengeId, modifierId: modifier.id, practice: isPractice });
   const musicRef = useRef<HTMLAudioElement | null>(null);
   const sfxContextRef = useRef<AudioContext | null>(null);
   const sfxBuffersRef = useRef<Map<SoundKind, AudioBuffer>>(new Map());
@@ -109,6 +119,8 @@ export default function Home() {
   const [dailyReset, setDailyReset] = useState('—');
   const [gameNotice, setGameNotice] = useState<GameNotice | null>(null);
   const gameNoticeTimerRef = useRef(0);
+  const [seriesCompletions, setSeriesCompletions] = useState(0);
+  const [completedSeriesWeeks, setCompletedSeriesWeeks] = useState<string[]>([]);
 
   const showGameNotice = useCallback((text: string, kind: GameNotice['kind']) => {
     window.clearTimeout(gameNoticeTimerRef.current);
@@ -178,6 +190,18 @@ export default function Home() {
     let playerId = window.localStorage.getItem('crestbound-player-id');
     if (!playerId) { playerId = crypto.randomUUID(); window.localStorage.setItem('crestbound-player-id', playerId); }
     playerIdRef.current = playerId;
+    if (activeSeries) {
+      const localCompleted = completedSeriesWeekIds(window.localStorage, activeSeries.series.id);
+      setCompletedSeriesWeeks(localCompleted);
+      void fetch(`/api/series?playerId=${encodeURIComponent(playerId)}`, { cache: 'no-store' })
+        .then(async (response) => response.ok ? response.json() as Promise<{ completions?: number; completedWeeks?: string[] }> : null)
+        .then((data) => {
+          if (!data) return;
+          setSeriesCompletions(data.completions ?? 0);
+          setCompletedSeriesWeeks([...new Set([...localCompleted, ...(data.completedWeeks ?? [])])]);
+        })
+        .catch(() => undefined);
+    }
     const syncStoredState = window.setTimeout(() => {
       const stored = window.localStorage.getItem(runStorageKey('best', { courseId: dailyCourse.id, challengeId: dailyChallengeId, modifierId: dailyModifier.id, practice: false }));
       if (stored) setHud((current) => ({ ...current, best: Number(stored) }));
@@ -242,14 +266,14 @@ export default function Home() {
       if (existing.paused) void existing.play().catch(() => undefined);
       return;
     }
-    const track = musicTrackForCourse(activeCourseIndex);
+    const track = isSeries ? musicTrackForSeries() : musicTrackForCourse(activeCourseIndex);
     const music = new Audio(track.src);
     music.loop = true;
     music.preload = 'auto';
     music.volume = audible ? .34 : 0;
     musicRef.current = music;
     void music.play().catch(() => { if (musicRef.current === music) musicRef.current = null; });
-  }, [activeCourseIndex]);
+  }, [activeCourseIndex, isSeries]);
 
   function sound(kind: SoundKind) {
     if (mutedRef.current) return;
@@ -299,10 +323,11 @@ export default function Home() {
   function track(eventName: string, details: Record<string, string | number> = {}) {
     if (!playerIdRef.current) return;
     const metadata = {
-      mode: isPractice ? 'practice' : 'ranked',
+      mode: isSeries ? 'series' : 'ranked',
       modifierId: modifier.id,
       orientation: window.matchMedia('(orientation: portrait)').matches ? 'portrait' : 'landscape',
       device: window.matchMedia('(pointer: coarse)').matches ? 'touch' : 'desktop',
+      ...(isSeries && activeSeries ? { seriesId: activeSeries.series.id, weekId: activeSeries.week.id } : {}),
       ...details,
     };
     const payload = { eventName, playerId: playerIdRef.current, courseId: course.id, metadata };
@@ -378,7 +403,7 @@ export default function Home() {
     const needsCoach = !window.localStorage.getItem('crestbound-dash-learned');
     const needsModifierCoach = !isPractice && !window.localStorage.getItem(`crestbound-twist-seen-${localDay}-${modifier.id}`);
     coachPauseRef.current = needsCoach || needsModifierCoach;
-    dashCoachRef.current = needsCoach; setShowDashCoach(needsCoach); track(isPractice ? 'practice_start' : 'run_start');
+    dashCoachRef.current = needsCoach; setShowDashCoach(needsCoach); track(isSeries ? 'series_start' : 'run_start');
     setShowModifierCoach(needsModifierCoach);
     if (shouldWaitForLandscape) track('orientation_wait');
     if (replaying) track('replay');
@@ -559,7 +584,8 @@ export default function Home() {
     if (!context) return;
     const touchLandscape = window.matchMedia('(pointer: coarse) and (orientation: landscape)');
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const atmosphere = [
+    const atmosphere = isSeries ?
+      { skyTop: '#f8e45c', skyMid: '#f8e45c', skyLow: '#ffe777', haze: '#f4d64e', far: '#ef4638', near: '#171b1c', window: '#f8e45c', rail: '#ef4638', edge: '#171b1c', blockA: '#ef4638', blockB: '#c9362c', support: '#171b1c' } : [
       { skyTop: '#0d99a8', skyMid: '#63cec4', skyLow: '#ffd36f', haze: '#ff9662', far: '#668292', near: '#365b6d', window: '#ffd86a', rail: '#2bc8c0', edge: '#087d86', blockA: '#164f5f', blockB: '#0e3e4c', support: '#082d38' },
       { skyTop: '#168fc5', skyMid: '#68cbdc', skyLow: '#d5f1e8', haze: '#fff0b0', far: '#75aeba', near: '#347382', window: '#f5fff5', rail: '#35c9c1', edge: '#087b85', blockA: '#235f70', blockB: '#194e5d', support: '#103b49' },
       { skyTop: '#06111f', skyMid: '#0a2333', skyLow: '#174251', haze: '#245d68', far: '#153746', near: '#092431', window: '#f5c84d', rail: '#24aaa9', edge: '#0b666d', blockA: '#0e3541', blockB: '#092a35', support: '#061c25' },
@@ -593,7 +619,7 @@ export default function Home() {
         if (index % 3 === 0) { tileContext.fillRect(x + 44, baseY - h - 28, 8, 28); tileContext.fillRect(x + 34, baseY - h - 28, 28, 5); }
         for (let wx = 16; wx < 80; wx += 24) for (let wy = baseY - h + 16; wy < baseY - 12; wy += 28) {
           const lit = (index + wx + wy + layer) % 4 !== 0;
-          tileContext.fillStyle = lit ? (activeCourseIndex === 2 ? atmosphere.window : activeCourseIndex === 0 ? '#e78c52' : '#bde4e8') : building;
+          tileContext.fillStyle = lit ? (isSeries ? '#f8e45c' : activeCourseIndex === 2 ? atmosphere.window : activeCourseIndex === 0 ? '#e78c52' : '#bde4e8') : building;
           tileContext.fillRect(x + wx, wy, 8, 12);
         }
       }
@@ -810,8 +836,19 @@ export default function Home() {
         finalResultRef.current = finishedRun;
         setFinalResult(finishedRun);
         setHud(finishedRun);
-        if (!isPractice) recordStreak();
-        else track('practice_finish', { lives, progress: player.x, elapsedMs: elapsed * 1000 });
+        if (!isSeries) recordStreak();
+        else if (activeSeries) {
+          const completed = [...new Set([...completedSeriesWeekIds(window.localStorage, activeSeries.series.id), activeSeries.week.id])];
+          window.localStorage.setItem(`crestbound-series-complete-${activeSeries.series.id}`, JSON.stringify(completed));
+          setCompletedSeriesWeeks(completed);
+          track('series_finish', { lives, progress: player.x, elapsedMs: elapsed * 1000 });
+          void fetch('/api/series', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ playerId: playerIdRef.current, seriesId: activeSeries.series.id, weekId: activeSeries.week.id, timeMs: Math.round(elapsed * 1000), lights: collected }),
+          }).then(async (response) => response.ok ? response.json() as Promise<{ completions?: number }> : null)
+            .then((data) => { if (data?.completions != null) setSeriesCompletions(data.completions); })
+            .catch(() => undefined);
+        }
         flushTelemetry();
         tone('win'); setGameScreen('won');
       }
@@ -837,7 +874,20 @@ export default function Home() {
       ctx.drawImage(skyLayer, 0, 0, skyLayer.width, skyLayer.height, -8, 0, VIEW_W + 16, VIEW_H);
       ctx.save();
 
-      if (activeCourseIndex === 0) {
+      if (isSeries) {
+        // Declarations: bold poster color, protest placards, and megaphone
+        // bursts echo the current Suncrest series without copying its slide.
+        ctx.fillStyle = '#ef4638';
+        for (let index = 0; index < 7; index += 1) {
+          const x = ((index * 286 - cameraX * .07) % 1880 + 1880) % 1880 - 260;
+          ctx.fillRect(x, 94 + (index % 3) * 96, 180, 22);
+          ctx.fillStyle = '#171b1c'; ctx.fillRect(x + 22, 126 + (index % 3) * 96, 110, 8); ctx.fillStyle = '#ef4638';
+        }
+        const hornX = Math.floor((1080 - cameraX * .035) / 8) * 8;
+        ctx.fillStyle = '#171b1c';
+        ctx.fillRect(hornX - 34, 118, 92, 48); ctx.fillRect(hornX - 62, 128, 34, 28); ctx.fillRect(hornX - 20, 158, 18, 62);
+        for (let ray = 0; ray < 4; ray += 1) ctx.fillRect(hornX + 72 + ray * 20, 104 + ray * 25, 34, 7);
+      } else if (activeCourseIndex === 0) {
         // Goldline: a low, oversized sun and warm bands make the whole route feel like golden hour.
         const sunX = Math.floor((1030 - cameraX * .025) / 8) * 8;
         ctx.fillStyle = '#f28a56'; ctx.fillRect(sunX - 78, 178, 156, 116);
@@ -907,16 +957,16 @@ export default function Home() {
         ctx.drawImage(skylineTiles[layer], 0, 0, skylineTiles[layer].width, skylineTiles[layer].height, offset, 0, skylineTileWidth, VIEW_H);
         ctx.drawImage(skylineTiles[layer], 0, 0, skylineTiles[layer].width, skylineTiles[layer].height, offset + skylineTileWidth, 0, skylineTileWidth, VIEW_H);
       }
-      ctx.fillStyle = activeCourseIndex === 0 ? '#ffd77a' : activeCourseIndex === 1 ? '#dff7f2' : '#78d7d2';
+      ctx.fillStyle = isSeries ? '#ef4638' : activeCourseIndex === 0 ? '#ffd77a' : activeCourseIndex === 1 ? '#dff7f2' : '#78d7d2';
       for (let index = 0; index < 16; index += 1) { const x = ((index * 101 - cameraX * .52) % 1440 + 1440) % 1440 - 80; ctx.fillRect(x, 520 + (index % 3) * 10, 10, 4); }
-      ctx.fillStyle = activeCourseIndex === 0 ? '#2c2834' : activeCourseIndex === 1 ? '#1c5664' : '#061720'; ctx.fillRect(-8, 574, VIEW_W + 16, 10);
+      ctx.fillStyle = isSeries ? '#171b1c' : activeCourseIndex === 0 ? '#2c2834' : activeCourseIndex === 1 ? '#1c5664' : '#061720'; ctx.fillRect(-8, 574, VIEW_W + 16, 10);
       ctx.fillStyle = atmosphere.near;
       for (let x = -80 - ((cameraX * .64) % 96); x < VIEW_W + 96; x += 96) { ctx.fillRect(x, 548, 8, 36); ctx.fillRect(x + 8, 552, 64, 4); }
-      ctx.fillStyle = activeCourseIndex === 0 ? '#f5d263' : activeCourseIndex === 1 ? '#fff8e9' : '#18a7a2';
+      ctx.fillStyle = isSeries ? '#ef4638' : activeCourseIndex === 0 ? '#f5d263' : activeCourseIndex === 1 ? '#fff8e9' : '#18a7a2';
       for (let index = 0; index < 8; index += 1) { const x = ((index * 227 - cameraX * .38) % 1700 + 1700) % 1700 - 100; ctx.fillRect(x, 535 + (index % 2) * 12, 20, 4); }
       ctx.restore();
 
-      if (activeCourseIndex === 2) {
+      if (!isSeries && activeCourseIndex === 2) {
         ctx.globalAlpha = .62;
         for (let index = 0; index < 96; index += 1) {
           const x = ((index * 97 + elapsed * 290 - cameraX * .04) % 1460 + 1460) % 1460 - 90;
@@ -958,7 +1008,7 @@ export default function Home() {
         ctx.fillStyle = '#061a20'; ctx.fillRect(px - 4, py - 4, platform.w + 8, platform.h + 4);
         ctx.fillStyle = atmosphere.edge; ctx.fillRect(px, py, platform.w, 20);
         ctx.fillStyle = atmosphere.rail; ctx.fillRect(px, py, platform.w, 8);
-        ctx.fillStyle = activeCourseIndex === 2 ? '#78d7d2' : '#d9fff0'; ctx.fillRect(px + 8, py + 2, Math.max(0, platform.w - 16), 2);
+        ctx.fillStyle = isSeries ? '#f8e45c' : activeCourseIndex === 2 ? '#78d7d2' : '#d9fff0'; ctx.fillRect(px + 8, py + 2, Math.max(0, platform.w - 16), 2);
         ctx.fillStyle = '#071316'; for (let x = px + 18; x < px + platform.w - 8; x += 48) ctx.fillRect(x, py + 12, 5, 5);
         ctx.fillStyle = atmosphere.edge; ctx.fillRect(px, py + 20, platform.w, 4);
         for (let x = px; x < px + platform.w; x += 32) for (let y = py + 24; y < py + platform.h; y += 24) {
@@ -968,25 +1018,34 @@ export default function Home() {
           ctx.fillStyle = atmosphere.support;
           for (let x = px + 12; x < px + platform.w - 20; x += 96) { ctx.fillRect(x, py + 34, 8, platform.h - 34); ctx.fillRect(x + 8, py + 38, 36, 6); }
         }
-        if (activeCourseIndex === 2) {
+        if (!isSeries && activeCourseIndex === 2) {
           ctx.fillStyle = '#78d7d2';
           for (let x = px + 12; x < px + platform.w - 20; x += 74) ctx.fillRect(x, py + 5, Math.min(28, px + platform.w - x - 8), 3);
         }
       });
-      const drawSign = (x: number, y: number, text: string, accent: string) => {
-        if (!visible(x, 150)) return;
-        ctx.fillStyle = '#071316'; ctx.fillRect(x - 6, y - 6, 150, 48);
-        ctx.fillStyle = accent; ctx.fillRect(x, y, 138, 36);
-        ctx.fillStyle = '#071316'; ctx.fillRect(x + 5, y + 5, 128, 26);
+      const drawSign = (x: number, y: number, text: string, accent: string, width = 150) => {
+        if (!visible(x, width)) return;
+        ctx.fillStyle = '#071316'; ctx.fillRect(x - 6, y - 6, width, 48);
+        ctx.fillStyle = accent; ctx.fillRect(x, y, width - 12, 36);
+        ctx.fillStyle = '#071316'; ctx.fillRect(x + 5, y + 5, width - 22, 26);
         ctx.fillStyle = accent; ctx.font = 'bold 18px monospace'; ctx.fillText(text, x + 12, y + 24);
-        ctx.fillStyle = '#fff8e9'; ctx.fillRect(x + 4, y + 4, 3, 3); ctx.fillRect(x + 131, y + 29, 3, 3);
+        ctx.fillStyle = '#fff8e9'; ctx.fillRect(x + 4, y + 4, 3, 3); ctx.fillRect(x + width - 19, y + 29, 3, 3);
       };
-      drawSign(760, 535, 'KEEP GOING', '#78d7d2');
-      drawSign(3720, 545, 'HALFWAY', '#f5d263');
-      drawSign(7060, 540, 'SECTOR 2', '#ef6f52');
-      drawSign(8960, 535, course.short, course.accent);
-      drawSign(11280, 545, modifier.name.toUpperCase(), '#78d7d2');
-      drawSign(14290, 540, 'FINAL PUSH', '#ef6f52');
+      if (isSeries) {
+        drawSign(760, 535, 'BE CONSISTENT', '#f8e45c', 205);
+        drawSign(3720, 545, 'OWN IT', '#ef4638');
+        drawSign(7060, 540, 'FORGIVE', '#f8e45c');
+        drawSign(8960, 535, 'SEEK WISDOM', '#ef4638', 190);
+        drawSign(11280, 545, 'THE ONE', '#f8e45c');
+        drawSign(14290, 540, 'DECLARE', '#ef4638');
+      } else {
+        drawSign(760, 535, 'KEEP GOING', '#78d7d2');
+        drawSign(3720, 545, 'HALFWAY', '#f5d263');
+        drawSign(7060, 540, 'SECTOR 2', '#ef6f52');
+        drawSign(8960, 535, course.short, course.accent);
+        drawSign(11280, 545, modifier.name.toUpperCase(), '#78d7d2');
+        drawSign(14290, 540, 'FINAL PUSH', '#ef6f52');
+      }
       spikeZones.forEach((spike) => {
         if (!visible(spike.x, spike.w)) return;
         ctx.fillStyle = '#071316'; ctx.fillRect(spike.x, spike.y + 20, spike.w, 8);
@@ -1066,7 +1125,7 @@ export default function Home() {
         ctx.drawImage(spriteSheet, spriteIndex * 48, 0, 48, 72, -drawW / 2, -drawH, drawW, drawH); ctx.restore();
       } else { ctx.fillStyle = '#f5d263'; ctx.fillRect(player.x, player.y, player.w, player.h); }
       ctx.globalAlpha = 1; ctx.restore();
-      if (activeCourseIndex === 2) {
+      if (!isSeries && activeCourseIndex === 2) {
         ctx.globalAlpha = .4;
         for (let index = 0; index < 24; index += 1) {
           const x = ((index * 181 + elapsed * 430) % 1420) - 70;
@@ -1101,7 +1160,7 @@ export default function Home() {
     };
   // The game engine is intentionally rebuilt when the selected course mode changes.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeCourseIndex, isPractice]);
+  }, [activeCourseIndex, isSeries, routeSeed]);
 
   return (
     <main className="shell">
@@ -1135,11 +1194,11 @@ export default function Home() {
                 </picture>
               </div>
               <div className="home-dashboard">
-                <div className="daily-course"><span>{isPractice ? 'PRACTICE RUN' : 'TODAY\'S SEEDED RUN'}</span><b>{course.name}</b><em>{isPractice ? 'STANDARD RULES' : `TWIST · ${modifier.name}`}</em><div className="daily-challenge"><strong>{isPractice ? 'PRACTICE GOAL' : `CHALLENGE · ${objective.name}`}</strong><small>{objectiveDescription}</small></div><div className="daily-return"><strong>{isPractice ? 'PRACTICE MODE' : streak > 0 ? `${streak} DAY STREAK` : 'FINISH TO START A STREAK'}</strong><small>{isPractice ? 'TODAY\'S BOARD IS UNAFFECTED' : `NEW ROUTE IN ${dailyReset}`}</small></div></div>
-                <button className="play-button" type="button" disabled={runStartState === 'connecting'} onClick={() => void startGame(true)}>{runStartState === 'connecting' ? 'Connecting Ranked Run…' : isPractice ? 'Start Practice' : 'Play Today\'s Run'} {runStartState !== 'connecting' && <span aria-hidden="true">▶</span>}</button>
+                <div className={isSeries ? 'daily-course series-course' : 'daily-course'}><span>{isSeries && activeSeries ? `SERIES ROUTE · WEEK ${activeSeries.weekIndex + 1}/${activeSeries.series.weeks.length}` : 'TODAY\'S SEEDED RUN'}</span><b>{course.name}</b><em>{isSeries && activeSeries ? `DECLARATIONS · ${activeSeries.week.title}` : `TWIST · ${modifier.name}`}</em><div className="daily-challenge"><strong>{isSeries ? `WEEKLY GOAL · ${objective.name}` : `CHALLENGE · ${objective.name}`}</strong><small>{objectiveDescription}</small></div><div className="daily-return"><strong>{isSeries ? 'LIMITED SERIES ROUTE' : streak > 0 ? `${streak} DAY STREAK` : 'FINISH TO START A STREAK'}</strong><small>{isSeries ? 'NEW MESSAGE + ROUTE EVERY SUNDAY' : `NEW ROUTE IN ${dailyReset}`}</small></div></div>
+                <button className="play-button" type="button" disabled={runStartState === 'connecting'} onClick={() => void startGame(true)}>{runStartState === 'connecting' ? 'Connecting Ranked Run…' : isSeries ? 'Play Series Route' : 'Play Today\'s Run'} {runStartState !== 'connecting' && <span aria-hidden="true">▶</span>}</button>
                 {runStartState === 'error' && <p className="run-start-error" role="alert"><b>RUN NOT STARTED</b><span>{runStartError}</span></p>}
-                <div className="daily-glance"><span>{isPractice ? 'PRACTICE DOES NOT AFFECT RANK' : 'FASTEST TIME WINS TODAY'}</span><b>{entries[0] ? `#1 ${entries[0].name} · ${formatTime(entries[0].timeMs / 1000)} · ${community.players} ${community.players === 1 ? 'RUNNER' : 'RUNNERS'}` : 'BE THE FIRST FINISHER'}</b><div className="community-progress"><div><span>LIGHT BUILDS THE COMMUNITY GOAL</span><b>{community.lights.toLocaleString()} / {community.goal.toLocaleString()}</b></div><progress aria-label={`${community.lights} of ${community.goal} community lights collected today`} max={community.goal} value={Math.min(community.lights, community.goal)} /><small>{community.lights >= community.goal ? 'TODAY\'S GOAL REACHED — KEEP IT GLOWING' : `${(community.goal - community.lights).toLocaleString()} LIGHTS TO TODAY'S GOAL`}</small></div></div>
-                <div className="home-links"><button type="button" onClick={() => { openHomePanel('leaderboard'); track('leaderboard_open'); }}>Leaderboard</button><button type="button" onClick={() => openHomePanel('courses')}>{isPractice ? 'Change Course' : 'Practice Courses'}</button><button type="button" onClick={() => openHomePanel('help')}>How to Play</button></div>
+                {isSeries && activeSeries ? <div className="daily-glance series-glance"><span>{seriesCompletions} SUNCRESTERS COMPLETED THIS WEEK</span><b>{completedSeriesWeeks.length}/{activeSeries.series.weeks.length} SERIES ROUTES COMPLETE</b><div className="community-progress"><div><span>THIS WEEK&apos;S DECLARATION</span><b>{activeSeries.week.title}</b></div><progress aria-label={`${completedSeriesWeeks.length} of ${activeSeries.series.weeks.length} series routes completed`} max={activeSeries.series.weeks.length} value={completedSeriesWeeks.length} /><small>THE MESSAGE AND NEXT ROUTE ARRIVE SUNDAY</small></div></div> : <div className="daily-glance"><span>FASTEST TIME WINS TODAY</span><b>{entries[0] ? `#1 ${entries[0].name} · ${formatTime(entries[0].timeMs / 1000)} · ${community.players} ${community.players === 1 ? 'RUNNER' : 'RUNNERS'}` : 'BE THE FIRST FINISHER'}</b><div className="community-progress"><div><span>LIGHT BUILDS THE COMMUNITY GOAL</span><b>{community.lights.toLocaleString()} / {community.goal.toLocaleString()}</b></div><progress aria-label={`${community.lights} of ${community.goal} community lights collected today`} max={community.goal} value={Math.min(community.lights, community.goal)} /><small>{community.lights >= community.goal ? 'TODAY\'S GOAL REACHED — KEEP IT GLOWING' : `${(community.goal - community.lights).toLocaleString()} LIGHTS TO TODAY'S GOAL`}</small></div></div>}
+                <div className="home-links"><button type="button" onClick={() => { openHomePanel('leaderboard'); track('leaderboard_open'); }}>Leaderboard</button><button type="button" onClick={() => { openHomePanel('series'); track('series_open'); }}>Series Routes</button><button type="button" onClick={() => openHomePanel('help')}>How to Play</button></div>
               </div>
             </div>
             {homePanel === 'leaderboard' && <aside ref={homePanelRef} className="leaderboard home-panel" role="dialog" aria-modal="true" aria-labelledby="leaderboard-title" tabIndex={-1}>
@@ -1172,33 +1231,32 @@ export default function Home() {
               <p className="app-tip"><b>FULL-SCREEN TEST</b> On iPhone, tap Share, then Add to Home Screen. Crestbound will open without Safari&apos;s bars.</p>
               <button className="panel-close" type="button" onClick={closeHomePanel}>Got It</button>
             </aside>}
-            {homePanel === 'courses' && <aside ref={homePanelRef} className="course-picker home-panel" role="dialog" aria-modal="true" aria-labelledby="courses-title" tabIndex={-1}>
-              <button className="panel-dismiss" type="button" aria-label="Close practice courses" onClick={closeHomePanel}>X</button>
-              <p className="kicker">EXPLORE THE SKYLINE</p><h2 id="courses-title">Practice Courses</h2>
-              <p>Practice any route now. Practice times stay on this device and do not enter the daily board.</p>
-              <div>{courseSpecs.map((item, index) => <button className={practiceCourseIndex === index ? 'active' : ''} aria-pressed={practiceCourseIndex === index} type="button" key={item.id} onClick={() => { setPracticeCourseIndex(index); closeHomePanel(); }}><b>{item.name}</b><span>{item.description}</span></button>)}</div>
-              {isPractice && <button className="today-course" type="button" onClick={() => { setPracticeCourseIndex(null); closeHomePanel(); }}>Return to Today&apos;s Course</button>}
+            {homePanel === 'series' && <aside ref={homePanelRef} className="course-picker series-picker home-panel" role="dialog" aria-modal="true" aria-labelledby="series-title" tabIndex={-1}>
+              <button className="panel-dismiss" type="button" aria-label="Close Series Routes" onClick={closeHomePanel}>X</button>
+              <p className="kicker">NOW AT SUNCREST</p><h2 id="series-title">Series Routes</h2>
+              {activeSeries ? <><section className="series-feature"><div className="series-wordmark"><small>TAKE A STAND</small><b>DECLARATIONS</b></div><p>{activeSeries.series.description}</p><div className="series-week"><span>THIS WEEK · {activeSeries.week.title}</span><b>{activeSeries.week.routeName}</b></div><div className="series-week-dots" aria-label={`${completedSeriesWeeks.length} of ${activeSeries.series.weeks.length} routes completed`}>{activeSeries.series.weeks.map((week, index) => <i className={completedSeriesWeeks.includes(week.id) ? 'complete' : index === activeSeries.weekIndex ? 'current' : ''} key={week.id}>{index + 1}</i>)}</div></section><button className="series-play" type="button" onClick={() => { setSeriesMode(true); closeHomePanel(); }}>Play This Week&apos;s Route ▶</button><a className="message-link" href={activeSeries.series.messageUrl} target="_blank" rel="noreferrer" onClick={() => track('message_open')}>Explore This Week&apos;s Message ↗</a>{isSeries && <button className="today-course" type="button" onClick={() => { setSeriesMode(false); closeHomePanel(); }}>Return to Today&apos;s Run</button>}</> : <p>No Series Route is active today. The daily Crestbound route is still ready to run.</p>}
+              <section className="upcoming-series"><h3>Coming to Series Routes</h3>{upcomingSeries.map((item) => <div key={item.name}><b>{item.name}</b><span>{new Date(`${item.startsOn}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span></div>)}</section>
               <button className="panel-close" type="button" onClick={closeHomePanel}>Close</button>
             </aside>}
           </div>
         )}
 
         {screen === 'paused' && <div ref={gameModalRef} className="game-modal" role="dialog" aria-modal="true" aria-labelledby="pause-title" tabIndex={-1}><p>RUN PAUSED</p><h2 id="pause-title">Catch your breath.</h2><button type="button" onClick={togglePause}>Resume</button><button className="secondary" type="button" onClick={() => { track('quit', { checkpoint: hud.checkpoint, progress: hud.progress, elapsedMs: hud.time * 1000 }); setGameScreen('title'); }}>Quit Run</button></div>}
-        {screen === 'over' && <div ref={gameModalRef} className="game-modal" role="dialog" aria-modal="true" aria-labelledby="over-title" tabIndex={-1}><p>LIGHT LOST</p><h2 id="over-title">That route got you.</h2><p>Use the high paths, save your dash, and hit enemies from above.</p><button type="button" onClick={() => void startGame()}>Run It Back</button><button className="secondary" type="button" onClick={() => { setGameScreen('title'); if (isPractice) openHomePanel('courses'); }}>{isPractice ? 'Choose Another Course' : 'Back to Home'}</button></div>}
+        {screen === 'over' && <div ref={gameModalRef} className="game-modal" role="dialog" aria-modal="true" aria-labelledby="over-title" tabIndex={-1}><p>LIGHT LOST</p><h2 id="over-title">That route got you.</h2><p>Use the high paths, save your dash, and hit enemies from above.</p><button type="button" onClick={() => void startGame()}>Run It Back</button><button className="secondary" type="button" onClick={() => { setGameScreen('title'); if (isSeries) openHomePanel('series'); }}>{isSeries ? 'Back to Series Routes' : 'Back to Home'}</button></div>}
         {screen === 'won' && (
           <div ref={gameModalRef} className="game-modal win-modal" role="dialog" aria-modal="true" aria-labelledby="win-title" tabIndex={-1}>
             <p>LIGHT RESTORED // {earnedMedal} MEDAL</p><h2 id="win-title">Skyline cleared.</h2>
             <div className="result-grid"><span><b>{formatTime(resultHud.time)}</b><small>FINISH</small></span><span><b>{resultHud.sparks}/{resultHud.total}</b><small>LIGHT</small></span><span><b>{resultHud.best ? formatTime(resultHud.best) : '—'}</b><small>BEST</small></span></div>
-            <div className="result-priority"><b>{isPractice ? 'PRACTICE RESULT' : 'RANKED BY FINISH TIME'}</b><span>{isPractice ? 'Your best stays on this route and device.' : `Light counts toward ${objective.name} and the community goal.`}</span></div>
+            <div className="result-priority"><b>{isSeries ? 'SERIES ROUTE COMPLETE' : 'RANKED BY FINISH TIME'}</b><span>{isSeries ? 'Your completion is saved to this Declarations series.' : `Light counts toward ${objective.name} and the community goal.`}</span></div>
             <div className={`challenge-result ${earnedMedal.toLowerCase()}`}><b>{objective.name}</b><span>{objectiveResult}</span></div>
-            {isPractice ? <div className="rank-callout">PRACTICE COMPLETE // PERSONAL BESTS STAY ON THIS DEVICE</div> : submitState !== 'saved' ? <form className="score-form" onSubmit={submitRun} noValidate>
+            {isSeries ? <div className="rank-callout">DECLARATION MADE // {seriesCompletions} SUNCRESTERS THIS WEEK</div> : submitState !== 'saved' ? <form className="score-form" onSubmit={submitRun} noValidate>
               <label htmlFor="nickname">POST TO TODAY&apos;S BOARD</label>
               <div><input id="nickname" value={nickname} onChange={(event) => setNickname(event.target.value)} minLength={2} maxLength={12} placeholder="NICKNAME" autoComplete="nickname" autoCapitalize="characters" spellCheck={false} /><button type="submit" disabled={submitState === 'saving' || !runIdRef.current}>{submitState === 'saving' ? 'SAVING...' : 'POST RUN'}</button></div>
               <small>Family-friendly nicknames only. Don&apos;t use your real name.{!runIdRef.current ? ' Online posting is unavailable for this run.' : ''}</small>
               {submitState === 'error' && <em role="alert">{submitError || 'COULDN\'T POST. TRY AGAIN.'}</em>}
             </form> : <div className="rank-callout">RUN POSTED {rank ? `// TODAY #${rank}` : '// TO TODAY'}</div>}
             <button type="button" onClick={() => void startGame()}>Beat Your Time</button>
-            <button className="secondary" type="button" onClick={() => { setPracticeCourseIndex(null); setGameScreen('title'); if (!isPractice) openHomePanel('leaderboard'); void loadBoard('daily'); }}>{isPractice ? 'Return to Today' : 'View Leaderboard'}</button>
+            <button className="secondary" type="button" onClick={() => { if (isSeries) setSeriesMode(false); setGameScreen('title'); if (!isSeries) openHomePanel('leaderboard'); void loadBoard('daily'); }}>{isSeries ? 'Return to Today' : 'View Leaderboard'}</button>
           </div>
         )}
 

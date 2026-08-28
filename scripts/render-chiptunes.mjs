@@ -1,7 +1,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { musicTrackForCourse } from '../app/game-rules.ts';
+import { musicTrackForCourse, musicTrackForSeries } from '../app/game-rules.ts';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const sampleRate = 22050;
@@ -54,3 +54,5 @@ for (let course = 0; course < 3; course += 1) {
   const track = musicTrackForCourse(course);
   await writeFile(resolve(root, `public${track.src}`), renderTrack(track));
 }
+const seriesTrack = musicTrackForSeries();
+await writeFile(resolve(root, `public${seriesTrack.src}`), renderTrack(seriesTrack));

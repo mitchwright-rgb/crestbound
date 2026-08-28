@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { soundSources } from './audio-assets.ts';
-import { challengeMedal, chicagoDayKey, collectLightPower, dailyObjectiveForSerial, formatDailyReset, gravityForModifier, horizontalSpeedLimit, lightHuntTargets, millisecondsUntilNextChicagoDay, musicTrackForCourse, objectiveResultLabel, resetRunTiming, resolveDamage, runStorageKey, tailwindAcceleration, touchInputFromControls } from './game-rules.ts';
+import { challengeMedal, chicagoDayKey, collectLightPower, dailyObjectiveForSerial, formatDailyReset, gravityForModifier, horizontalSpeedLimit, lightHuntTargets, millisecondsUntilNextChicagoDay, musicTrackForCourse, musicTrackForSeries, objectiveResultLabel, resetRunTiming, resolveDamage, runStorageKey, tailwindAcceleration, touchInputFromControls } from './game-rules.ts';
 import { buildSeededCourse, checkpointHasClearLanding, checkpointIsSupported, courseSignature, maximumGroundGap } from './course-generator.ts';
+import { buildDeclarationsCourse } from './series-course-generator.ts';
+import { activeSeriesForDay, completedSeriesWeekIds, declarationsSeries, seriesWeekSeed } from './series-routes.ts';
 import { checkNickname, publicNickname } from '../lib/nickname.ts';
 import { normalizeEventMetadata } from '../lib/telemetry.ts';
 
@@ -47,7 +49,7 @@ test('each route has its own named chiptune arrangement', () => {
 });
 
 test('each route music asset is a playable WAV file', () => {
-  for (const track of [0, 1, 2].map(musicTrackForCourse)) {
+  for (const track of [...[0, 1, 2].map(musicTrackForCourse), musicTrackForSeries()]) {
     const audio = readFileSync(new URL(`../public${track.src}`, import.meta.url));
     assert.equal(audio.subarray(0, 4).toString(), 'RIFF');
     assert.equal(audio.subarray(8, 12).toString(), 'WAVE');
@@ -114,6 +116,33 @@ test('event metadata keeps useful product signals without accepting arbitrary da
   assert.equal(normalizeEventMetadata({ reason: 'x'.repeat(40) }), null);
 });
 
+test('Declarations rolls to a new weekly route every Sunday and remains available through Saturday', () => {
+  assert.equal(activeSeriesForDay('2026-08-15'), null);
+  assert.equal(activeSeriesForDay('2026-08-16')?.week.id, 'declarations-2026-w1');
+  assert.equal(activeSeriesForDay('2026-08-22')?.week.id, 'declarations-2026-w1');
+  assert.equal(activeSeriesForDay('2026-08-23')?.week.id, 'declarations-2026-w2');
+  assert.equal(activeSeriesForDay('2026-09-13')?.week.id, 'declarations-2026-w5');
+  assert.equal(activeSeriesForDay('2026-09-19')?.week.id, 'declarations-2026-w5');
+  assert.equal(activeSeriesForDay('2026-09-20'), null);
+});
+
+test('Series Route completion progress safely reads local storage', () => {
+  const storage = { getItem: () => JSON.stringify(['declarations-2026-w1', 42, 'declarations-2026-w2']) };
+  assert.deepEqual(completedSeriesWeekIds(storage, declarationsSeries.id), ['declarations-2026-w1', 'declarations-2026-w2']);
+});
+
+test('each Declarations week is structurally distinct and keeps recovery points safe', () => {
+  const routes = declarationsSeries.weeks.map((week, index) => buildDeclarationsCourse(index, seriesWeekSeed(week.sunday)));
+  assert.equal(new Set(routes.map(courseSignature)).size, declarationsSeries.weeks.length);
+  for (const route of routes) {
+    assert.ok(maximumGroundGap(route) <= 370);
+    assert.ok(route.checkpoints.every((checkpoint) => checkpointIsSupported(route, checkpoint)));
+    assert.ok(route.checkpoints.every((checkpoint) => checkpointHasClearLanding(route, checkpoint)));
+    assert.ok(route.platforms.some((platform) => platform.y >= 600 && 15135 >= platform.x && 15135 <= platform.x + platform.w));
+    assert.ok(route.sparkSeed.length <= 120);
+  }
+});
+
 test('daily route generation is deterministic but changes with the date seed', () => {
   const first = buildSeededCourse(0, 'clear', 20693);
   const repeated = buildSeededCourse(0, 'clear', 20693);
@@ -169,4 +198,10 @@ test('production hosting migrations include the daily challenge columns', () => 
   const migration = readFileSync(new URL('../drizzle/0003_daily_layout_version.sql', import.meta.url), 'utf8');
   assert.match(migration, /ALTER TABLE run_context ADD COLUMN challenge_id/);
   assert.match(migration, /ALTER TABLE crest_scores ADD COLUMN challenge_id/);
+});
+
+test('production hosting migrations include Series Route completions', () => {
+  const migration = readFileSync(new URL('../drizzle/0004_series_routes.sql', import.meta.url), 'utf8');
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS series_completions/);
+  assert.match(migration, /UNIQUE\(player_id, week_id\)/);
 });

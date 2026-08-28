@@ -1,4 +1,4 @@
-const allowedKeys = new Set(['mode', 'modifierId', 'reason', 'lives', 'checkpoint', 'progress', 'elapsedMs', 'orientation', 'device']);
+const allowedKeys = new Set(['mode', 'modifierId', 'reason', 'lives', 'checkpoint', 'progress', 'elapsedMs', 'orientation', 'device', 'seriesId', 'weekId']);
 
 export function normalizeEventMetadata(value: unknown) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;

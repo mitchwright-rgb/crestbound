@@ -3,8 +3,8 @@ import { chicagoKeys, database } from '@/lib/db';
 import { rateLimit } from '@/lib/rate-limit';
 import { normalizeEventMetadata } from '@/lib/telemetry';
 
-const events = new Set(['home_view', 'run_start', 'practice_start', 'dash_learned', 'modifier_learned', 'checkpoint', 'life_lost', 'run_over', 'practice_finish', 'run_finish', 'replay', 'pause', 'quit', 'orientation_wait', 'leaderboard_open']);
-const courses = new Set(['goldline', 'crosswind', 'nightshift']);
+const events = new Set(['home_view', 'run_start', 'dash_learned', 'modifier_learned', 'checkpoint', 'life_lost', 'run_over', 'run_finish', 'replay', 'pause', 'quit', 'orientation_wait', 'leaderboard_open', 'series_open', 'series_start', 'series_finish', 'message_open']);
+const courses = new Set(['goldline', 'crosswind', 'nightshift', 'declarations']);
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
