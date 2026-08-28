@@ -1268,19 +1268,9 @@ export default function Home({ initialDay }: { initialDay: string }) {
                 </div>
                 <button className="play-button" type="button" disabled={runStartState === 'connecting'} onClick={() => void startGame(true)}>{runStartState === 'connecting' ? 'Connecting Ranked Run…' : 'Run with Sunny'} {runStartState !== 'connecting' && <span aria-hidden="true">▶</span>}</button>
                 {runStartState === 'error' && <p className="run-start-error" role="alert"><b>RUN NOT STARTED</b><span>{runStartError}</span></p>}
-                <div className="daily-glance">
-                  <div className="home-social-stats">
-                    <span><small>FASTEST</small><b>{entries[0] ? `${entries[0].name} · ${formatTime(entries[0].timeMs / 1000)}` : 'CLAIM #1'}</b></span>
-                    <span><small>TODAY</small><b>{community.players} {community.players === 1 ? 'RUNNER' : 'RUNNERS'}</b></span>
-                  </div>
-                  <div className="community-progress">
-                    <div><span>COMMUNITY LIGHT</span><b>{community.lights.toLocaleString()} / {community.goal.toLocaleString()}</b></div>
-                    <progress aria-label={`${community.lights} of ${community.goal} community lights collected today`} max={community.goal} value={Math.min(community.lights, community.goal)} />
-                  </div>
-                </div>
+                <button className="home-results-button" type="button" onClick={() => { openHomePanel('leaderboard'); track('leaderboard_open'); }}><span><small>TODAY&apos;S RUNS</small><strong>Results &amp; Leaderboard</strong></span><b aria-hidden="true">→</b></button>
                 <div className="home-links">
                   <button className="series-routes-link" type="button" onClick={() => { setSeriesWeekIndex(activeSeries?.weekIndex ?? 0); openHomePanel('series'); track('series_open'); }}><strong>{activeSeries?.series.name ?? 'Series Routes'}</strong><small>{activeSeries ? 'Explore Series Routes →' : 'No active route today'}</small></button>
-                  <button type="button" onClick={() => { openHomePanel('leaderboard'); track('leaderboard_open'); }}>Leaderboard</button>
                   <button type="button" onClick={() => openHomePanel('help')}>How to Play</button>
                 </div>
               </div>
@@ -1300,6 +1290,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
               </ol>
               {community.playerRank && <div className="nearby-rivals"><b>YOUR NEARBY RIVALS // #{community.playerRank}</b>{community.nearby.map((entry) => <span key={`${entry.rank}-${entry.name}`}>#{entry.rank} {entry.name} <time>{formatTime(entry.timeMs / 1000)}</time></span>)}</div>}
               {community.recent.length > 0 && <p className="recent-finishers">JUST RAN: {community.recent.join(' · ')}</p>}
+              <section className="board-community" aria-label="Today&apos;s Suncrest community progress"><div><span>COMMUNITY LIGHT</span><b>{community.lights.toLocaleString()} / {community.goal.toLocaleString()}</b></div><progress aria-label={`${community.lights} of ${community.goal} community lights collected today`} max={community.goal} value={Math.min(community.lights, community.goal)} /><small>{community.players} {community.players === 1 ? 'SUNCRESTER HAS' : 'SUNCRESTERS HAVE'} RUN TODAY</small></section>
               <p>{board === 'weekly' ? 'WEEKLY POINTS COME FROM EACH DAY’S BEST RUN: FINISH SPEED + LIGHT. MORE DAYS PLAYED BUILDS THE TOTAL.' : 'FASTEST VERIFIED TIME WINS. LIGHT BREAKS AN EXACT TIE AND SHOWS WHAT THAT SAME RUN COLLECTED.'}</p>
               <button className="panel-close" type="button" onClick={closeHomePanel}>Close</button>
             </aside>}
