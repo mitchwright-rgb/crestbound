@@ -11,10 +11,15 @@ function localDay() {
 export async function GET(request: Request) {
   const active = activeSeriesForDay(localDay());
   if (!active) return NextResponse.json({ active: false, completions: 0, completedWeeks: [] });
-  const playerId = new URL(request.url).searchParams.get('playerId') ?? '';
+  const params = new URL(request.url).searchParams;
+  const playerId = params.get('playerId') ?? '';
+  const requestedWeekId = params.get('weekId');
+  const requestedIndex = requestedWeekId ? active.series.weeks.findIndex((week) => week.id === requestedWeekId) : active.weekIndex;
+  if (requestedIndex < 0 || requestedIndex > active.weekIndex) return NextResponse.json({ error: 'That Series Route is not available yet.' }, { status: 404 });
+  const selectedWeek = active.series.weeks[requestedIndex];
   const db = database();
   const summary = await db.prepare('SELECT COUNT(*) completions FROM series_completions WHERE series_id = ? AND week_id = ?')
-    .bind(active.series.id, active.week.id).first<{ completions: number }>();
+    .bind(active.series.id, selectedWeek.id).first<{ completions: number }>();
   const completed = validId(playerId)
     ? await db.prepare('SELECT week_id FROM series_completions WHERE series_id = ? AND player_id = ? ORDER BY completed_at')
       .bind(active.series.id, playerId).all<{ week_id: string }>()
@@ -30,7 +35,8 @@ export async function POST(request: Request) {
   const weekId = String(body?.weekId ?? '');
   const timeMs = Math.round(Number(body?.timeMs));
   const lights = Math.round(Number(body?.lights));
-  if (!active || !validId(playerId) || seriesId !== active.series.id || weekId !== active.week.id || !Number.isFinite(timeMs) || timeMs < 10000 || timeMs > 900000 || !Number.isInteger(lights) || lights < 0 || lights > 120) {
+  const weekIndex = active?.series.weeks.findIndex((week) => week.id === weekId) ?? -1;
+  if (!active || weekIndex < 0 || weekIndex > active.weekIndex || !validId(playerId) || seriesId !== active.series.id || !Number.isFinite(timeMs) || timeMs < 10000 || timeMs > 900000 || !Number.isInteger(lights) || lights < 0 || lights > 120) {
     return NextResponse.json({ error: 'That Series Route could not be verified.' }, { status: 400 });
   }
   const allowance = await rateLimit(request, 'series-finish', playerId, 12, 10 * 60_000);

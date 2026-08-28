@@ -5,7 +5,7 @@ import { SoundKind, soundSources, soundVolumes } from './audio-assets';
 import { challengeMedal, chicagoDayKey, collectLightPower, dailyObjectiveForSerial, dailyObjectiveSpecs, formatDailyReset, gravityForModifier, horizontalSpeedLimit, lightHuntTargets, millisecondsUntilNextChicagoDay, musicTrackForCourse, musicTrackForSeries, objectiveResultLabel, resetRunTiming, resolveDamage, runStorageKey, tailwindAcceleration, touchInputFromControls } from './game-rules';
 import { buildSeededCourse } from './course-generator';
 import { buildDeclarationsCourse } from './series-course-generator';
-import { activeSeriesForDay, completedSeriesWeekIds, upcomingSeries, seriesWeekSeed } from './series-routes';
+import { activeSeriesForDay, completedSeriesWeekIds, seriesWeekSeed } from './series-routes';
 import { checkNickname } from '@/lib/nickname';
 import { dailyChallengeIdForDay } from '@/lib/daily-challenge';
 
@@ -53,18 +53,20 @@ function formatTime(seconds: number) {
 
 export default function Home() {
   const [seriesMode, setSeriesMode] = useState(false);
+  const [seriesWeekIndex, setSeriesWeekIndex] = useState(activeSeries?.weekIndex ?? 0);
+  const seriesWeek = activeSeries?.series.weeks[seriesWeekIndex] ?? null;
   const isSeries = seriesMode && Boolean(activeSeries);
   const isPractice = isSeries;
-  const activeCourseIndex = isSeries ? activeSeries!.weekIndex % courseSpecs.length : dailyCourseIndex;
+  const activeCourseIndex = isSeries ? seriesWeekIndex % courseSpecs.length : dailyCourseIndex;
   const course = isSeries
-    ? { id: 'declarations', name: activeSeries!.week.routeName, short: 'DECLARATIONS', accent: '#ef4638', description: activeSeries!.series.description }
+    ? { id: 'declarations', name: seriesWeek!.routeName, short: 'DECLARATIONS', accent: '#ef4638', description: activeSeries!.series.description }
     : courseSpecs[activeCourseIndex];
   const modifier = isSeries ? modifierSpecs[0] : dailyModifier;
-  const objectiveId = isSeries ? activeSeries!.week.objective : dailyObjectiveId;
+  const objectiveId = isSeries ? seriesWeek!.objective : dailyObjectiveId;
   const objective = dailyObjectiveSpecs[objectiveId];
-  const routeSeed = isSeries ? seriesWeekSeed(activeSeries!.week.sunday) : daySerial;
+  const routeSeed = isSeries ? seriesWeekSeed(seriesWeek!.sunday) : daySerial;
   const courseData = useMemo(() => isSeries
-    ? buildDeclarationsCourse(activeSeries!.weekIndex, routeSeed)
+    ? buildDeclarationsCourse(seriesWeekIndex, routeSeed)
     : buildSeededCourse(activeCourseIndex, modifier.id, routeSeed), [activeCourseIndex, isSeries, modifier.id, routeSeed]);
   const { platforms, spikeZones, sparkSeed, enemySeed, checkpoints } = courseData;
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -89,7 +91,7 @@ export default function Home() {
   const objectiveDescription = objectiveId === 'light_hunt'
     ? `Gold ${lightTargets.gold}/${sparkSeed.length} Light · Silver ${lightTargets.silver}/${sparkSeed.length}`
     : objective.description;
-  const routeChallengeId = isSeries ? activeSeries!.week.id : dailyChallengeId;
+  const routeChallengeId = isSeries ? seriesWeek!.id : dailyChallengeId;
   const bestStorageKey = runStorageKey('best', { courseId: course.id, challengeId: routeChallengeId, modifierId: modifier.id, practice: isPractice });
   const ghostStorageKey = runStorageKey('ghost', { courseId: course.id, challengeId: routeChallengeId, modifierId: modifier.id, practice: isPractice });
   const musicRef = useRef<HTMLAudioElement | null>(null);
@@ -123,6 +125,7 @@ export default function Home() {
   const [seriesCompletions, setSeriesCompletions] = useState(0);
   const [completedSeriesWeeks, setCompletedSeriesWeeks] = useState<string[]>([]);
   const [seriesMessage, setSeriesMessage] = useState<SeriesMessage | null>(null);
+  const pendingSeriesStartRef = useRef(false);
 
   const showGameNotice = useCallback((text: string, kind: GameNotice['kind']) => {
     window.clearTimeout(gameNoticeTimerRef.current);
@@ -203,10 +206,6 @@ export default function Home() {
           setCompletedSeriesWeeks([...new Set([...localCompleted, ...(data.completedWeeks ?? [])])]);
         })
         .catch(() => undefined);
-      void fetch('/api/series-content', { cache: 'no-store' })
-        .then(async (response) => response.ok ? response.json() as Promise<{ available?: boolean; message?: SeriesMessage }> : null)
-        .then((data) => { if (data?.available && data.message) setSeriesMessage(data.message); })
-        .catch(() => undefined);
     }
     const syncStoredState = window.setTimeout(() => {
       const stored = window.localStorage.getItem(runStorageKey('best', { courseId: dailyCourse.id, challengeId: dailyChallengeId, modifierId: dailyModifier.id, practice: false }));
@@ -220,6 +219,23 @@ export default function Home() {
     }
     return () => window.clearTimeout(syncStoredState);
   }, []);
+
+  useEffect(() => {
+    if (!activeSeries || !seriesWeek) return;
+    setSeriesMessage(null);
+    const params = new URLSearchParams({ weekId: seriesWeek.id });
+    void fetch(`/api/series-content?${params}`, { cache: 'no-store' })
+      .then(async (response) => response.ok ? response.json() as Promise<{ available?: boolean; message?: SeriesMessage }> : null)
+      .then((data) => { if (data?.available && data.message) setSeriesMessage(data.message); })
+      .catch(() => undefined);
+    if (playerIdRef.current) {
+      params.set('playerId', playerIdRef.current);
+      void fetch(`/api/series?${params}`, { cache: 'no-store' })
+        .then(async (response) => response.ok ? response.json() as Promise<{ completions?: number }> : null)
+        .then((data) => { if (data) setSeriesCompletions(data.completions ?? 0); })
+        .catch(() => undefined);
+    }
+  }, [seriesWeek]);
 
   useEffect(() => {
     const initialDay = chicagoDayKey();
@@ -302,6 +318,7 @@ export default function Home() {
     }
     screenRef.current = next;
     setScreen(next);
+    if (next === 'title') setSeriesMode(false);
   }
 
   function openHomePanel(panel: Exclude<HomePanel, 'none'>) {
@@ -333,7 +350,7 @@ export default function Home() {
       modifierId: modifier.id,
       orientation: window.matchMedia('(orientation: portrait)').matches ? 'portrait' : 'landscape',
       device: window.matchMedia('(pointer: coarse)').matches ? 'touch' : 'desktop',
-      ...(isSeries && activeSeries ? { seriesId: activeSeries.series.id, weekId: activeSeries.week.id } : {}),
+      ...(isSeries && activeSeries && seriesWeek ? { seriesId: activeSeries.series.id, weekId: seriesWeek.id } : {}),
       ...details,
     };
     const payload = { eventName, playerId: playerIdRef.current, courseId: course.id, metadata };
@@ -844,13 +861,13 @@ export default function Home() {
         setHud(finishedRun);
         if (!isSeries) recordStreak();
         else if (activeSeries) {
-          const completed = [...new Set([...completedSeriesWeekIds(window.localStorage, activeSeries.series.id), activeSeries.week.id])];
+          const completed = [...new Set([...completedSeriesWeekIds(window.localStorage, activeSeries.series.id), seriesWeek!.id])];
           window.localStorage.setItem(`crestbound-series-complete-${activeSeries.series.id}`, JSON.stringify(completed));
           setCompletedSeriesWeeks(completed);
           track('series_finish', { lives, progress: player.x, elapsedMs: elapsed * 1000 });
           void fetch('/api/series', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ playerId: playerIdRef.current, seriesId: activeSeries.series.id, weekId: activeSeries.week.id, timeMs: Math.round(elapsed * 1000), lights: collected }),
+            body: JSON.stringify({ playerId: playerIdRef.current, seriesId: activeSeries.series.id, weekId: seriesWeek!.id, timeMs: Math.round(elapsed * 1000), lights: collected }),
           }).then(async (response) => response.ok ? response.json() as Promise<{ completions?: number }> : null)
             .then((data) => { if (data?.completions != null) setSeriesCompletions(data.completions); })
             .catch(() => undefined);
@@ -1168,6 +1185,16 @@ export default function Home() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeCourseIndex, isSeries, routeSeed]);
 
+  // A Series Route launches only after React has rebuilt the game engine for
+  // the selected week. This prevents the two-tap "mode selected" dead end.
+  useEffect(() => {
+    if (!seriesMode || !pendingSeriesStartRef.current) return;
+    pendingSeriesStartRef.current = false;
+    void startGame(true);
+  // startGame intentionally reads the freshly rendered route state.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [seriesMode, seriesWeekIndex, routeSeed]);
+
   return (
     <main className="shell">
       <section className="game-frame" aria-label="Crestbound platform game starring Sunny">
@@ -1200,11 +1227,11 @@ export default function Home() {
                 </picture>
               </div>
               <div className="home-dashboard">
-                <div className={isSeries ? 'daily-course series-course' : 'daily-course'}><span>{isSeries && activeSeries ? `SERIES ROUTE · WEEK ${activeSeries.weekIndex + 1}/${activeSeries.series.weeks.length}` : 'TODAY\'S SEEDED RUN'}</span><b>{course.name}</b><em>{isSeries && activeSeries ? `DECLARATIONS · ${activeSeries.week.title}` : `TWIST · ${modifier.name}`}</em><div className="daily-challenge"><strong>{isSeries ? `WEEKLY GOAL · ${objective.name}` : `CHALLENGE · ${objective.name}`}</strong><small>{objectiveDescription}</small></div><div className="daily-return"><strong>{isSeries ? 'LIMITED SERIES ROUTE' : streak > 0 ? `${streak} DAY STREAK` : 'FINISH TO START A STREAK'}</strong><small>{isSeries ? 'NEW MESSAGE + ROUTE EVERY SUNDAY' : `NEW ROUTE IN ${dailyReset}`}</small></div></div>
-                <button className="play-button" type="button" disabled={runStartState === 'connecting'} onClick={() => void startGame(true)}>{runStartState === 'connecting' ? 'Connecting Ranked Run…' : isSeries ? 'Play Series Route' : 'Play Today\'s Run'} {runStartState !== 'connecting' && <span aria-hidden="true">▶</span>}</button>
+                <div className="daily-course"><span>TODAY&apos;S SEEDED RUN</span><b>{dailyCourse.name}</b><em>TWIST · {dailyModifier.name}</em><div className="daily-challenge"><strong>CHALLENGE · {dailyObjectiveSpecs[dailyObjectiveId].name}</strong><small>{dailyObjectiveSpecs[dailyObjectiveId].description}</small></div><div className="daily-return"><strong>{streak > 0 ? `${streak} DAY STREAK` : 'FINISH TO START A STREAK'}</strong><small>NEW ROUTE IN {dailyReset}</small></div></div>
+                <button className="play-button" type="button" disabled={runStartState === 'connecting'} onClick={() => void startGame(true)}>{runStartState === 'connecting' ? 'Connecting Ranked Run…' : 'Play Today\'s Run'} {runStartState !== 'connecting' && <span aria-hidden="true">▶</span>}</button>
                 {runStartState === 'error' && <p className="run-start-error" role="alert"><b>RUN NOT STARTED</b><span>{runStartError}</span></p>}
-                {isSeries && activeSeries ? <div className="daily-glance series-glance"><span>{seriesCompletions} SUNCRESTERS COMPLETED THIS WEEK</span><b>{completedSeriesWeeks.length}/{activeSeries.series.weeks.length} SERIES ROUTES COMPLETE</b><div className="community-progress"><div><span>THIS WEEK&apos;S DECLARATION</span><b>{activeSeries.week.title}</b></div><progress aria-label={`${completedSeriesWeeks.length} of ${activeSeries.series.weeks.length} series routes completed`} max={activeSeries.series.weeks.length} value={completedSeriesWeeks.length} /><small>THE MESSAGE AND NEXT ROUTE ARRIVE SUNDAY</small></div></div> : <div className="daily-glance"><span>FASTEST TIME WINS TODAY</span><b>{entries[0] ? `#1 ${entries[0].name} · ${formatTime(entries[0].timeMs / 1000)} · ${community.players} ${community.players === 1 ? 'RUNNER' : 'RUNNERS'}` : 'BE THE FIRST FINISHER'}</b><div className="community-progress"><div><span>LIGHT BUILDS THE COMMUNITY GOAL</span><b>{community.lights.toLocaleString()} / {community.goal.toLocaleString()}</b></div><progress aria-label={`${community.lights} of ${community.goal} community lights collected today`} max={community.goal} value={Math.min(community.lights, community.goal)} /><small>{community.lights >= community.goal ? 'TODAY\'S GOAL REACHED — KEEP IT GLOWING' : `${(community.goal - community.lights).toLocaleString()} LIGHTS TO TODAY'S GOAL`}</small></div></div>}
-                <div className="home-links"><button type="button" onClick={() => { openHomePanel('leaderboard'); track('leaderboard_open'); }}>Leaderboard</button><button type="button" onClick={() => { openHomePanel('series'); track('series_open'); }}>Series Routes</button><button type="button" onClick={() => openHomePanel('help')}>How to Play</button></div>
+                <div className="daily-glance"><span>FASTEST TIME WINS TODAY</span><b>{entries[0] ? `#1 ${entries[0].name} · ${formatTime(entries[0].timeMs / 1000)} · ${community.players} ${community.players === 1 ? 'RUNNER' : 'RUNNERS'}` : 'BE THE FIRST FINISHER'}</b><div className="community-progress"><div><span>LIGHT BUILDS THE COMMUNITY GOAL</span><b>{community.lights.toLocaleString()} / {community.goal.toLocaleString()}</b></div><progress aria-label={`${community.lights} of ${community.goal} community lights collected today`} max={community.goal} value={Math.min(community.lights, community.goal)} /><small>{community.lights >= community.goal ? 'TODAY\'S GOAL REACHED — KEEP IT GLOWING' : `${(community.goal - community.lights).toLocaleString()} LIGHTS TO TODAY'S GOAL`}</small></div></div>
+                <div className="home-links"><button type="button" onClick={() => { openHomePanel('leaderboard'); track('leaderboard_open'); }}>Leaderboard</button><button className="series-routes-link" type="button" onClick={() => { setSeriesWeekIndex(activeSeries?.weekIndex ?? 0); openHomePanel('series'); track('series_open'); }}><strong>Series Routes</strong><small>Declarations · New weekly route</small></button><button type="button" onClick={() => openHomePanel('help')}>How to Play</button></div>
               </div>
             </div>
             {homePanel === 'leaderboard' && <aside ref={homePanelRef} className="leaderboard home-panel" role="dialog" aria-modal="true" aria-labelledby="leaderboard-title" tabIndex={-1}>
@@ -1240,8 +1267,7 @@ export default function Home() {
             {homePanel === 'series' && <aside ref={homePanelRef} className="course-picker series-picker home-panel" role="dialog" aria-modal="true" aria-labelledby="series-title" tabIndex={-1}>
               <button className="panel-dismiss" type="button" aria-label="Close Series Routes" onClick={closeHomePanel}>X</button>
               <p className="kicker">NOW AT SUNCREST</p><h2 id="series-title">Series Routes</h2>
-              {activeSeries ? <><section className="series-feature"><div className="series-wordmark"><small>TAKE A STAND</small><b>DECLARATIONS</b></div><p>{seriesMessage?.description || activeSeries.series.description}</p><div className="series-week"><span>THIS WEEK · {seriesMessage?.title || activeSeries.week.title}</span><b>{activeSeries.week.routeName}</b>{seriesMessage?.speaker && <small>{seriesMessage.speaker}</small>}</div><div className="series-week-dots" aria-label={`${completedSeriesWeeks.length} of ${activeSeries.series.weeks.length} routes completed`}>{activeSeries.series.weeks.map((week, index) => <i className={completedSeriesWeeks.includes(week.id) ? 'complete' : index === activeSeries.weekIndex ? 'current' : ''} key={week.id}>{index + 1}</i>)}</div></section><button className="series-play" type="button" onClick={() => { setSeriesMode(true); closeHomePanel(); }}>Play This Week&apos;s Route ▶</button><div className="series-resources"><a className="message-link" href={seriesMessage?.url || activeSeries.series.messageUrl} target="_blank" rel="noreferrer" onClick={() => track('message_open')}>{seriesMessage ? "Watch This Week's Message ↗" : 'Message Details ↗'}</a>{seriesMessage?.discussionGuideUrl && <a href={seriesMessage.discussionGuideUrl} target="_blank" rel="noreferrer">Discussion Guide ↗</a>}{seriesMessage?.readingGuideUrl && <a href={seriesMessage.readingGuideUrl} target="_blank" rel="noreferrer">Reading Guide ↗</a>}</div>{isSeries && <button className="today-course" type="button" onClick={() => { setSeriesMode(false); closeHomePanel(); }}>Return to Today&apos;s Run</button>}</> : <p>No Series Route is active today. The daily Crestbound route is still ready to run.</p>}
-              <section className="upcoming-series"><h3>Coming to Series Routes</h3>{upcomingSeries.map((item) => <div key={item.name}><b>{item.name}</b><span>{new Date(`${item.startsOn}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span></div>)}</section>
+              {activeSeries && seriesWeek ? <><section className="series-feature"><div className="series-wordmark"><small>TAKE A STAND</small><b>DECLARATIONS</b></div><p>{seriesMessage?.description || activeSeries.series.description}</p><div className="series-week"><span>{seriesWeekIndex === activeSeries.weekIndex ? 'THIS WEEK' : `WEEK ${seriesWeekIndex + 1} ARCHIVE`} · {seriesMessage?.title || seriesWeek.title}</span><b>{seriesWeek.routeName}</b>{seriesMessage?.speaker && <small>{seriesMessage.speaker}</small>}</div><div className="series-week-dots" aria-label={`${completedSeriesWeeks.length} of ${activeSeries.series.weeks.length} routes completed`}>{activeSeries.series.weeks.map((week, index) => { const locked = index > activeSeries.weekIndex; const state = [completedSeriesWeeks.includes(week.id) ? 'complete' : '', index === activeSeries.weekIndex ? 'current' : '', index === seriesWeekIndex ? 'selected' : ''].filter(Boolean).join(' '); return <button type="button" className={state} disabled={locked} aria-label={locked ? `Week ${index + 1} unlocks ${week.sunday}` : `Select week ${index + 1}: ${week.title}`} aria-pressed={index === seriesWeekIndex} onClick={() => setSeriesWeekIndex(index)} key={week.id}>{locked ? '—' : index + 1}</button>; })}</div></section><button className="series-play" type="button" onClick={() => { pendingSeriesStartRef.current = true; setSeriesMode(true); closeHomePanel(); }}>Play {seriesWeekIndex === activeSeries.weekIndex ? 'This Week' : `Week ${seriesWeekIndex + 1}`} ▶</button><div className="series-resources"><a className="message-link" href={seriesMessage?.url || activeSeries.series.messageUrl} target="_blank" rel="noreferrer" onClick={() => track('message_open')}>{seriesMessage ? "Watch This Week's Message ↗" : 'Message Details ↗'}</a>{seriesMessage?.discussionGuideUrl && <a href={seriesMessage.discussionGuideUrl} target="_blank" rel="noreferrer">Discussion Guide ↗</a>}{seriesMessage?.readingGuideUrl && <a href={seriesMessage.readingGuideUrl} target="_blank" rel="noreferrer">Reading Guide ↗</a>}</div></> : <p>No Series Route is active today. The daily Crestbound route is still ready to run.</p>}
               <button className="panel-close" type="button" onClick={closeHomePanel}>Close</button>
             </aside>}
           </div>
