@@ -585,7 +585,10 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 @media (orientation: landscape) {
   .sunny-cover-character {
     display: none;
+    animation: none;
   }
+  .sunny-cover-sprite,
+  .sunny-cover-name { animation: none; }
 }
 .home-dashboard {
   position: absolute;
@@ -1071,6 +1074,53 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .home-dashboard .daily-glance .community-progress > div { font-size: 9px; }
   .home-dashboard .home-links { gap: 10px; }
   .home-dashboard .home-links button { min-height: 46px; font-size: 11px; }
+}
+
+/* Landscape is the compact play menu, not a cropped version of the cover. */
+@media (orientation: landscape) {
+  .home-hero {
+    height: 100%;
+    display: block;
+  }
+  .home-cover { display: none; }
+  .home-dashboard {
+    position: static;
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    grid-template-columns: minmax(210px, .85fr) minmax(290px, 1.1fr) minmax(250px, 1fr);
+    grid-template-rows: clamp(112px, 34vh, 150px) clamp(60px, 18vh, 80px);
+    align-content: center;
+    gap: clamp(10px, 3vh, 18px) clamp(14px, 2.5vw, 26px);
+    padding: max(18px, env(safe-area-inset-top)) max(28px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(28px, env(safe-area-inset-left));
+    border-top: 0;
+  }
+  .home-dashboard .daily-course,
+  .home-dashboard .daily-glance,
+  .home-dashboard .play-button {
+    height: 100%;
+    min-height: 0;
+  }
+  .home-dashboard .home-links,
+  .home-dashboard .home-links button { height: 100%; }
+  .home-dashboard .daily-course span { font-size: 11px; }
+  .home-dashboard .daily-course b { font-size: 16px; }
+  .home-dashboard .daily-course em { font-size: 11px; }
+  .home-dashboard .play-button { font-size: 15px; }
+  .home-dashboard .daily-glance { font-size: 12px; }
+  .home-dashboard .home-social-stats small { font-size: 9px; }
+  .home-dashboard .home-social-stats b { font-size: 11px; }
+  .home-dashboard .daily-glance .community-progress > div { font-size: 10px; }
+  .home-dashboard .home-links button { font-size: 12px; }
+  .home-dashboard .series-routes-link strong { font-size: 13px; }
+  .home-dashboard .series-routes-link small { font-size: 9px; }
+}
+
+/* Re-entering portrait restarts both the motion path and sprite frames. */
+@media (orientation: portrait) {
+  .sunny-cover-character { animation: sunny-cover-path 5.8s linear 1 both, sunny-cover-layer 5.8s steps(1, end) 1 both; }
+  .sunny-cover-sprite { animation: sunny-cover-frames 5.8s steps(1, end) 1 both, sunny-cover-body 5.8s linear 1 both; }
+  .sunny-cover-name { animation: sunny-cover-name-pop 5.8s cubic-bezier(.18, .82, .22, 1) 1 both; }
 }
 
 @media (prefers-reduced-motion: reduce) {
