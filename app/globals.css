@@ -1092,7 +1092,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
     width: 100%;
     height: 100%;
     min-height: 100%;
-    grid-template-columns: minmax(210px, .85fr) minmax(290px, 1.1fr) minmax(250px, 1fr);
+    grid-template-columns: minmax(0, .85fr) minmax(0, 1.1fr) minmax(0, 1fr);
     grid-template-rows: clamp(30px, 8vh, 52px) clamp(112px, 34vh, 150px) clamp(60px, 18vh, 80px);
     align-content: center;
     gap: clamp(10px, 3vh, 18px) clamp(14px, 2.5vw, 26px);
@@ -1113,6 +1113,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
     letter-spacing: .12em;
     text-shadow: 3px 3px 0 #020708;
   }
+  .home-dashboard > * { min-width: 0; }
   .home-dashboard .daily-course,
   .home-dashboard .daily-glance,
   .home-dashboard .play-button {
@@ -1138,6 +1139,37 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .home-dashboard .home-links button { font-size: 12px; }
   .home-dashboard .series-routes-link strong { font-size: 13px; }
   .home-dashboard .series-routes-link small { font-size: 9px; }
+}
+
+@media (max-width: 760px) and (orientation: landscape) {
+  .home-dashboard {
+    grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr);
+    grid-template-rows: 28px minmax(104px, 30vh) 58px 56px;
+    gap: 8px 12px;
+    padding: max(12px, env(safe-area-inset-top)) max(22px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(22px, env(safe-area-inset-left));
+  }
+  .home-dashboard::before { grid-row: 1; font-size: 11px; }
+  .home-dashboard .daily-course { grid-column: 1; grid-row: 2; }
+  .home-dashboard .play-button { grid-column: 2; grid-row: 2; }
+  .home-dashboard .daily-glance {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+    align-items: center;
+    gap: 12px;
+    padding-block: 6px;
+  }
+  .home-dashboard .daily-glance .community-progress {
+    margin: 0;
+    padding: 0 0 0 12px;
+    border-top: 0;
+    border-left: 2px solid #17444b;
+  }
+  .home-dashboard .home-links { grid-column: 1 / -1; grid-row: 4; }
+  .home-dashboard .daily-course span { font-size: 9px; }
+  .home-dashboard .daily-course b { font-size: 14px; }
+  .home-dashboard .daily-course em { font-size: 9px; }
+  .home-dashboard .play-button { font-size: 13px; }
 }
 
 /* Re-entering portrait restarts both the motion path and sprite frames. */
