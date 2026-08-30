@@ -254,3 +254,13 @@ test('production hosting migrations include Crest Score and every-run Community 
   assert.match(migration, /CREATE TABLE IF NOT EXISTS community_light_contributions/);
   assert.match(migration, /contribution_id TEXT PRIMARY KEY/);
 });
+
+test('post-run layouts keep Daily and Series results distinct and landscape-safe', () => {
+  const game = readFileSync(new URL('./crestbound-game.tsx', import.meta.url), 'utf8');
+  const styles = readFileSync(new URL('./globals.css', import.meta.url), 'utf8');
+  assert.match(game, /isSeries \? 'series-win' : 'daily-win'/);
+  assert.match(game, /RALLY POINTS/);
+  assert.match(game, /SERIES RUN RECORDED/);
+  assert.match(styles, /grid-template-columns: minmax\(0, 1\.08fr\) minmax\(300px, \.92fr\)/);
+  assert.match(styles, /\.win-modal \.result-actions \{[\s\S]*?grid-column: 1 \/ -1/);
+});

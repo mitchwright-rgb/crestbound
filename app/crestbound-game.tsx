@@ -1390,7 +1390,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
         {screen === 'paused' && <div ref={gameModalRef} className="game-modal" role="dialog" aria-modal="true" aria-labelledby="pause-title" tabIndex={-1}><p>RUN PAUSED</p><h2 id="pause-title">Catch your breath.</h2><button type="button" onClick={togglePause}>Resume</button><button className="secondary" type="button" onClick={() => { track('quit', { checkpoint: hud.checkpoint, progress: hud.progress, elapsedMs: hud.time * 1000 }); setGameScreen('title'); }}>Quit Run</button></div>}
         {screen === 'over' && <div ref={gameModalRef} className="game-modal" role="dialog" aria-modal="true" aria-labelledby="over-title" tabIndex={-1}><p>LIGHT LOST</p><h2 id="over-title">That route got you.</h2><p>Use the high paths, save your dash, and hit enemies from above.</p><button type="button" onClick={() => void startGame()}>Run It Back</button><button className="secondary" type="button" onClick={() => { setGameScreen('title'); if (isSeries) openHomePanel('series'); }}>{isSeries ? 'Back to Series Routes' : 'Back to Home'}</button></div>}
         {screen === 'won' && (
-          <div ref={gameModalRef} className="game-modal win-modal" role="dialog" aria-modal="true" aria-labelledby="win-title" tabIndex={-1}>
+          <div ref={gameModalRef} className={`game-modal win-modal ${isSeries ? 'series-win' : 'daily-win'}`} role="dialog" aria-modal="true" aria-labelledby="win-title" tabIndex={-1}>
             <p>{isSeries ? `DECLARATIONS ${resultHud.signatureCount}/3` : `LIGHT RESTORED // ${earnedMedal} MEDAL`}</p><h2 id="win-title">Route cleared.</h2>
             <div className="score-tally" aria-label={`Crest Score ${(scoreResult?.score ?? localScore.total).toLocaleString()}`}>
               <span><small>ROUTE COMPLETE</small><b>+{(scoreResult?.breakdown.finish ?? localScore.finish).toLocaleString()}</b></span>
@@ -1399,9 +1399,11 @@ export default function Home({ initialDay }: { initialDay: string }) {
               <span><small>{isSeries ? `DECLARATIONS · ${resultHud.signatureCount}/3` : `${earnedMedal} CHALLENGE`}</small><b>+{(scoreResult?.breakdown.bonus ?? localScore.bonus).toLocaleString()}</b></span>
               <strong><small>CREST SCORE</small><b>{(scoreResult?.score ?? localScore.total).toLocaleString()}</b></strong>
             </div>
-            <div className="result-priority"><b>+{resultHud.sparks} COMMUNITY LIGHT</b><span>Every verified finish helps Suncrest reach this week&apos;s shared goal.</span></div>
-            <div className={`challenge-result ${earnedMedal.toLowerCase()}`}><b>{objective.name}</b><span>{objectiveResult}</span></div>
-            {isSeries ? <div className="rank-callout">DECLARATION MADE // {seriesCompletions} SUNCRESTERS THIS WEEK</div> : submitState !== 'saved' ? <form className="score-form" onSubmit={submitRun} noValidate>
+            <div className="result-priority"><b>+{resultHud.sparks} COMMUNITY LIGHT</b><span>Every verified finish counts toward Suncrest&apos;s weekly goal.</span></div>
+            {isSeries
+              ? <div className="challenge-result series-signature"><b>RALLY POINTS</b><span>{resultHud.signatureCount}/3 · {resultHud.signatureCount === 3 ? 'ALL HAZARDS CLEARED' : 'ROUTE CLEARED'}</span></div>
+              : <div className={`challenge-result ${earnedMedal.toLowerCase()}`}><b>{objective.name}</b><span>{objectiveResult}</span></div>}
+            {isSeries ? <div className="rank-callout">SERIES RUN RECORDED · {seriesCompletions} {seriesCompletions === 1 ? 'FINISHER' : 'FINISHERS'} THIS WEEK</div> : submitState !== 'saved' ? <form className="score-form" onSubmit={submitRun} noValidate>
               <label htmlFor="nickname">POST TO TODAY&apos;S BOARD</label>
               <div><input id="nickname" value={nickname} onChange={(event) => setNickname(event.target.value)} minLength={2} maxLength={12} placeholder="NICKNAME" autoComplete="nickname" autoCapitalize="characters" spellCheck={false} /><button type="submit" disabled={submitState === 'saving' || !runIdRef.current}>{submitState === 'saving' ? 'SAVING...' : 'POST RUN'}</button></div>
               <small>Family-friendly nicknames only. Don&apos;t use your real name.{!runIdRef.current ? ' Online posting is unavailable for this run.' : ''}</small>
