@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { chicagoKeys, database } from '@/lib/db';
+import { chicagoKeys, database, weeklyCommunityLight } from '@/lib/db';
 import { checkNickname, publicNickname } from '@/lib/nickname';
 import { rateLimit } from '@/lib/rate-limit';
 import { activeSeriesForDay, seriesWeekSeed } from '@/app/series-routes';
@@ -108,7 +108,6 @@ export async function POST(request: Request) {
   const summary = await db.prepare('SELECT COUNT(*) completions FROM series_completions WHERE series_id = ? AND week_id = ?')
     .bind(seriesId, weekId).first<{ completions: number }>();
   const entries = await seriesLeaderboard(db, seriesId, weekId, playerId);
-  const community = await db.prepare(`SELECT COALESCE(SUM(lights), 0) lights, COUNT(DISTINCT player_id) players FROM community_light_contributions WHERE week_key = ?`)
-    .bind(keys.week).first<{ lights: number; players: number }>();
+  const community = await weeklyCommunityLight(db, keys.week);
   return NextResponse.json({ ok: true, score: breakdown.total, breakdown, completions: summary?.completions ?? 1, entries, community: { lights: community?.lights ?? lights, players: community?.players ?? 1, goal: 2500, contribution: lights } });
 }

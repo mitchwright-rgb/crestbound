@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { chicagoKeys, database } from '@/lib/db';
+import { chicagoKeys, database, weeklyCommunityLight } from '@/lib/db';
 import { checkNickname } from '@/lib/nickname';
 import { rateLimit } from '@/lib/rate-limit';
 import { dailyChallengeIdForDay } from '@/lib/daily-challenge';
@@ -95,7 +95,6 @@ export async function POST(request: Request) {
   ) SELECT COUNT(*) + 1 AS rank FROM player_runs
     WHERE player_run_rank = 1 AND (crest_score > ? OR (crest_score = ? AND score_ms < ?))`
   ).bind(keys.day, courseId, challengeId, breakdown.total, breakdown.total, scoreMs).first<{ rank: number }>();
-  const community = await db.prepare(`SELECT COALESCE(SUM(lights), 0) lights, COUNT(DISTINCT player_id) players
-    FROM community_light_contributions WHERE week_key = ?`).bind(keys.week).first<{ lights: number; players: number }>();
+  const community = await weeklyCommunityLight(db, keys.week);
   return NextResponse.json({ ok: true, rank: rank?.rank ?? 1, score: breakdown.total, breakdown, medal, community: { lights: community?.lights ?? sparks, players: community?.players ?? 1, goal: 2500, contribution: sparks } });
 }

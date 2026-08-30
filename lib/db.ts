@@ -26,3 +26,21 @@ export function chicagoKeys(now = new Date()) {
   sunday.setUTCDate(local.getUTCDate() - local.getUTCDay());
   return { day, week: sunday.toISOString().slice(0, 10) };
 }
+
+export async function weeklyCommunityLight(db: D1Database, weekKey: string) {
+  return db.prepare(`WITH earned_light AS (
+    SELECT player_id, lights
+    FROM community_light_contributions
+    WHERE week_key = ?
+    UNION ALL
+    SELECT legacy.player_id, legacy.sparks lights
+    FROM crest_scores legacy
+    WHERE legacy.week_key = ?
+      AND NOT EXISTS (
+        SELECT 1 FROM community_light_contributions contribution
+        WHERE contribution.source = 'daily' AND contribution.source_id = legacy.run_id
+      )
+  )
+  SELECT COUNT(DISTINCT player_id) players, COALESCE(SUM(lights), 0) lights
+  FROM earned_light`).bind(weekKey, weekKey).first<{ players: number; lights: number }>();
+}

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { chicagoKeys, database } from '@/lib/db';
+import { chicagoKeys, database, weeklyCommunityLight } from '@/lib/db';
 import { publicNickname } from '@/lib/nickname';
 import { dailyChallengeIdForDay } from '@/lib/daily-challenge';
 
@@ -68,8 +68,7 @@ export async function GET(request: Request) {
   const ranked = dailyRanked.results;
   const player = ranked.find((entry) => entry.player_id === playerId);
   const nearby = player ? ranked.filter((entry) => Math.abs(Number(entry.rank) - Number(player.rank)) <= 2) : [];
-  const summary = await db.prepare(`SELECT COUNT(DISTINCT player_id) players, COALESCE(SUM(lights), 0) lights
-    FROM community_light_contributions WHERE week_key = ?`).bind(keys.week).first<{ players: number; lights: number }>();
+  const summary = await weeklyCommunityLight(db, keys.week);
   const recent = await db.prepare(`SELECT COALESCE(players.nickname, crest_scores.player_name) player_name
     FROM crest_scores LEFT JOIN players ON players.player_id = crest_scores.player_id
     WHERE crest_scores.day_key = ? AND crest_scores.course_id = ? AND crest_scores.challenge_id = ?
