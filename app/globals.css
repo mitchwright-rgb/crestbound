@@ -1570,3 +1570,84 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .series-results-panel .series-results li { min-height: 0; padding-block: 4px; font-size: 10px; }
   .series-results-panel > .panel-close { display: none; }
 }
+
+/* Series Routes product hierarchy: make the extra content, exclusive mechanic,
+   Suncrest message connection, and return path explicit at every step. */
+.home-dashboard .home-links .series-routes-link {
+  min-height: 50px;
+  border-width: 4px;
+  box-shadow: 5px 5px 0 #ef4638;
+}
+.home-dashboard .series-routes-link strong { color: #171b1c; font-size: 12px; }
+.home-dashboard .series-routes-link small { color: #71362d; font-size: 8px; }
+.series-mechanic {
+  display: grid;
+  gap: 4px;
+  margin-top: 5px;
+  padding: 9px 10px;
+  border: 3px solid #171b1c;
+  color: #fff8e9;
+  background: #171b1c;
+  box-shadow: 4px 4px 0 rgb(239 70 56 / 55%);
+}
+.series-week .series-mechanic span { color: #ff8767 !important; font-size: 8px !important; }
+.series-week .series-mechanic b { color: #f8e45c !important; font-size: 10px !important; line-height: 1.35 !important; }
+.series-week .series-mechanic small { color: #fff8e9; font-size: 10px; line-height: 1.35; }
+.series-resources .message-link {
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 11px;
+  place-items: center stretch;
+  min-height: 66px;
+  padding: 9px 12px;
+  border-width: 4px;
+  color: #171b1c;
+  background: #f8e45c;
+  box-shadow: 5px 5px 0 #ef4638;
+  text-align: left;
+}
+.message-link .message-icon {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border: 3px solid #171b1c;
+  color: #f8e45c;
+  background: #ef4638;
+}
+.message-link > span:last-child { display: grid; gap: 4px; }
+.message-link strong { color: #171b1c; font-size: 11px; line-height: 1.25; }
+.message-link small { color: #71362d; font: 10px/1.3 var(--font-title-pixel), monospace; text-transform: none; }
+.hud-stats .series-status { border-color: #8e3c31; background: rgb(239 70 56 / 12%); }
+.hud-stats .series-status b { color: #f8e45c; }
+.hud-stats .series-status small { color: #ff9a82; }
+.result-actions .message-result-cta {
+  border-color: #171b1c;
+  color: #171b1c;
+  background: #f8e45c;
+  box-shadow: inset 0 -5px 0 #ef4638, 4px 4px 0 #020708;
+}
+.result-actions .series-back-action { border-color: #ef4638; color: #ff9a82; }
+
+@media (max-width: 700px) and (orientation: portrait) {
+  .home-dashboard .home-links .series-routes-link { min-height: 58px; }
+  .home-dashboard .series-routes-link strong { font-size: 13px; }
+  .home-dashboard .series-routes-link small { font-size: 9px; }
+  .series-mechanic { padding: 9px; }
+  .series-week .series-mechanic b { font-size: 11px !important; }
+  .series-week .series-mechanic small { font-size: 11px; }
+}
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .home-dashboard .home-links .series-routes-link { min-height: 0; }
+  .home-dashboard .series-routes-link strong { font-size: 11px; }
+  .home-dashboard .series-routes-link small { font-size: 8px; }
+  .series-picker:not(.series-results-panel) .series-week { align-content: start; overflow: hidden; }
+  .series-picker:not(.series-results-panel) .series-mechanic { gap: 2px; margin-top: 4px; padding: 6px 7px; box-shadow: 3px 3px 0 rgb(239 70 56 / 50%); }
+  .series-picker:not(.series-results-panel) .series-week .series-mechanic span { font-size: 7px !important; }
+  .series-picker:not(.series-results-panel) .series-week .series-mechanic b { font-size: 9px !important; }
+  .series-picker:not(.series-results-panel) .series-week .series-mechanic small { font-size: 9px; }
+  .series-picker:not(.series-results-panel) > .series-resources .message-link { grid-template-columns: 34px minmax(0, 1fr); gap: 8px; padding: 7px 9px; }
+  .series-picker:not(.series-results-panel) .message-link .message-icon { width: 30px; height: 30px; }
+  .series-picker:not(.series-results-panel) .message-link strong { font-size: 9px; }
+  .series-picker:not(.series-results-panel) .message-link small { font-size: 9px; }
+}

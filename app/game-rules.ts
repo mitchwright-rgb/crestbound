@@ -145,6 +145,10 @@ export function resolveDamage(lives: number, shieldSeconds: number) {
   return { lives: Math.max(0, lives - 1), shieldSeconds: 0, absorbed: false };
 }
 
+export function seriesBeaconReached(playerX: number, playerWidth: number, beaconX: number) {
+  return playerX + playerWidth / 2 >= beaconX;
+}
+
 export function chicagoDayKey(date = new Date()) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(date);
 }

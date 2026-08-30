@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { soundSources } from './audio-assets.ts';
-import { challengeMedal, chicagoDayKey, collectLightPower, crestScoreBreakdown, dailyObjectiveForSerial, dashVelocity, formatDailyReset, gravityForModifier, horizontalSpeedLimit, jumpReleaseGravity, jumpVelocityForModifier, lightHuntTargets, millisecondsUntilNextChicagoDay, musicTrackForCourse, musicTrackForSeries, objectiveResultLabel, resetRunTiming, resolveDamage, runStorageKey, tailwindAcceleration, touchInputFromControls } from './game-rules.ts';
+import { challengeMedal, chicagoDayKey, collectLightPower, crestScoreBreakdown, dailyObjectiveForSerial, dashVelocity, formatDailyReset, gravityForModifier, horizontalSpeedLimit, jumpReleaseGravity, jumpVelocityForModifier, lightHuntTargets, millisecondsUntilNextChicagoDay, musicTrackForCourse, musicTrackForSeries, objectiveResultLabel, resetRunTiming, resolveDamage, runStorageKey, seriesBeaconReached, tailwindAcceleration, touchInputFromControls } from './game-rules.ts';
 import { buildSeededCourse, checkpointHasClearLanding, checkpointIsSupported, courseSignature, maximumGroundGap } from './course-generator.ts';
 import { buildDeclarationsCourse } from './series-course-generator.ts';
 import { activeSeriesForDay, completedSeriesWeekIds, declarationsSeries, seriesWeekSeed } from './series-routes.ts';
@@ -35,6 +35,12 @@ test('Crest Score rewards finishing, pace, normalized Light, and the route chall
   assert.ok(crestScoreBreakdown({ time: 40, sparks: 60, total: 60, medal: 'GOLD' }).total > crestScoreBreakdown({ time: 40, sparks: 30, total: 60, medal: 'GOLD' }).total);
   assert.ok(crestScoreBreakdown({ time: 35, sparks: 30, total: 60, medal: 'GOLD' }).total > crestScoreBreakdown({ time: 55, sparks: 30, total: 60, medal: 'GOLD' }).total);
   assert.equal(crestScoreBreakdown({ time: 40, sparks: 30, total: 60, signatureCount: 3 }).bonus, 200);
+});
+
+test('Series Declaration Beacons activate reliably across every route height', () => {
+  assert.equal(seriesBeaconReached(920, 48, 1000), false);
+  assert.equal(seriesBeaconReached(976, 48, 1000), true);
+  assert.equal(seriesBeaconReached(1220, 48, 1000), true);
 });
 
 test('Tailwind strongly accelerates right, drifts while coasting, and resists leftward recovery', () => {
@@ -271,12 +277,17 @@ test('post-run layouts keep Daily and Series results distinct and landscape-safe
   const game = readFileSync(new URL('./crestbound-game.tsx', import.meta.url), 'utf8');
   const styles = readFileSync(new URL('./globals.css', import.meta.url), 'utf8');
   assert.match(game, /isSeries \? 'series-win' : 'daily-win'/);
-  assert.match(game, /RALLY POINTS/);
+  assert.match(game, /DECLARATION BEACONS/);
   assert.match(game, /SERIES RUN RECORDED/);
   assert.match(game, /NEW PERSONAL BEST/);
   assert.match(game, /POINTS FROM YOUR BEST/);
   assert.match(game, /BADGE EARNED/);
   assert.match(game, /series-completion-progress/);
+  assert.match(game, /ACTIVATE 3 DECLARATION BEACONS/);
+  assert.match(game, /series-status/);
+  assert.match(game, /Back to Series Routes/);
+  assert.match(game, /Watch This Week&apos;s Message/);
+  assert.match(game, /crestbound-series-mechanic-seen-\$\{seriesWeek\?\.id/);
   assert.match(game, /Highest score wins\./);
   assert.match(game, /track\('scoring_learned'/);
   assert.match(game, /track\('personal_best'/);
@@ -286,4 +297,6 @@ test('post-run layouts keep Daily and Series results distinct and landscape-safe
   assert.match(styles, /\.win-modal \.result-actions \{[\s\S]*?grid-column: 1 \/ -1/);
   assert.match(styles, /\.score-tally\.new-best/);
   assert.match(styles, /\.series-completion-progress/);
+  assert.match(styles, /\.series-mechanic/);
+  assert.match(styles, /\.message-result-cta/);
 });
