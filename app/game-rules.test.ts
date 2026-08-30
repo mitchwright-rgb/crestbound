@@ -280,6 +280,8 @@ test('post-run layouts keep Daily and Series results distinct and landscape-safe
   assert.match(game, /Highest score wins\./);
   assert.match(game, /track\('scoring_learned'/);
   assert.match(game, /track\('personal_best'/);
+  assert.match(game, /back-home-action[\s\S]*?Back to Home/);
+  assert.match(game, /!isSeries && <button className="secondary"[\s\S]*?View Leaderboard/);
   assert.match(styles, /grid-template-columns: minmax\(0, 1\.08fr\) minmax\(300px, \.92fr\)/);
   assert.match(styles, /\.win-modal \.result-actions \{[\s\S]*?grid-column: 1 \/ -1/);
   assert.match(styles, /\.score-tally\.new-best/);

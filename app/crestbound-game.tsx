@@ -1457,7 +1457,8 @@ export default function Home({ initialDay }: { initialDay: string }) {
               {activeSeries && !isSeries && <button className="series-result-cta" type="button" onClick={() => { setGameScreen('title'); setSeriesWeekIndex(activeSeries.weekIndex); openHomePanel('series'); }}>Run a Series Route</button>}
               {isSeries && <button className="series-result-cta" type="button" onClick={() => { setSeriesMode(false); setGameScreen('title'); }}>Run Today&apos;s Route</button>}
               {isSeries && seriesMessage && <button className="secondary" type="button" onClick={() => { setGameScreen('title'); setSeriesWeekIndex(seriesWeekIndex); openSeriesResource(seriesMessage.title, seriesMessage.appUrl || seriesMessage.url); }}>Open This Week&apos;s Message</button>}
-              <button className="secondary" type="button" onClick={() => { if (isSeries) setSeriesMode(false); setGameScreen('title'); if (!isSeries) openHomePanel('leaderboard'); void loadBoard('daily'); }}>{isSeries ? 'Back to Home' : 'View Leaderboard'}</button>
+              {!isSeries && <button className="secondary" type="button" onClick={() => { setGameScreen('title'); openHomePanel('leaderboard'); void loadBoard('daily'); }}>View Leaderboard</button>}
+              <button className="secondary back-home-action" type="button" onClick={() => { setSeriesMode(false); closeHomePanel(); setGameScreen('title'); }}>Back to Home</button>
             </div>
           </div>
         )}
