@@ -1350,3 +1350,221 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .score-tally > * { opacity: 1; transform: none; animation: none; }
   .score-tally.new-best { animation: none; }
 }
+
+/* Unified phone-landscape UI: every menu uses the same full-screen rhythm. */
+@media (max-height: 560px) and (orientation: landscape) {
+  .title-screen:has(.home-panel)::after {
+    background: rgb(1 7 9 / 86%);
+    backdrop-filter: none;
+  }
+
+  .home-dashboard {
+    grid-template-columns: minmax(0, .92fr) minmax(0, 1.16fr) minmax(0, 1fr);
+    grid-template-rows: 32px minmax(150px, 46vh) 64px;
+    align-content: center;
+    gap: 12px 14px;
+    padding: max(16px, env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+  }
+  .home-dashboard::before {
+    align-self: center;
+    content: 'CRESTBOUND  //  DAILY ROUTE';
+    font-size: 13px;
+    letter-spacing: .14em;
+  }
+  .home-dashboard .daily-course,
+  .home-dashboard .play-button,
+  .home-dashboard .daily-glance {
+    min-height: 0;
+    height: 100%;
+  }
+  .home-dashboard .daily-course { padding: 14px 16px; }
+  .home-dashboard .daily-course span { padding-right: 86px; font-size: 11px; white-space: nowrap; }
+  .home-dashboard .daily-course b { font-size: 16px; }
+  .home-dashboard .daily-course em { font-size: 11px; }
+  .home-dashboard .streak-badge { top: 10px; right: 10px; font-size: 8px; }
+  .home-dashboard .play-button { padding: 12px 16px; font-size: 15px; }
+  .home-dashboard .daily-glance { padding: 12px 14px; font-size: 12px; }
+  .home-dashboard .home-social-stats small { font-size: 9px; }
+  .home-dashboard .home-social-stats b { font-size: 11px; }
+  .home-dashboard .daily-glance .community-progress > div { font-size: 10px; }
+  .home-dashboard .home-links { gap: 12px; }
+  .home-dashboard .home-links,
+  .home-dashboard .home-links button { height: 100%; }
+  .home-dashboard .home-links button { min-height: 0; padding: 8px; font-size: 11px; }
+  .home-dashboard .series-routes-link strong { font-size: 12px; }
+  .home-dashboard .series-routes-link small { font-size: 9px; }
+
+  .series-picker:not(.series-results-panel) {
+    width: min(1000px, calc(100% - 24px));
+    height: calc(100svh - 18px);
+    max-height: none;
+    grid-template-columns: minmax(0, 1.48fr) minmax(250px, .72fr);
+    grid-template-rows: 32px 66px 72px minmax(72px, 1fr);
+    gap: 8px 14px;
+    padding: 12px 14px;
+  }
+  .series-picker:not(.series-results-panel) > h2 {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    align-self: center;
+    margin: 0;
+    font-size: 19px;
+    letter-spacing: .08em;
+  }
+  .series-picker:not(.series-results-panel) > .panel-dismiss {
+    top: 10px;
+    right: 12px;
+    width: 40px;
+    height: 40px;
+  }
+  .series-picker:not(.series-results-panel) > .series-feature {
+    grid-column: 1;
+    grid-row: 2 / 5;
+    height: 100%;
+    min-height: 0;
+    grid-template-columns: minmax(0, .92fr) minmax(210px, 1.08fr);
+    grid-template-rows: auto minmax(0, 1fr) 38px 28px;
+    gap: 7px 14px;
+    padding: 11px 12px;
+    overflow: hidden;
+  }
+  .series-picker:not(.series-results-panel) .series-wordmark {
+    grid-column: 1;
+    grid-row: 1;
+    gap: 4px;
+  }
+  .series-picker:not(.series-results-panel) .series-wordmark small { padding: 4px 7px; font-size: 9px; }
+  .series-picker:not(.series-results-panel) .series-wordmark b { font-size: clamp(28px, 4.3vw, 44px) !important; }
+  .series-picker:not(.series-results-panel) .series-feature > p {
+    grid-column: 1;
+    grid-row: 2;
+    align-self: center;
+    font-size: 12px;
+    line-height: 1.35;
+  }
+  .series-picker:not(.series-results-panel) .series-week {
+    grid-column: 2;
+    grid-row: 1 / 5;
+    align-content: center;
+    min-height: 0;
+    padding: 10px 12px;
+  }
+  .series-picker:not(.series-results-panel) .series-week span { font-size: 10px !important; }
+  .series-picker:not(.series-results-panel) .series-week b { font-size: 13px !important; }
+  .series-picker:not(.series-results-panel) .series-week small { font-size: 12px; }
+  .series-picker:not(.series-results-panel) .series-week-dots {
+    grid-column: 1;
+    grid-row: 3;
+    gap: 5px !important;
+  }
+  .series-picker:not(.series-results-panel) .series-week-dots button { min-height: 34px; font-size: 10px; }
+  .series-picker:not(.series-results-panel) .series-completion-progress {
+    grid-column: 1;
+    grid-row: 4;
+    min-height: 26px;
+  }
+  .series-picker:not(.series-results-panel) .series-completion-progress span { padding: 4px 7px; font-size: 9px; }
+  .series-picker:not(.series-results-panel) > .series-play {
+    grid-column: 2;
+    grid-row: 2;
+    min-height: 0;
+    height: 100%;
+    margin: 0;
+    font-size: 12px;
+  }
+  .series-picker:not(.series-results-panel) > .series-results-button {
+    grid-column: 2;
+    grid-row: 3;
+    min-height: 0;
+    height: 100%;
+    margin: 0;
+  }
+  .series-picker:not(.series-results-panel) .series-results-button small { font-size: 9px; }
+  .series-picker:not(.series-results-panel) .series-results-button strong { font-size: 11px; }
+  .series-picker:not(.series-results-panel) .series-results-button > b { font-size: 9px; }
+  .series-picker:not(.series-results-panel) > .series-resources {
+    grid-column: 2;
+    grid-row: 4;
+    height: 100%;
+    align-content: stretch;
+    margin: 0;
+  }
+  .series-picker:not(.series-results-panel) > .series-resources .message-link {
+    min-height: 0;
+    height: 100%;
+    margin: 0;
+    font-size: 11px;
+  }
+  .series-picker:not(.series-results-panel) > .panel-close { display: none; }
+
+  .leaderboard.home-panel {
+    width: min(1000px, calc(100% - 24px));
+    height: calc(100svh - 18px);
+    max-height: none;
+    display: grid;
+    grid-template-rows: 52px 42px 28px minmax(0, 1fr) auto auto;
+    margin: 0;
+    overflow: hidden;
+    transform: translate(-50%, -50%);
+    transform-origin: center;
+    border: 4px solid #171b1c;
+    outline: 3px solid var(--teal-light);
+  }
+  .leaderboard > .panel-dismiss {
+    position: absolute;
+    top: 9px;
+    right: 11px;
+    width: 40px;
+    height: 40px;
+    margin: 0;
+  }
+  .leaderboard .board-heading {
+    min-height: 0;
+    padding: 12px 64px 10px 16px;
+    border-bottom: 2px solid #123137;
+    font-size: 17px;
+  }
+  .leaderboard .board-heading small { font-size: 10px; }
+  .leaderboard .board-tabs { min-height: 0; border-top: 0; }
+  .leaderboard .board-tabs button { min-height: 0; font-size: 10px; }
+  .leaderboard .board-legend { min-height: 0; padding: 7px 12px 5px; font-size: 9px; }
+  .leaderboard .board-list {
+    min-height: 0;
+    display: grid;
+    grid-template-rows: repeat(7, minmax(0, 1fr));
+    overflow: hidden;
+    padding: 0;
+  }
+  .leaderboard .board-list li {
+    min-height: 0;
+    padding: 3px 12px;
+    font: 11px/1.15 var(--font-pixel), monospace;
+  }
+  .leaderboard .board-list li span { font-family: var(--font-pixel), monospace; font-weight: 400; }
+  .leaderboard .nearby-rivals { min-height: 34px; padding: 8px 12px; }
+  .leaderboard .nearby-rivals b,
+  .leaderboard .nearby-rivals span { font-size: 9px; }
+  .leaderboard > p,
+  .leaderboard .recent-finishers,
+  .leaderboard > .panel-close { display: none; }
+
+  .series-results-panel.home-panel {
+    width: min(900px, calc(100% - 24px));
+    height: calc(100svh - 18px);
+    max-height: none;
+    display: grid;
+    grid-template-columns: 170px minmax(0, 1fr);
+    grid-template-rows: 42px minmax(0, 1fr);
+    gap: 10px 14px;
+    padding: 12px 14px;
+    overflow: hidden;
+  }
+  .series-results-panel > .panel-dismiss { position: absolute; top: 10px; right: 12px; width: 40px; height: 40px; margin: 0; }
+  .series-results-panel > .series-results-back { grid-column: 1; grid-row: 1; min-height: 40px; margin: 0; font-size: 10px; }
+  .series-results-panel > .kicker { grid-column: 1; grid-row: 2; align-self: start; margin: 4px 0 0; font-size: 10px; }
+  .series-results-panel > h2 { grid-column: 1; grid-row: 2; align-self: start; margin: 34px 0 0; font-size: 22px; line-height: 1.2; }
+  .series-results-panel > .series-results { grid-column: 2; grid-row: 1 / 3; min-height: 0; margin: 0; overflow: hidden; }
+  .series-results-panel .series-results ol { display: grid; grid-template-rows: repeat(7, minmax(0, 1fr)); }
+  .series-results-panel .series-results li { min-height: 0; padding-block: 4px; font-size: 10px; }
+  .series-results-panel > .panel-close { display: none; }
+}
