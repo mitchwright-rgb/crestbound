@@ -1685,8 +1685,8 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   cursor: pointer;
 }
 .how-to .help-tabs button.active { border-color: var(--gold); color: #171b1c; background: var(--gold-light); }
-.how-to .help-content { min-height: 0; display: block; margin: 0; overflow: hidden; }
-.how-to .help-content > section { min-height: 0; margin: 0; }
+.how-to .help-content { min-height: 0; display: grid; align-items: center; margin: 0; overflow: hidden; }
+.how-to .help-content > section { width: 100%; min-height: 0; margin: 0; }
 .help-play { display: grid; grid-template-rows: repeat(4, auto); align-content: start; gap: 9px; }
 .control-directory { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
 .control-directory article,
@@ -1757,7 +1757,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
     max-height: none;
     overflow: hidden;
   }
-  .how-to.home-panel { height: min(680px, calc(100dvh - 18px)); grid-template-rows: 58px 46px minmax(0, 1fr) 44px; gap: 8px; padding: 12px; }
+  .how-to.home-panel { height: min(580px, calc(100dvh - 18px)); grid-template-rows: 58px 46px minmax(0, 1fr) 44px; gap: 8px; padding: 12px; }
   .how-to .help-heading h2 { font-size: 27px; }
   .how-to .help-tabs button { font-size: 10px; }
   .control-directory { gap: 6px; }
@@ -1772,9 +1772,11 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .leaderboard.home-panel {
     display: grid;
     grid-template-rows: 56px 46px 30px minmax(0, 1fr) auto auto;
+    margin: 0;
   }
   .leaderboard .board-heading { min-height: 0; padding-right: 62px; }
-  .leaderboard .board-tabs button { min-height: 0; }
+  .leaderboard .board-tabs { min-height: 44px; }
+  .leaderboard .board-tabs button { min-height: 44px; }
   .leaderboard .board-list { min-height: 0; display: grid; grid-template-rows: repeat(7, minmax(0, 1fr)); overflow: hidden; }
   .leaderboard .board-list li { min-height: 0; padding-block: 8px 4px; }
   .leaderboard .nearby-rivals { max-height: 96px; overflow: hidden; }
@@ -1793,9 +1795,9 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .series-picker:not(.series-results-panel) .series-wordmark b { font-size: clamp(32px, 11vw, 46px) !important; }
   .series-picker:not(.series-results-panel) .series-feature > p { font-size: 12px; line-height: 1.3; }
   .series-picker:not(.series-results-panel) .series-week { padding: 8px 9px; }
-  .series-picker:not(.series-results-panel) .series-week span { font-size: 9px !important; }
-  .series-picker:not(.series-results-panel) .series-week b { font-size: 11px !important; }
-  .series-picker:not(.series-results-panel) .series-week small { font-size: 10px; }
+  .series-picker:not(.series-results-panel) .series-week span { font-size: 10px !important; }
+  .series-picker:not(.series-results-panel) .series-week b { font-size: 12px !important; }
+  .series-picker:not(.series-results-panel) .series-week small { font-size: 11px; }
   .series-picker:not(.series-results-panel) .series-mechanic { padding: 7px 8px; }
   .series-picker:not(.series-results-panel) .series-week .series-mechanic small { font-size: 10px; }
   .series-picker:not(.series-results-panel) .series-week-dots button { min-height: 34px; }
@@ -1807,7 +1809,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .series-picker:not(.series-results-panel) > .series-results-button { grid-row: 4; min-height: 58px; }
   .series-picker:not(.series-results-panel) > .series-resources { grid-row: 5; gap: 7px !important; }
   .series-picker:not(.series-results-panel) > .series-resources .message-link { min-height: 56px; }
-  .series-picker:not(.series-results-panel) > .series-resources > button:not(.message-link) { min-height: 40px; font-size: 9px; }
+  .series-picker:not(.series-results-panel) > .series-resources > button:not(.message-link) { min-height: 40px; font-size: 10px; }
   .series-picker:not(.series-results-panel) > .panel-close { grid-row: 6; width: 100%; min-height: 44px; }
 
   .series-results-panel.home-panel {
@@ -1851,7 +1853,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   }
   .how-to .help-heading { grid-column: 1; grid-row: 1; align-self: center; }
   .how-to .help-heading .kicker { display: none; }
-  .how-to .help-heading h2 { margin: 0; font-size: 18px; }
+  .how-to .help-heading h2 { margin: 0; font-size: 18px; line-height: 1.25; }
   .how-to .help-tabs { grid-column: 2; grid-row: 1; }
   .how-to .help-tabs button { min-height: 38px; }
   .how-to .help-content { grid-column: 1 / -1; grid-row: 2; }

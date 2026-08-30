@@ -315,4 +315,6 @@ test('menu guidance uses readable in-place views instead of a scrolling document
   assert.match(styles, /\.win-modal \.result-actions \{ grid-template-columns: 1fr 1fr/);
   assert.match(styles, /\.help-play \{[\s\S]*?align-content: start/);
   assert.match(styles, /\.leaderboard \.board-list li\.score-board \{ align-items: start; align-content: start/);
+  assert.match(styles, /\.leaderboard\.home-panel \{[\s\S]*?margin: 0/);
+  assert.match(styles, /\.leaderboard \.board-tabs button \{ min-height: 44px/);
 });
