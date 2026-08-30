@@ -317,4 +317,9 @@ test('menu guidance uses readable in-place views instead of a scrolling document
   assert.match(styles, /\.leaderboard \.board-list li\.score-board \{ align-items: start; align-content: start/);
   assert.match(styles, /\.leaderboard\.home-panel \{[\s\S]*?margin: 0/);
   assert.match(styles, /\.leaderboard \.board-tabs button \{ min-height: 44px/);
+  assert.match(styles, /\.leaderboard \.board-list \{ min-height: 0; display: flex; flex-direction: column/);
+  assert.match(styles, /grid-template-rows: 56px 50px 32px minmax\(0, 1fr\) auto auto auto 44px/);
+  assert.match(styles, /\.series-results-panel\.home-panel \{[\s\S]*?height: auto;[\s\S]*?grid-template-rows: 44px auto auto 44px/);
+  assert.match(styles, /\.series-results-panel \.series-results ol \{[\s\S]*?display: flex; flex-direction: column/);
+  assert.match(game, /<header><h3>Top Scores<\/h3>/);
 });
