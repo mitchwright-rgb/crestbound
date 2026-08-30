@@ -90,7 +90,7 @@ export function resetRunTiming() {
   return { elapsed: 0, lastHud: 0 };
 }
 
-export function runStorageKey(kind: 'best' | 'ghost', context: { courseId: string; challengeId: string; modifierId: ModifierId; practice: boolean }) {
+export function runStorageKey(kind: 'best' | 'ghost' | 'score', context: { courseId: string; challengeId: string; modifierId: ModifierId; practice: boolean }) {
   const mode = context.practice ? 'practice' : 'ranked';
   return `crestbound-${kind}-${mode}-${context.courseId}-${context.challengeId}-${context.modifierId}`;
 }

@@ -92,6 +92,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
   const routeChallengeId = isSeries ? seriesWeek!.id : dailyChallengeId;
   const bestStorageKey = runStorageKey('best', { courseId: course.id, challengeId: routeChallengeId, modifierId: modifier.id, practice: isPractice });
   const ghostStorageKey = runStorageKey('ghost', { courseId: course.id, challengeId: routeChallengeId, modifierId: modifier.id, practice: isPractice });
+  const scoreStorageKey = runStorageKey('score', { courseId: course.id, challengeId: routeChallengeId, modifierId: modifier.id, practice: isPractice });
   const musicRef = useRef<HTMLAudioElement | null>(null);
   const sfxContextRef = useRef<AudioContext | null>(null);
   const sfxBuffersRef = useRef<Map<SoundKind, AudioBuffer>>(new Map());
@@ -100,6 +101,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
   const playerIdRef = useRef('');
   const homeTrackedRef = useRef<string | null>(null);
   const dashCoachRef = useRef(false);
+  const runMetricsRef = useRef({ dashCount: 0 });
   const [board, setBoard] = useState<Board>('daily');
   const [entries, setEntries] = useState<BoardEntry[]>([]);
   const [boardStatus, setBoardStatus] = useState<'loading' | 'ready' | 'offline'>('loading');
@@ -110,6 +112,9 @@ export default function Home({ initialDay }: { initialDay: string }) {
   const [runStartError, setRunStartError] = useState('');
   const [rank, setRank] = useState<number | null>(null);
   const [scoreResult, setScoreResult] = useState<{ score: number; breakdown: CrestScoreBreakdown; contribution: number } | null>(null);
+  const [previousBestScore, setPreviousBestScore] = useState<number | null>(null);
+  const [isNewBestScore, setIsNewBestScore] = useState(false);
+  const [showScoreIntro, setShowScoreIntro] = useState(false);
   const [homePanel, setHomePanel] = useState<HomePanel>('none');
   const homePanelRef = useRef<HTMLElement>(null);
   const homePanelTriggerRef = useRef<HTMLElement | null>(null);
@@ -125,9 +130,16 @@ export default function Home({ initialDay }: { initialDay: string }) {
   const [seriesEntries, setSeriesEntries] = useState<SeriesBoardEntry[]>([]);
   const [seriesBoardStatus, setSeriesBoardStatus] = useState<'loading' | 'ready' | 'offline'>('loading');
   const [completedSeriesWeeks, setCompletedSeriesWeeks] = useState<string[]>([]);
+  const [seriesBadgeNew, setSeriesBadgeNew] = useState(false);
   const [seriesMessage, setSeriesMessage] = useState<SeriesMessage | null>(null);
   const [seriesResource, setSeriesResource] = useState<{ title: string; url: string } | null>(null);
   const pendingSeriesStartRef = useRef(false);
+  const displayedScore = scoreResult?.score ?? localScore.total;
+  const scoreDelta = previousBestScore == null ? null : displayedScore - previousBestScore;
+  const scoreResultLabel = isNewBestScore
+    ? previousBestScore == null ? 'FIRST CREST SCORE' : `NEW PERSONAL BEST · +${Math.max(0, scoreDelta ?? 0).toLocaleString()}`
+    : scoreDelta === 0 ? 'MATCHED YOUR BEST' : `${Math.abs(Math.min(0, scoreDelta ?? 0)).toLocaleString()} POINTS FROM YOUR BEST`;
+  const seriesProgressCount = activeSeries ? activeSeries.series.weeks.filter((week) => completedSeriesWeeks.includes(week.id)).length : 0;
 
   const showGameNotice = useCallback((text: string, kind: GameNotice['kind']) => {
     window.clearTimeout(gameNoticeTimerRef.current);
@@ -160,7 +172,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
     return () => window.removeEventListener('keydown', handlePanelKeys);
   }, [homePanel]);
   useEffect(() => {
-    if (screen !== 'paused' && screen !== 'over' && screen !== 'won') return;
+    if (!showScoreIntro && screen !== 'paused' && screen !== 'over' && screen !== 'won') return;
     const modal = gameModalRef.current;
     modal?.focus();
     const trapModalFocus = (event: KeyboardEvent) => {
@@ -174,7 +186,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
     };
     window.addEventListener('keydown', trapModalFocus);
     return () => window.removeEventListener('keydown', trapModalFocus);
-  }, [screen]);
+  }, [screen, showScoreIntro]);
   useEffect(() => {
     const AudioContextConstructor = window.AudioContext ?? (window as typeof window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!AudioContextConstructor) return;
@@ -401,7 +413,18 @@ export default function Home({ initialDay }: { initialDay: string }) {
     track('modifier_learned');
   }
 
-  async function startGame(tryImmersive = false) {
+  function dismissScoreIntro() {
+    window.localStorage.setItem('crestbound-scoring-learned', '1');
+    setShowScoreIntro(false);
+    track('scoring_learned');
+    void startGame(true, true);
+  }
+
+  async function startGame(tryImmersive = false, scoringIntroSeen = false) {
+    if (!scoringIntroSeen && !window.localStorage.getItem('crestbound-scoring-learned')) {
+      setShowScoreIntro(true);
+      return;
+    }
     if (sfxContextRef.current?.state === 'suspended') void sfxContextRef.current.resume().catch(() => undefined);
     if (tryImmersive && window.matchMedia('(pointer: coarse)').matches && !window.matchMedia('(display-mode: standalone)').matches && !document.fullscreenElement) {
       const immersiveRequest = document.documentElement.requestFullscreen?.({ navigationUI: 'hide' });
@@ -415,6 +438,8 @@ export default function Home({ initialDay }: { initialDay: string }) {
     setHomePanel('none');
     resetRef.current?.();
     setSubmitState('idle'); setRank(null); setScoreResult(null); runIdRef.current = null;
+    setPreviousBestScore(null); setIsNewBestScore(false); setSeriesBadgeNew(false);
+    runMetricsRef.current = { dashCount: 0 };
     const shouldWaitForLandscape = window.matchMedia('(orientation: portrait) and (pointer: coarse)').matches;
     {
       setRunStartState('connecting');
@@ -743,7 +768,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
         runEnded = true;
         player.invuln = 999;
         inputRef.current = { left: false, right: false, jump: false, dash: false };
-        track('run_over', { reason: soundKind, checkpoint: checkpointIndex, progress: player.x, elapsedMs: elapsed * 1000 });
+        track('run_over', { reason: soundKind, hits, checkpoint: checkpointIndex, progress: player.x, elapsedMs: elapsed * 1000, lights: collected, lightTotal: sparks.length, lightPercent: sparks.length ? collected / sparks.length * 100 : 0, dashCount: runMetricsRef.current.dashCount, signatureCount });
         flushTelemetry();
         setGameScreen('over');
       } else resetPosition();
@@ -757,6 +782,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
       activeSpikes = spikeZones.map((item) => ({ ...item }));
       rallyPoints = rallySeed.map((item) => ({ ...item }));
       lives = 3; hits = 0; collected = 0; signatureCount = 0; ({ elapsed, lastHud } = resetRunTiming()); cameraX = 0; checkpointIndex = 0; jumpBuffer = 0; coyote = 0; previousJump = false; previousDash = false; trace = []; traceTimer = 0; stormShield = 0; runEnded = false;
+      runMetricsRef.current = { dashCount: 0 };
       window.clearTimeout(gameNoticeTimerRef.current); setGameNotice(null);
       const storedBest = window.localStorage.getItem(bestStorageKey);
       setHud({ sparks: 0, total: sparkSeed.length, lives: 3, hits: 0, time: 0, best: storedBest ? Number(storedBest) : null, checkpoint: 0, progress: 0, dashReady: true, shield: 0, signatureCount: 0 });
@@ -817,6 +843,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
       if (!input.jump && player.vy < -260) player.vy += jumpReleaseGravity(modifier.id) * dt;
       if (input.dash && !previousDash && player.dashCooldown <= 0) {
         player.dashTime = 0.22; player.dashCooldown = 0.9; player.vx = player.facing * 900; player.vy *= 0.18; screenShake = .08; tone('dash');
+        runMetricsRef.current.dashCount += 1;
         if (dashCoachRef.current) dismissDashCoach(true);
       }
       previousJump = input.jump;
@@ -914,15 +941,28 @@ export default function Home({ initialDay }: { initialDay: string }) {
           ghost = trace;
         }
         const finishedRun: Hud = { sparks: collected, total: sparks.length, lives, hits, time: elapsed, best: Math.min(best, elapsed), checkpoint: checkpointIndex, progress: player.x, dashReady: player.dashCooldown <= 0, shield: stormShield, signatureCount };
+        const finishMedal = challengeMedal(objectiveId, finishedRun);
+        const finishScore = crestScoreBreakdown({ time: elapsed, sparks: collected, total: sparks.length, ...(isSeries ? { signatureCount } : { medal: finishMedal }) }).total;
+        const storedScore = Number(window.localStorage.getItem(scoreStorageKey));
+        const priorScore = Number.isFinite(storedScore) && storedScore > 0 ? storedScore : null;
+        const newBest = priorScore == null || finishScore > priorScore;
+        const scoreDifference = priorScore == null ? finishScore : finishScore - priorScore;
+        const lightPercent = sparks.length ? collected / sparks.length * 100 : 0;
+        setPreviousBestScore(priorScore);
+        setIsNewBestScore(newBest);
+        if (newBest) window.localStorage.setItem(scoreStorageKey, String(finishScore));
         finalResultRef.current = finishedRun;
         setFinalResult(finishedRun);
         setHud(finishedRun);
         if (!isSeries) recordStreak();
         else if (activeSeries) {
-          const completed = [...new Set([...completedSeriesWeekIds(window.localStorage, activeSeries.series.id), seriesWeek!.id])];
+          const previousCompletions = completedSeriesWeekIds(window.localStorage, activeSeries.series.id);
+          const newBadge = !previousCompletions.includes(seriesWeek!.id);
+          const completed = [...new Set([...previousCompletions, seriesWeek!.id])];
           window.localStorage.setItem(`crestbound-series-complete-${activeSeries.series.id}`, JSON.stringify(completed));
           setCompletedSeriesWeeks(completed);
-          track('series_finish', { lives, progress: player.x, elapsedMs: elapsed * 1000 });
+          setSeriesBadgeNew(newBadge);
+          track('series_finish', { lives, hits, progress: player.x, elapsedMs: elapsed * 1000, score: finishScore, scoreDelta: scoreDifference, newBest: newBest ? 1 : 0, newBadge: newBadge ? 1 : 0, lights: collected, lightTotal: sparks.length, lightPercent, dashCount: runMetricsRef.current.dashCount, signatureCount });
           void fetch('/api/series', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ runId: runIdRef.current, playerId: playerIdRef.current, name: nickname, seriesId: activeSeries.series.id, weekId: seriesWeek!.id, timeMs: Math.round(elapsed * 1000), lights: collected, lightTotal: sparks.length, signatureCount }),
@@ -936,9 +976,11 @@ export default function Home({ initialDay }: { initialDay: string }) {
             .catch(() => undefined);
         }
         if (!isSeries) {
+          track('run_finish', { lives, hits, progress: player.x, elapsedMs: elapsed * 1000, score: finishScore, scoreDelta: scoreDifference, newBest: newBest ? 1 : 0, lights: collected, lightTotal: sparks.length, lightPercent, dashCount: runMetricsRef.current.dashCount });
           const storedName = checkNickname(nickname);
           if (storedName.ok) void postDailyRun(finishedRun, storedName.name);
         }
+        if (newBest) track('personal_best', { score: finishScore, scoreDelta: scoreDifference, lights: collected, lightTotal: sparks.length, lightPercent, dashCount: runMetricsRef.current.dashCount, signatureCount });
         flushTelemetry();
         tone('win'); setGameScreen('won');
       }
@@ -1370,7 +1412,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
             {homePanel === 'series' && <aside ref={homePanelRef} className="course-picker series-picker home-panel" role="dialog" aria-modal="true" aria-labelledby="series-title" tabIndex={-1}>
               <button className="panel-dismiss" type="button" aria-label="Close Series Routes" onClick={closeHomePanel}>X</button>
               <p className="kicker">NOW AT SUNCREST</p><h2 id="series-title">Series Routes</h2>
-              {activeSeries && seriesWeek ? <><section className="series-feature"><div className="series-wordmark"><small>TAKE A STAND</small><b>DECLARATIONS</b></div><p>{activeSeries.series.description}</p><div className="series-week"><span>{seriesWeekIndex === activeSeries.weekIndex ? 'THIS WEEK' : `WEEK ${seriesWeekIndex + 1} ARCHIVE`} · {seriesMessage?.title || seriesWeek.title}</span><b>{seriesWeek.routeName}</b>{seriesMessage?.speaker && <small>{seriesMessage.speaker}</small>}</div><div className="series-week-dots" aria-label={`${completedSeriesWeeks.length} of ${activeSeries.series.weeks.length} routes completed`}>{activeSeries.series.weeks.map((week, index) => { const locked = index > activeSeries.weekIndex; const state = [completedSeriesWeeks.includes(week.id) ? 'complete' : '', index === activeSeries.weekIndex ? 'current' : '', index === seriesWeekIndex ? 'selected' : ''].filter(Boolean).join(' '); return <button type="button" className={state} disabled={locked} aria-label={locked ? `Week ${index + 1} unlocks ${week.sunday}` : `Select week ${index + 1}: ${week.title}`} aria-pressed={index === seriesWeekIndex} onClick={() => setSeriesWeekIndex(index)} key={week.id}>{locked ? '—' : index + 1}</button>; })}</div></section><button className="series-play" type="button" onClick={() => { pendingSeriesStartRef.current = true; setSeriesMode(true); closeHomePanel(); }}>Play {seriesWeekIndex === activeSeries.weekIndex ? 'This Week' : `Week ${seriesWeekIndex + 1}`} ▶</button><button className="series-results-button" type="button" onClick={() => openHomePanel('series-results')}><span><small>SELECTED ROUTE</small><strong>Results &amp; Leaderboard</strong></span><b>{seriesCompletions} {seriesCompletions === 1 ? 'FINISHER' : 'FINISHERS'} →</b></button><div className="series-resources"><button className="message-link" type="button" onClick={() => { track('message_open'); openSeriesResource(seriesMessage?.title || 'This Week\'s Message', seriesMessage?.appUrl || seriesMessage?.url || activeSeries.series.messageUrl); }}>{seriesMessage ? "Watch This Week's Message" : 'Message Details'}</button>{seriesMessage?.discussionGuideUrl && <button type="button" onClick={() => openSeriesResource('Discussion Guide', seriesMessage.discussionGuideUrl!)}>Discussion Guide</button>}{seriesMessage?.readingGuideUrl && <button type="button" onClick={() => openSeriesResource('Reading Guide', seriesMessage.readingGuideUrl!)}>Reading Guide</button>}</div></> : <p>No Series Route is active today. The daily Crestbound route is still ready to run.</p>}
+              {activeSeries && seriesWeek ? <><section className="series-feature"><div className="series-wordmark"><small>TAKE A STAND</small><b>DECLARATIONS</b></div><p>{activeSeries.series.description}</p><div className="series-week"><span>{seriesWeekIndex === activeSeries.weekIndex ? 'THIS WEEK' : `WEEK ${seriesWeekIndex + 1} ARCHIVE`} · {seriesMessage?.title || seriesWeek.title}</span><b>{seriesWeek.routeName}</b>{seriesMessage?.speaker && <small>{seriesMessage.speaker}</small>}</div><div className="series-week-dots" aria-label={`${seriesProgressCount} of ${activeSeries.series.weeks.length} routes completed`}>{activeSeries.series.weeks.map((week, index) => { const locked = index > activeSeries.weekIndex; const state = [completedSeriesWeeks.includes(week.id) ? 'complete' : '', index === activeSeries.weekIndex ? 'current' : '', index === seriesWeekIndex ? 'selected' : ''].filter(Boolean).join(' '); return <button type="button" className={state} disabled={locked} aria-label={locked ? `Week ${index + 1} unlocks ${week.sunday}` : `Select week ${index + 1}: ${week.title}`} aria-pressed={index === seriesWeekIndex} onClick={() => setSeriesWeekIndex(index)} key={week.id}>{locked ? '—' : index + 1}</button>; })}</div><div className="series-completion-progress"><span><b>{seriesProgressCount}/{activeSeries.series.weeks.length}</b> SERIES ROUTES</span><i style={{ width: `${seriesProgressCount / activeSeries.series.weeks.length * 100}%` }} /></div></section><button className="series-play" type="button" onClick={() => { pendingSeriesStartRef.current = true; setSeriesMode(true); closeHomePanel(); }}>Play {seriesWeekIndex === activeSeries.weekIndex ? 'This Week' : `Week ${seriesWeekIndex + 1}`} ▶</button><button className="series-results-button" type="button" onClick={() => openHomePanel('series-results')}><span><small>SELECTED ROUTE</small><strong>Results &amp; Leaderboard</strong></span><b>{seriesCompletions} {seriesCompletions === 1 ? 'FINISHER' : 'FINISHERS'} →</b></button><div className="series-resources"><button className="message-link" type="button" onClick={() => { track('message_open'); openSeriesResource(seriesMessage?.title || 'This Week\'s Message', seriesMessage?.appUrl || seriesMessage?.url || activeSeries.series.messageUrl); }}>{seriesMessage ? "Watch This Week's Message" : 'Message Details'}</button>{seriesMessage?.discussionGuideUrl && <button type="button" onClick={() => openSeriesResource('Discussion Guide', seriesMessage.discussionGuideUrl!)}>Discussion Guide</button>}{seriesMessage?.readingGuideUrl && <button type="button" onClick={() => openSeriesResource('Reading Guide', seriesMessage.readingGuideUrl!)}>Reading Guide</button>}</div></> : <p>No Series Route is active today. The daily Crestbound route is still ready to run.</p>}
               <button className="panel-close" type="button" onClick={closeHomePanel}>Close</button>
             </aside>}
             {homePanel === 'series-results' && <aside ref={homePanelRef} className="course-picker series-picker series-results-panel home-panel" role="dialog" aria-modal="true" aria-labelledby="series-results-panel-title" tabIndex={-1}>
@@ -1387,23 +1429,24 @@ export default function Home({ initialDay }: { initialDay: string }) {
           </div>
         )}
 
-        {screen === 'paused' && <div ref={gameModalRef} className="game-modal" role="dialog" aria-modal="true" aria-labelledby="pause-title" tabIndex={-1}><p>RUN PAUSED</p><h2 id="pause-title">Catch your breath.</h2><button type="button" onClick={togglePause}>Resume</button><button className="secondary" type="button" onClick={() => { track('quit', { checkpoint: hud.checkpoint, progress: hud.progress, elapsedMs: hud.time * 1000 }); setGameScreen('title'); }}>Quit Run</button></div>}
+        {showScoreIntro && <div ref={gameModalRef} className="game-modal score-intro" role="dialog" aria-modal="true" aria-labelledby="score-intro-title" tabIndex={-1}><p>BEFORE YOUR FIRST RUN</p><h2 id="score-intro-title">Highest score wins.</h2><div className="score-intro-grid"><span><b>+500</b> Finish</span><span><b>+1,200</b> Move fast</span><span><b>+800</b> Collect Light</span><span><b>+200</b> Complete the challenge</span></div><p>Faster runs earn more Pace points; time breaks an exact score tie. Every finish adds your Light to Suncrest&apos;s weekly goal.</p><button type="button" onClick={dismissScoreIntro}>Got It · Start Run</button></div>}
+        {screen === 'paused' && <div ref={gameModalRef} className="game-modal" role="dialog" aria-modal="true" aria-labelledby="pause-title" tabIndex={-1}><p>RUN PAUSED</p><h2 id="pause-title">Catch your breath.</h2><button type="button" onClick={togglePause}>Resume</button><button className="secondary" type="button" onClick={() => { track('quit', { hits: hud.hits, checkpoint: hud.checkpoint, progress: hud.progress, elapsedMs: hud.time * 1000, lights: hud.sparks, lightTotal: hud.total, lightPercent: hud.total ? hud.sparks / hud.total * 100 : 0, dashCount: runMetricsRef.current.dashCount, signatureCount: hud.signatureCount }); flushTelemetry(); setGameScreen('title'); }}>Quit Run</button></div>}
         {screen === 'over' && <div ref={gameModalRef} className="game-modal" role="dialog" aria-modal="true" aria-labelledby="over-title" tabIndex={-1}><p>LIGHT LOST</p><h2 id="over-title">That route got you.</h2><p>Use the high paths, save your dash, and hit enemies from above.</p><button type="button" onClick={() => void startGame()}>Run It Back</button><button className="secondary" type="button" onClick={() => { setGameScreen('title'); if (isSeries) openHomePanel('series'); }}>{isSeries ? 'Back to Series Routes' : 'Back to Home'}</button></div>}
         {screen === 'won' && (
           <div ref={gameModalRef} className={`game-modal win-modal ${isSeries ? 'series-win' : 'daily-win'}`} role="dialog" aria-modal="true" aria-labelledby="win-title" tabIndex={-1}>
             <p>{isSeries ? `DECLARATIONS ${resultHud.signatureCount}/3` : `LIGHT RESTORED // ${earnedMedal} MEDAL`}</p><h2 id="win-title">Route cleared.</h2>
-            <div className="score-tally" aria-label={`Crest Score ${(scoreResult?.score ?? localScore.total).toLocaleString()}`}>
+            <div className={`score-tally ${isNewBestScore ? 'new-best' : ''}`} aria-label={`Crest Score ${displayedScore.toLocaleString()}. ${scoreResultLabel}`}>
               <span><small>ROUTE COMPLETE</small><b>+{(scoreResult?.breakdown.finish ?? localScore.finish).toLocaleString()}</b></span>
               <span><small>PACE BONUS · {formatTime(resultHud.time)}</small><b>+{(scoreResult?.breakdown.pace ?? localScore.pace).toLocaleString()}</b></span>
               <span><small>LIGHT · {resultHud.sparks}/{resultHud.total}</small><b>+{(scoreResult?.breakdown.light ?? localScore.light).toLocaleString()}</b></span>
               <span><small>{isSeries ? `DECLARATIONS · ${resultHud.signatureCount}/3` : `${earnedMedal} CHALLENGE`}</small><b>+{(scoreResult?.breakdown.bonus ?? localScore.bonus).toLocaleString()}</b></span>
-              <strong><small>CREST SCORE</small><b>{(scoreResult?.score ?? localScore.total).toLocaleString()}</b></strong>
+              <strong><small>{scoreResultLabel}</small><b>{displayedScore.toLocaleString()}</b></strong>
             </div>
             <div className="result-priority"><b>+{resultHud.sparks} COMMUNITY LIGHT</b><span>Every verified finish counts toward Suncrest&apos;s weekly goal.</span></div>
             {isSeries
               ? <div className="challenge-result series-signature"><b>RALLY POINTS</b><span>{resultHud.signatureCount}/3 · {resultHud.signatureCount === 3 ? 'ALL HAZARDS CLEARED' : 'ROUTE CLEARED'}</span></div>
               : <div className={`challenge-result ${earnedMedal.toLowerCase()}`}><b>{objective.name}</b><span>{objectiveResult}</span></div>}
-            {isSeries ? <div className="rank-callout">SERIES RUN RECORDED · {seriesCompletions} {seriesCompletions === 1 ? 'FINISHER' : 'FINISHERS'} THIS WEEK</div> : submitState !== 'saved' ? <form className="score-form" onSubmit={submitRun} noValidate>
+            {isSeries ? <div className={`rank-callout ${seriesBadgeNew ? 'badge-earned' : ''}`}>{seriesBadgeNew ? `BADGE EARNED · WEEK ${seriesWeekIndex + 1}` : 'SERIES RUN RECORDED'} · {seriesProgressCount}/{activeSeries?.series.weeks.length ?? 0} ROUTES</div> : submitState !== 'saved' ? <form className="score-form" onSubmit={submitRun} noValidate>
               <label htmlFor="nickname">POST TO TODAY&apos;S BOARD</label>
               <div><input id="nickname" value={nickname} onChange={(event) => setNickname(event.target.value)} minLength={2} maxLength={12} placeholder="NICKNAME" autoComplete="nickname" autoCapitalize="characters" spellCheck={false} /><button type="submit" disabled={submitState === 'saving' || !runIdRef.current}>{submitState === 'saving' ? 'SAVING...' : 'POST RUN'}</button></div>
               <small>Family-friendly nicknames only. Don&apos;t use your real name.{!runIdRef.current ? ' Online posting is unavailable for this run.' : ''}</small>

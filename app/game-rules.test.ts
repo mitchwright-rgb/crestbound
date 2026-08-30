@@ -96,8 +96,11 @@ test('restarting a run resets both gameplay time and HUD refresh time', () => {
 test('personal bests and ghosts stay scoped to the exact daily route and mode', () => {
   const ranked = { courseId: 'crosswind', challengeId: '2026-08-27-layout-1', modifierId: 'tailwind' as const, practice: false };
   assert.equal(runStorageKey('best', ranked), 'crestbound-best-ranked-crosswind-2026-08-27-layout-1-tailwind');
+  assert.equal(runStorageKey('score', ranked), 'crestbound-score-ranked-crosswind-2026-08-27-layout-1-tailwind');
   assert.notEqual(runStorageKey('ghost', ranked), runStorageKey('ghost', { ...ranked, challengeId: '2026-08-28-layout-1' }));
   assert.notEqual(runStorageKey('best', ranked), runStorageKey('best', { ...ranked, practice: true }));
+  assert.notEqual(runStorageKey('score', ranked), runStorageKey('score', { ...ranked, challengeId: '2026-08-28-layout-1' }));
+  assert.notEqual(runStorageKey('score', ranked), runStorageKey('score', { ...ranked, practice: true }));
 });
 
 test('releasing Jump cannot cancel or stick a separately held direction', () => {
@@ -142,7 +145,7 @@ test('server and client share one authoritative Chicago day during hydration', (
 });
 
 test('event metadata keeps useful product signals without accepting arbitrary data', () => {
-  assert.equal(normalizeEventMetadata({ mode: 'practice', reason: 'fall', lives: 2, secret: 'nope' }), '{"mode":"practice","reason":"fall","lives":2}');
+  assert.equal(normalizeEventMetadata({ mode: 'practice', reason: 'fall', lives: 2, hits: 3, scoreDelta: -182, newBest: 0, lightPercent: 72.6, dashCount: 4, secret: 'nope' }), '{"mode":"practice","reason":"fall","lives":2,"hits":3,"scoreDelta":-182,"newBest":0,"lightPercent":73,"dashCount":4}');
   assert.equal(normalizeEventMetadata({ reason: 'x'.repeat(40) }), null);
 });
 
@@ -261,6 +264,15 @@ test('post-run layouts keep Daily and Series results distinct and landscape-safe
   assert.match(game, /isSeries \? 'series-win' : 'daily-win'/);
   assert.match(game, /RALLY POINTS/);
   assert.match(game, /SERIES RUN RECORDED/);
+  assert.match(game, /NEW PERSONAL BEST/);
+  assert.match(game, /POINTS FROM YOUR BEST/);
+  assert.match(game, /BADGE EARNED/);
+  assert.match(game, /series-completion-progress/);
+  assert.match(game, /Highest score wins\./);
+  assert.match(game, /track\('scoring_learned'/);
+  assert.match(game, /track\('personal_best'/);
   assert.match(styles, /grid-template-columns: minmax\(0, 1\.08fr\) minmax\(300px, \.92fr\)/);
   assert.match(styles, /\.win-modal \.result-actions \{[\s\S]*?grid-column: 1 \/ -1/);
+  assert.match(styles, /\.score-tally\.new-best/);
+  assert.match(styles, /\.series-completion-progress/);
 });
