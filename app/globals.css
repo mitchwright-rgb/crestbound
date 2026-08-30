@@ -1651,3 +1651,220 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .series-picker:not(.series-results-panel) .message-link strong { font-size: 9px; }
   .series-picker:not(.series-results-panel) .message-link small { font-size: 9px; }
 }
+
+/* Single-viewport menus: keep every primary decision visible while detailed
+   guidance changes in place instead of becoming a long scrolling document. */
+.how-to.home-panel {
+  width: min(720px, calc(100% - 24px));
+  height: min(720px, calc(100dvh - 18px));
+  max-height: none;
+  display: grid;
+  grid-template-rows: 62px 48px minmax(0, 1fr) 46px;
+  gap: 10px;
+  padding: 18px;
+  overflow: hidden;
+}
+.how-to > .panel-dismiss { position: absolute; top: 10px; right: 12px; float: none; margin: 0; }
+.how-to .help-heading { display: block; margin: 0; }
+.how-to .help-heading .kicker { margin: 0 56px 5px 0; }
+.how-to .help-heading h2 { margin: 0 56px 0 0; font-size: clamp(24px, 5vw, 36px); line-height: 1; }
+.how-to .help-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 7px;
+  margin: 0;
+}
+.how-to .help-tabs button {
+  min-width: 0;
+  min-height: 44px;
+  border: 3px solid #31575a;
+  color: #8de0db;
+  background: #08262b;
+  font: 10px/1.2 var(--font-pixel), monospace;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.how-to .help-tabs button.active { border-color: var(--gold); color: #171b1c; background: var(--gold-light); }
+.how-to .help-content { min-height: 0; display: block; margin: 0; overflow: hidden; }
+.how-to .help-content > section { height: 100%; min-height: 0; margin: 0; }
+.help-play { display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: 9px; }
+.control-directory { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+.control-directory article,
+.help-card-grid article {
+  min-width: 0;
+  display: grid;
+  align-content: center;
+  gap: 6px;
+  padding: 10px;
+  border: 2px solid #23474d;
+  background: #082329;
+}
+.help-card-grid article { grid-template-columns: 1fr; }
+.control-directory article b,
+.help-card-grid article b { color: var(--teal-light); font: 10px/1.35 var(--font-pixel), monospace; }
+.control-directory article span,
+.help-card-grid article span { color: #d7e8e5; font-size: 13px; line-height: 1.35; }
+.today-guide {
+  display: grid;
+  align-content: center;
+  gap: 7px;
+  padding: 12px;
+  border: 3px solid var(--gold);
+  background: #132d30;
+  text-align: left;
+}
+.today-guide small { color: #ff8767; font: 8px/1.2 var(--font-pixel), monospace; }
+.today-guide b { color: var(--gold-light); font: 12px/1.35 var(--font-pixel), monospace; }
+.today-guide span { color: #d7e8e5; font-size: 13px; line-height: 1.4; }
+.how-to .help-play > p { margin: 0; font-size: 12px; line-height: 1.35; }
+.how-to .help-play .app-tip { margin: 0; padding: 8px 10px; }
+.help-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.scoring-directory.help-card-grid { grid-template-rows: 1fr 1fr auto; }
+.scoring-directory.help-card-grid > p {
+  grid-column: 1 / -1;
+  margin: 0;
+  padding: 10px 12px;
+  border: 2px solid #31575a;
+  color: #c9dcda;
+  background: #06161a;
+  font-size: 12px;
+  line-height: 1.4;
+}
+.scoring-directory.help-card-grid > p b { color: var(--gold-light); }
+.help-world { display: grid; grid-template-rows: .8fr 1.2fr; gap: 9px; }
+.help-world .world-rules { margin: 0; }
+.help-world .twist-directory {
+  min-height: 0;
+  grid-template-columns: 1fr 1fr;
+  align-content: stretch;
+  gap: 7px;
+  margin: 0;
+  padding: 9px;
+  overflow: hidden;
+}
+.help-world .twist-directory h3 { grid-column: 1 / -1; }
+.help-world .twist-directory article { min-height: 0; grid-template-columns: 1fr; align-content: center; padding: 7px 8px; }
+.help-world .twist-directory article b { font-size: 9px; }
+.help-world .twist-directory article span { font-size: 11px; line-height: 1.3; }
+.how-to .panel-close { width: 100%; min-height: 44px; margin: 0; }
+
+@media (max-width: 700px) and (orientation: portrait) {
+  .leaderboard.home-panel,
+  .series-picker.home-panel,
+  .how-to.home-panel {
+    height: calc(100dvh - 18px);
+    max-height: none;
+    overflow: hidden;
+  }
+  .how-to.home-panel { grid-template-rows: 58px 46px minmax(0, 1fr) 44px; gap: 8px; padding: 12px; }
+  .how-to .help-heading h2 { font-size: 27px; }
+  .how-to .help-tabs button { font-size: 10px; }
+  .control-directory { gap: 6px; }
+  .control-directory article, .help-card-grid article { padding: 8px; }
+  .control-directory article b, .help-card-grid article b { font-size: 9px; }
+  .control-directory article span, .help-card-grid article span { font-size: 12px; }
+  .today-guide { padding: 9px 10px; }
+  .today-guide b { font-size: 11px; }
+  .today-guide span { font-size: 12px; }
+  .help-world { grid-template-rows: .76fr 1.24fr; }
+
+  .leaderboard.home-panel {
+    display: grid;
+    grid-template-rows: 56px 46px 30px minmax(0, 1fr) auto auto;
+  }
+  .leaderboard .board-heading { min-height: 0; padding-right: 62px; }
+  .leaderboard .board-tabs button { min-height: 0; }
+  .leaderboard .board-list { min-height: 0; display: grid; grid-template-rows: repeat(7, minmax(0, 1fr)); overflow: hidden; }
+  .leaderboard .board-list li { min-height: 0; padding-block: 5px; }
+  .leaderboard .nearby-rivals { max-height: 96px; overflow: hidden; }
+  .leaderboard .panel-close { min-height: 44px; }
+
+  .series-picker:not(.series-results-panel) {
+    display: grid;
+    grid-template-rows: 42px minmax(0, 1fr) 54px 58px auto 44px;
+    gap: 7px;
+    padding: 11px 12px;
+  }
+  .series-picker:not(.series-results-panel) > .kicker { display: none; }
+  .series-picker:not(.series-results-panel) > .panel-dismiss { position: absolute; top: 10px; right: 12px; float: none; margin: 0; }
+  .series-picker:not(.series-results-panel) > h2 { grid-row: 1; margin: 0 56px 0 0; align-self: center; font-size: 24px; }
+  .series-picker:not(.series-results-panel) > .series-feature { grid-row: 2; min-height: 0; height: 100%; padding: 9px; overflow: hidden; }
+  .series-picker:not(.series-results-panel) .series-wordmark b { font-size: clamp(32px, 11vw, 46px) !important; }
+  .series-picker:not(.series-results-panel) .series-feature > p { font-size: 12px; line-height: 1.3; }
+  .series-picker:not(.series-results-panel) .series-week { padding: 8px 9px; }
+  .series-picker:not(.series-results-panel) .series-week span { font-size: 9px !important; }
+  .series-picker:not(.series-results-panel) .series-week b { font-size: 11px !important; }
+  .series-picker:not(.series-results-panel) .series-week small { font-size: 10px; }
+  .series-picker:not(.series-results-panel) .series-mechanic { padding: 7px 8px; }
+  .series-picker:not(.series-results-panel) .series-week .series-mechanic small { font-size: 10px; }
+  .series-picker:not(.series-results-panel) .series-week-dots button { min-height: 34px; }
+  .series-picker:not(.series-results-panel) > .series-play,
+  .series-picker:not(.series-results-panel) > .series-results-button,
+  .series-picker:not(.series-results-panel) > .series-resources,
+  .series-picker:not(.series-results-panel) > .panel-close { margin: 0; }
+  .series-picker:not(.series-results-panel) > .series-play { grid-row: 3; min-height: 54px; }
+  .series-picker:not(.series-results-panel) > .series-results-button { grid-row: 4; min-height: 58px; }
+  .series-picker:not(.series-results-panel) > .series-resources { grid-row: 5; gap: 7px !important; }
+  .series-picker:not(.series-results-panel) > .series-resources .message-link { min-height: 56px; }
+  .series-picker:not(.series-results-panel) > .series-resources > button:not(.message-link) { min-height: 40px; font-size: 9px; }
+  .series-picker:not(.series-results-panel) > .panel-close { grid-row: 6; width: 100%; min-height: 44px; }
+
+  .series-results-panel.home-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 44px auto minmax(0, 1fr) 44px;
+    gap: 7px;
+    padding: 11px 12px;
+  }
+  .series-results-panel > .panel-dismiss { position: absolute; top: 10px; right: 12px; float: none; margin: 0; }
+  .series-results-panel > .series-results-back { grid-column: 1; grid-row: 1; margin: 0 56px 0 0; }
+  .series-results-panel > .kicker { grid-column: 1; grid-row: 2; margin: 0; font-size: 9px; }
+  .series-results-panel > h2 { grid-column: 1; grid-row: 2; margin: 18px 0 0; font-size: 20px; }
+  .series-results-panel > .series-results { grid-column: 1; grid-row: 3; min-height: 0; margin: 0; overflow: hidden; }
+  .series-results-panel .series-results { display: grid; grid-template-rows: auto auto minmax(0, 1fr) auto; }
+  .series-results-panel .series-results ol { min-height: 0; display: grid; grid-template-rows: repeat(7, minmax(0, 1fr)); overflow: hidden; }
+  .series-results-panel .series-results li { min-height: 0; padding-block: 5px; }
+  .series-results-panel > .panel-close { grid-column: 1; grid-row: 4; width: 100%; min-height: 44px; margin: 0; }
+
+  .win-modal { max-height: calc(100dvh - 18px); overflow: hidden; padding: 12px; }
+  .win-modal h2 { margin: 4px 0 6px; font-size: 24px; }
+  .win-modal .score-tally { gap: 2px; margin: 6px 0; padding: 6px 8px; }
+  .win-modal .score-tally > span { min-height: 20px; }
+  .win-modal .score-tally > strong { min-height: 28px; }
+  .win-modal .score-tally > strong b { font-size: 18px; }
+  .win-modal .result-priority, .win-modal .challenge-result { margin-bottom: 6px; padding: 7px 8px; }
+  .win-modal .score-form { margin-bottom: 6px; padding: 7px; }
+  .win-modal .result-actions { grid-template-columns: 1fr 1fr; gap: 6px; }
+  .win-modal .result-actions > button,
+  .win-modal .result-actions .secondary { min-height: 42px; padding: 6px; font-size: 9px; }
+}
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .how-to.home-panel {
+    width: min(920px, calc(100% - 18px));
+    height: calc(100dvh - 18px);
+    grid-template-rows: 38px minmax(0, 1fr) 40px;
+    grid-template-columns: 180px minmax(0, 1fr);
+    gap: 8px 12px;
+    padding: 10px 12px;
+  }
+  .how-to .help-heading { grid-column: 1; grid-row: 1; align-self: center; }
+  .how-to .help-heading .kicker { display: none; }
+  .how-to .help-heading h2 { margin: 0; font-size: 18px; }
+  .how-to .help-tabs { grid-column: 2; grid-row: 1; }
+  .how-to .help-tabs button { min-height: 38px; }
+  .how-to .help-content { grid-column: 1 / -1; grid-row: 2; }
+  .how-to .panel-close { grid-column: 1 / -1; grid-row: 3; min-height: 40px; }
+  .help-play { grid-template-columns: .9fr 1.3fr; grid-template-rows: minmax(0, 1fr) auto; }
+  .control-directory { grid-template-columns: 1fr; grid-row: 1 / 3; }
+  .control-directory article { grid-template-columns: 74px 1fr; }
+  .today-guide { grid-column: 2; grid-row: 1; }
+  .help-play > p { grid-column: 2; }
+  .how-to .help-play .app-tip { display: none; }
+  .scoring-directory.help-card-grid { grid-template-columns: repeat(4, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  .scoring-directory.help-card-grid > p { grid-column: 1 / -1; }
+  .help-world { grid-template-columns: .85fr 1.15fr; grid-template-rows: 1fr; }
+  .help-world .world-rules { grid-template-columns: 1fr 1fr; }
+  .help-world .twist-directory { grid-template-columns: 1fr 1fr; }
+  .help-world .twist-directory article span { font-size: 10px; }
+}

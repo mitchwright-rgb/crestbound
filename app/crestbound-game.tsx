@@ -14,6 +14,7 @@ type Hud = { sparks: number; total: number; lives: number; hits: number; time: n
 type Board = 'daily' | 'weekly' | 'all';
 type BoardEntry = { rank: number; name: string; score: number; timeMs: number; sparks: number; points?: number; runs?: number };
 type HomePanel = 'none' | 'leaderboard' | 'help' | 'series' | 'series-results' | 'resource';
+type HelpTab = 'play' | 'score' | 'world';
 type GameNotice = { text: string; kind: 'checkpoint' | 'power' };
 type SeriesMessage = { title: string; date: string; speaker: string; url: string; appUrl: string | null; description: string; discussionGuideUrl: string | null; readingGuideUrl: string | null };
 type SeriesBoardEntry = { rank: number; name: string; score: number; timeMs: number; lights: number; isPlayer: boolean };
@@ -31,10 +32,10 @@ const courseSpecs = [
   { id: 'nightshift', name: 'Night Shift', short: 'NIGHT SHIFT', accent: '#ef6f52', description: 'Low tunnels, hazard lanes, and an enemy-heavy sprint.' },
 ] as const;
 const modifierSpecs = [
-  { id: 'clear', name: 'Clear Skies', description: 'The standard route: normal gravity, normal wind, and familiar light.' },
-  { id: 'tailwind', name: 'Tailwind', description: 'A strong eastbound wind makes rightward jumps much faster, pushes Sunny while coasting, and resists moving left.' },
-  { id: 'moonstep', name: 'Moonstep', description: 'Low gravity makes every jump dramatically higher and keeps Sunny airborne longer.' },
-  { id: 'sparkstorm', name: 'Spark Storm', description: 'Extra teal Storm Lights appear throughout the route. Each recharges Dash and shields one hit for seven seconds.' },
+  { id: 'clear', name: 'Clear Skies', description: 'The standard route: normal gravity, normal wind, and familiar light.', shortDescription: 'Standard gravity, wind, and Light.' },
+  { id: 'tailwind', name: 'Tailwind', description: 'A strong eastbound wind makes rightward jumps much faster, pushes Sunny while coasting, and resists moving left.', shortDescription: 'Eastbound wind boosts rightward movement.' },
+  { id: 'moonstep', name: 'Moonstep', description: 'Low gravity makes every jump dramatically higher and keeps Sunny airborne longer.', shortDescription: 'Low gravity sends jumps higher and longer.' },
+  { id: 'sparkstorm', name: 'Spark Storm', description: 'Extra teal Storm Lights appear throughout the route. Each recharges Dash and shields one hit for seven seconds.', shortDescription: 'Teal Lights ready Dash and shield one hit.' },
 ] as const;
 
 
@@ -116,6 +117,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
   const [isNewBestScore, setIsNewBestScore] = useState(false);
   const [showScoreIntro, setShowScoreIntro] = useState(false);
   const [homePanel, setHomePanel] = useState<HomePanel>('none');
+  const [helpTab, setHelpTab] = useState<HelpTab>('play');
   const homePanelRef = useRef<HTMLElement>(null);
   const homePanelTriggerRef = useRef<HTMLElement | null>(null);
   const gameModalRef = useRef<HTMLDivElement>(null);
@@ -1377,7 +1379,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
                 <div className="home-links">
                   <button className="series-routes-link" type="button" onClick={() => { setSeriesWeekIndex(activeSeries?.weekIndex ?? 0); openHomePanel('series'); track('series_open'); }}><strong>{activeSeries ? `${activeSeries.series.weeks.length} EXTRA SERIES ROUTES` : 'SERIES ROUTES'}</strong><small>{activeSeries ? `${activeSeries.series.name} · Weekly challenges →` : 'No active series today'}</small></button>
                   <button type="button" onClick={() => { openHomePanel('leaderboard'); track('leaderboard_open'); }}>Leaderboard</button>
-                  <button type="button" onClick={() => openHomePanel('help')}>How to Play</button>
+                  <button type="button" onClick={() => { setHelpTab('play'); openHomePanel('help'); }}>How to Play</button>
                 </div>
               </div>
             </div>
@@ -1401,14 +1403,15 @@ export default function Home({ initialDay }: { initialDay: string }) {
             </aside>}
             {homePanel === 'help' && <aside ref={homePanelRef} className="how-to home-panel" role="dialog" aria-modal="true" aria-labelledby="help-title" tabIndex={-1}>
               <button className="panel-dismiss" type="button" aria-label="Close how to play" onClick={closeHomePanel}>X</button>
-              <p className="kicker">READY, SUNNY?</p><h2 id="help-title">How to Play</h2>
-              <div><b>RUN</b><span>Arrow keys / A D / touch arrows</span><b>JUMP</b><span>Space / touch JUMP · tap twice</span><b>DASH</b><span>Shift or X / touch DASH · recharges</span></div>
-              <p>Touch controls appear automatically. Turn your phone sideways for the full course.</p>
-              <section className="scoring-directory"><h3>How You Win</h3><article><b>1 · FINISH</b><span>Clear the route to lock in 500 points.</span></article><article><b>2 · MOVE FAST</b><span>A faster finish earns a larger Pace Bonus.</span></article><article><b>3 · COLLECT LIGHT</b><span>Your percentage of available Light earns up to 800 points. Every completed run also adds all of its Light to Suncrest&apos;s weekly community goal.</span></article><article><b>4 · COMPLETE THE CHALLENGE</b><span>Silver adds 100 points and Gold adds 200. Series Routes award this bonus through their signature objective.</span></article></section>
-              <section className="world-rules"><h3>World Rules</h3><article><b>GOLD LIGHT</b><span>Shortens Dash recharge.</span></article><article><b>STORM LIGHT</b><span>Teal. In Spark Storm, fully recharges Dash and shields one hit for seven seconds.</span></article><article><b>CHECKPOINT</b><span>Saves your route and restores one life, up to three.</span></article><article><b>ENEMY</b><span>Dash through it or land on it from above.</span></article></section>
-              <section className="challenge-directory"><h3>Daily Challenge</h3><article><b>{objective.name}{!isPractice ? ' · TODAY' : ''}</b><span>{objective.description}. Finish for Bronze; hit the listed target for Silver or Gold.</span></article><p>Everyone gets the same seeded skyline each day. The route, challenge, and leaderboard reset together at midnight Central.</p></section>
-              <section className="twist-directory"><h3>Daily Twists</h3>{modifierSpecs.map((item) => <article className={item.id === modifier.id && !isPractice ? 'today' : ''} key={item.id}><b>{item.name}{item.id === modifier.id && !isPractice ? ' · TODAY' : ''}</b><span>{item.description}</span></article>)}</section>
-              <p className="app-tip"><b>FULL-SCREEN TEST</b> On iPhone, tap Share, then Add to Home Screen. Crestbound will open without Safari&apos;s bars.</p>
+              <div className="help-heading"><p className="kicker">READY, SUNNY?</p><h2 id="help-title">How to Play</h2></div>
+              <div className="help-tabs" role="tablist" aria-label="How to Play sections">
+                {(['play', 'score', 'world'] as HelpTab[]).map((tab) => <button id={`help-tab-${tab}`} className={helpTab === tab ? 'active' : ''} type="button" role="tab" aria-selected={helpTab === tab} aria-controls="help-tabpanel" onClick={() => setHelpTab(tab)} key={tab}>{tab === 'play' ? 'Play' : tab === 'score' ? 'Score' : 'World'}</button>)}
+              </div>
+              <div id="help-tabpanel" className="help-content" role="tabpanel" aria-labelledby={`help-tab-${helpTab}`}>
+                {helpTab === 'play' && <section className="help-play"><div className="control-directory"><article><b>RUN</b><span>Arrows · A/D · touch</span></article><article><b>JUMP 2X</b><span>Space or JUMP · tap twice</span></article><article><b>DASH</b><span>Shift · X · DASH</span></article></div><div className="today-guide"><small>TODAY&apos;S ROUTE</small><b>{modifier.name} · {objective.name}</b><span>{modifier.description}</span><span>{objective.description}. Finish for Bronze; reach the target for Silver or Gold.</span></div><p>Touch controls appear automatically. Turn your phone sideways before the timer starts.</p><p className="app-tip"><b>FULL SCREEN</b> On iPhone, tap Share → Add to Home Screen.</p></section>}
+                {helpTab === 'score' && <section className="scoring-directory help-card-grid"><article><b>+500 · FINISH</b><span>Clear the route to bank a score.</span></article><article><b>UP TO +1,200 · PACE</b><span>Finish faster for more points.</span></article><article><b>UP TO +800 · LIGHT</b><span>Collect a larger share of the route&apos;s Light.</span></article><article><b>UP TO +200 · CHALLENGE</b><span>Earn Silver or Gold—or complete the Series objective.</span></article><p><b>EVERY FINISH COUNTS</b> All collected Light also goes to Suncrest&apos;s weekly community goal. Highest score wins; time breaks an exact tie.</p></section>}
+                {helpTab === 'world' && <section className="help-world"><div className="world-rules help-card-grid"><article><b>GOLD LIGHT</b><span>Shortens Dash recharge.</span></article><article><b>STORM LIGHT</b><span>Readies Dash and shields one hit.</span></article><article><b>CHECKPOINT</b><span>Saves progress and restores one life.</span></article><article><b>ENEMY</b><span>Dash through or land from above.</span></article></div><div className="twist-directory"><h3>Daily Twists</h3>{modifierSpecs.map((item) => <article className={item.id === modifier.id && !isPractice ? 'today' : ''} key={item.id}><b>{item.name}{item.id === modifier.id && !isPractice ? ' · TODAY' : ''}</b><span>{item.shortDescription}</span></article>)}</div></section>}
+              </div>
               <button className="panel-close" type="button" onClick={closeHomePanel}>Got It</button>
             </aside>}
             {homePanel === 'series' && <aside ref={homePanelRef} className="course-picker series-picker home-panel" role="dialog" aria-modal="true" aria-labelledby="series-title" tabIndex={-1}>

@@ -300,3 +300,17 @@ test('post-run layouts keep Daily and Series results distinct and landscape-safe
   assert.match(styles, /\.series-mechanic/);
   assert.match(styles, /\.message-result-cta/);
 });
+
+test('menu guidance uses readable in-place views instead of a scrolling document', () => {
+  const game = readFileSync(new URL('./crestbound-game.tsx', import.meta.url), 'utf8');
+  const styles = readFileSync(new URL('./globals.css', import.meta.url), 'utf8');
+  assert.match(game, /type HelpTab = 'play' \| 'score' \| 'world'/);
+  assert.match(game, /role="tablist"/);
+  assert.match(game, /aria-controls="help-tabpanel"/);
+  assert.match(game, /EVERY FINISH COUNTS/);
+  assert.match(game, /Daily Twists/);
+  assert.match(styles, /Single-viewport menus/);
+  assert.match(styles, /\.how-to\.home-panel \{[\s\S]*?overflow: hidden/);
+  assert.match(styles, /\.series-results-panel\.home-panel \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\)/);
+  assert.match(styles, /\.win-modal \.result-actions \{ grid-template-columns: 1fr 1fr/);
+});
