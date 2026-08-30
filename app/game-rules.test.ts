@@ -313,4 +313,6 @@ test('menu guidance uses readable in-place views instead of a scrolling document
   assert.match(styles, /\.how-to\.home-panel \{[\s\S]*?overflow: hidden/);
   assert.match(styles, /\.series-results-panel\.home-panel \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\)/);
   assert.match(styles, /\.win-modal \.result-actions \{ grid-template-columns: 1fr 1fr/);
+  assert.match(styles, /\.help-play \{[\s\S]*?align-content: start/);
+  assert.match(styles, /\.leaderboard \.board-list li\.score-board \{ align-items: start; align-content: start/);
 });

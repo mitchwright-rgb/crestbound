@@ -1686,14 +1686,14 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 }
 .how-to .help-tabs button.active { border-color: var(--gold); color: #171b1c; background: var(--gold-light); }
 .how-to .help-content { min-height: 0; display: block; margin: 0; overflow: hidden; }
-.how-to .help-content > section { height: 100%; min-height: 0; margin: 0; }
-.help-play { display: grid; grid-template-rows: auto minmax(0, 1fr) auto auto; gap: 9px; }
+.how-to .help-content > section { min-height: 0; margin: 0; }
+.help-play { display: grid; grid-template-rows: repeat(4, auto); align-content: start; gap: 9px; }
 .control-directory { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
 .control-directory article,
 .help-card-grid article {
   min-width: 0;
   display: grid;
-  align-content: center;
+  align-content: start;
   gap: 6px;
   padding: 10px;
   border: 2px solid #23474d;
@@ -1706,7 +1706,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .help-card-grid article span { color: #d7e8e5; font-size: 13px; line-height: 1.35; }
 .today-guide {
   display: grid;
-  align-content: center;
+  align-content: start;
   gap: 7px;
   padding: 12px;
   border: 3px solid var(--gold);
@@ -1719,7 +1719,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .how-to .help-play > p { margin: 0; font-size: 12px; line-height: 1.35; }
 .how-to .help-play .app-tip { margin: 0; padding: 8px 10px; }
 .help-card-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-.scoring-directory.help-card-grid { grid-template-rows: 1fr 1fr auto; }
+.scoring-directory.help-card-grid { grid-template-rows: repeat(3, auto); align-content: start; }
 .scoring-directory.help-card-grid > p {
   grid-column: 1 / -1;
   margin: 0;
@@ -1731,22 +1731,23 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   line-height: 1.4;
 }
 .scoring-directory.help-card-grid > p b { color: var(--gold-light); }
-.help-world { display: grid; grid-template-rows: .8fr 1.2fr; gap: 9px; }
+.help-world { display: grid; grid-template-rows: repeat(2, auto); align-content: start; gap: 9px; }
 .help-world .world-rules { margin: 0; }
 .help-world .twist-directory {
   min-height: 0;
   grid-template-columns: 1fr 1fr;
-  align-content: stretch;
+  align-content: start;
   gap: 7px;
   margin: 0;
   padding: 9px;
   overflow: hidden;
 }
 .help-world .twist-directory h3 { grid-column: 1 / -1; }
-.help-world .twist-directory article { min-height: 0; grid-template-columns: 1fr; align-content: center; padding: 7px 8px; }
+.help-world .twist-directory article { min-height: 0; grid-template-columns: 1fr; align-content: start; padding: 7px 8px; }
 .help-world .twist-directory article b { font-size: 9px; }
 .help-world .twist-directory article span { font-size: 11px; line-height: 1.3; }
 .how-to .panel-close { width: 100%; min-height: 44px; margin: 0; }
+.leaderboard .board-list li.score-board { align-items: start; align-content: start; padding-top: 8px; }
 
 @media (max-width: 700px) and (orientation: portrait) {
   .leaderboard.home-panel,
@@ -1756,7 +1757,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
     max-height: none;
     overflow: hidden;
   }
-  .how-to.home-panel { grid-template-rows: 58px 46px minmax(0, 1fr) 44px; gap: 8px; padding: 12px; }
+  .how-to.home-panel { height: min(680px, calc(100dvh - 18px)); grid-template-rows: 58px 46px minmax(0, 1fr) 44px; gap: 8px; padding: 12px; }
   .how-to .help-heading h2 { font-size: 27px; }
   .how-to .help-tabs button { font-size: 10px; }
   .control-directory { gap: 6px; }
@@ -1766,7 +1767,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .today-guide { padding: 9px 10px; }
   .today-guide b { font-size: 11px; }
   .today-guide span { font-size: 12px; }
-  .help-world { grid-template-rows: .76fr 1.24fr; }
+  .help-world { grid-template-rows: repeat(2, auto); }
 
   .leaderboard.home-panel {
     display: grid;
@@ -1775,7 +1776,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .leaderboard .board-heading { min-height: 0; padding-right: 62px; }
   .leaderboard .board-tabs button { min-height: 0; }
   .leaderboard .board-list { min-height: 0; display: grid; grid-template-rows: repeat(7, minmax(0, 1fr)); overflow: hidden; }
-  .leaderboard .board-list li { min-height: 0; padding-block: 5px; }
+  .leaderboard .board-list li { min-height: 0; padding-block: 8px 4px; }
   .leaderboard .nearby-rivals { max-height: 96px; overflow: hidden; }
   .leaderboard .panel-close { min-height: 44px; }
 
@@ -1855,15 +1856,15 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .how-to .help-tabs button { min-height: 38px; }
   .how-to .help-content { grid-column: 1 / -1; grid-row: 2; }
   .how-to .panel-close { grid-column: 1 / -1; grid-row: 3; min-height: 40px; }
-  .help-play { grid-template-columns: .9fr 1.3fr; grid-template-rows: minmax(0, 1fr) auto; }
+  .help-play { grid-template-columns: .9fr 1.3fr; grid-template-rows: auto auto; align-content: start; }
   .control-directory { grid-template-columns: 1fr; grid-row: 1 / 3; }
   .control-directory article { grid-template-columns: 74px 1fr; }
   .today-guide { grid-column: 2; grid-row: 1; }
   .help-play > p { grid-column: 2; }
   .how-to .help-play .app-tip { display: none; }
-  .scoring-directory.help-card-grid { grid-template-columns: repeat(4, 1fr); grid-template-rows: minmax(0, 1fr) auto; }
+  .scoring-directory.help-card-grid { grid-template-columns: repeat(4, 1fr); grid-template-rows: auto auto; align-content: start; }
   .scoring-directory.help-card-grid > p { grid-column: 1 / -1; }
-  .help-world { grid-template-columns: .85fr 1.15fr; grid-template-rows: 1fr; }
+  .help-world { grid-template-columns: .85fr 1.15fr; grid-template-rows: auto; align-content: start; }
   .help-world .world-rules { grid-template-columns: 1fr 1fr; }
   .help-world .twist-directory { grid-template-columns: 1fr 1fr; }
   .help-world .twist-directory article span { font-size: 10px; }
