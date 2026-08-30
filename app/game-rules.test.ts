@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { soundSources } from './audio-assets.ts';
-import { challengeMedal, chicagoDayKey, collectLightPower, dailyObjectiveForSerial, formatDailyReset, gravityForModifier, horizontalSpeedLimit, lightHuntTargets, millisecondsUntilNextChicagoDay, musicTrackForCourse, musicTrackForSeries, objectiveResultLabel, resetRunTiming, resolveDamage, runStorageKey, tailwindAcceleration, touchInputFromControls } from './game-rules.ts';
+import { challengeMedal, chicagoDayKey, collectLightPower, crestScoreBreakdown, dailyObjectiveForSerial, dashVelocity, formatDailyReset, gravityForModifier, horizontalSpeedLimit, jumpReleaseGravity, jumpVelocityForModifier, lightHuntTargets, millisecondsUntilNextChicagoDay, musicTrackForCourse, musicTrackForSeries, objectiveResultLabel, resetRunTiming, resolveDamage, runStorageKey, tailwindAcceleration, touchInputFromControls } from './game-rules.ts';
 import { buildSeededCourse, checkpointHasClearLanding, checkpointIsSupported, courseSignature, maximumGroundGap } from './course-generator.ts';
 import { buildDeclarationsCourse } from './series-course-generator.ts';
 import { activeSeriesForDay, completedSeriesWeekIds, declarationsSeries, seriesWeekSeed } from './series-routes.ts';
@@ -11,9 +11,30 @@ import { normalizeEventMetadata } from '../lib/telemetry.ts';
 import { parseMessageDetails, parseSeriesMessages } from '../lib/suncrest-messages.ts';
 
 test('Moonstep lowers gravity while other twists preserve standard gravity', () => {
-  assert.equal(gravityForModifier('moonstep'), 1350);
+  assert.equal(gravityForModifier('moonstep'), 1050);
   assert.equal(gravityForModifier('clear'), 1850);
   assert.equal(gravityForModifier('sparkstorm'), 1850);
+});
+
+test('Moonstep has a visibly stronger jump and a gentler phone-tap release', () => {
+  assert.equal(jumpVelocityForModifier('moonstep', 0), -780);
+  assert.equal(jumpVelocityForModifier('moonstep', 1), -700);
+  assert.equal(jumpVelocityForModifier('clear', 0), -690);
+  assert.equal(jumpReleaseGravity('moonstep'), 650);
+  assert.equal(jumpReleaseGravity('clear'), 1450);
+});
+
+test('Dash preserves its burst velocity for the full active window', () => {
+  assert.equal(dashVelocity(.19, 1, 430), 900);
+  assert.equal(dashVelocity(.01, -1, -430), -900);
+  assert.equal(dashVelocity(0, 1, 318), 318);
+});
+
+test('Crest Score rewards finishing, pace, normalized Light, and the route challenge', () => {
+  assert.deepEqual(crestScoreBreakdown({ time: 40, sparks: 30, total: 60, medal: 'SILVER' }), { finish: 500, pace: 800, light: 400, bonus: 100, total: 1800 });
+  assert.ok(crestScoreBreakdown({ time: 40, sparks: 60, total: 60, medal: 'GOLD' }).total > crestScoreBreakdown({ time: 40, sparks: 30, total: 60, medal: 'GOLD' }).total);
+  assert.ok(crestScoreBreakdown({ time: 35, sparks: 30, total: 60, medal: 'GOLD' }).total > crestScoreBreakdown({ time: 55, sparks: 30, total: 60, medal: 'GOLD' }).total);
+  assert.equal(crestScoreBreakdown({ time: 40, sparks: 30, total: 60, signatureCount: 3 }).bonus, 200);
 });
 
 test('Tailwind strongly accelerates right, drifts while coasting, and resists leftward recovery', () => {
@@ -159,6 +180,7 @@ test('each Declarations week is structurally distinct and keeps recovery points 
     assert.ok(route.checkpoints.every((checkpoint) => checkpointHasClearLanding(route, checkpoint)));
     assert.ok(route.platforms.some((platform) => platform.y >= 600 && 15135 >= platform.x && 15135 <= platform.x + platform.w));
     assert.ok(route.sparkSeed.length <= 120);
+    assert.equal(route.rallyPoints?.length, 3);
   }
 });
 
@@ -223,4 +245,12 @@ test('production hosting migrations include Series Route completions', () => {
   const migration = readFileSync(new URL('../drizzle/0004_series_routes.sql', import.meta.url), 'utf8');
   assert.match(migration, /CREATE TABLE IF NOT EXISTS series_completions/);
   assert.match(migration, /UNIQUE\(player_id, week_id\)/);
+});
+
+test('production hosting migrations include Crest Score and every-run Community Light', () => {
+  const migration = readFileSync(new URL('../drizzle/0005_crest_score.sql', import.meta.url), 'utf8');
+  assert.match(migration, /ALTER TABLE crest_scores ADD COLUMN crest_score/);
+  assert.match(migration, /ALTER TABLE series_completions ADD COLUMN best_score/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS community_light_contributions/);
+  assert.match(migration, /contribution_id TEXT PRIMARY KEY/);
 });

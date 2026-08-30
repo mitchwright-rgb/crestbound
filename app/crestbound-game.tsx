@@ -2,7 +2,7 @@
 
 import { FormEvent, PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SoundKind, soundSources, soundVolumes } from './audio-assets';
-import { challengeMedal, chicagoDayKey, collectLightPower, dailyObjectiveForSerial, dailyObjectiveSpecs, formatDailyReset, gravityForModifier, horizontalSpeedLimit, millisecondsUntilNextChicagoDay, musicTrackForCourse, musicTrackForSeries, objectiveResultLabel, resetRunTiming, resolveDamage, runStorageKey, tailwindAcceleration, touchInputFromControls } from './game-rules';
+import { challengeMedal, chicagoDayKey, collectLightPower, crestScoreBreakdown, dailyObjectiveForSerial, dailyObjectiveSpecs, dashVelocity, formatDailyReset, gravityForModifier, horizontalSpeedLimit, jumpReleaseGravity, jumpVelocityForModifier, millisecondsUntilNextChicagoDay, musicTrackForCourse, musicTrackForSeries, objectiveResultLabel, resetRunTiming, resolveDamage, runStorageKey, tailwindAcceleration, touchInputFromControls, type CrestScoreBreakdown } from './game-rules';
 import { buildSeededCourse } from './course-generator';
 import { buildDeclarationsCourse } from './series-course-generator';
 import { activeSeriesForDay, completedSeriesWeekIds, seriesWeekSeed } from './series-routes';
@@ -10,13 +10,13 @@ import { checkNickname } from '@/lib/nickname';
 import { dailyChallengeIdForDay } from '@/lib/daily-challenge';
 
 type Screen = 'title' | 'playing' | 'paused' | 'won' | 'over';
-type Hud = { sparks: number; total: number; lives: number; hits: number; time: number; best: number | null; checkpoint: number; progress: number; dashReady: boolean; shield: number };
+type Hud = { sparks: number; total: number; lives: number; hits: number; time: number; best: number | null; checkpoint: number; progress: number; dashReady: boolean; shield: number; signatureCount: number };
 type Board = 'daily' | 'weekly' | 'all';
-type BoardEntry = { rank: number; name: string; timeMs: number; sparks: number; points?: number; runs?: number };
+type BoardEntry = { rank: number; name: string; score: number; timeMs: number; sparks: number; points?: number; runs?: number };
 type HomePanel = 'none' | 'leaderboard' | 'help' | 'series' | 'series-results' | 'resource';
 type GameNotice = { text: string; kind: 'checkpoint' | 'power' };
 type SeriesMessage = { title: string; date: string; speaker: string; url: string; appUrl: string | null; description: string; discussionGuideUrl: string | null; readingGuideUrl: string | null };
-type SeriesBoardEntry = { rank: number; name: string; timeMs: number; lights: number; isPlayer: boolean };
+type SeriesBoardEntry = { rank: number; name: string; score: number; timeMs: number; lights: number; isPlayer: boolean };
 
 type Community = { players: number; lights: number; goal: number; nearby: BoardEntry[]; playerRank: number | null; recent: string[] };
 
@@ -69,7 +69,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
   const courseData = useMemo(() => isSeries
     ? buildDeclarationsCourse(seriesWeekIndex, routeSeed)
     : buildSeededCourse(activeCourseIndex, modifier.id, routeSeed), [activeCourseIndex, isSeries, modifier.id, routeSeed, seriesWeekIndex]);
-  const { platforms, spikeZones, sparkSeed, enemySeed, checkpoints } = courseData;
+  const { platforms, spikeZones, sparkSeed, enemySeed, checkpoints, rallyPoints: rallySeed = [] } = courseData;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const touchControlsRef = useRef<HTMLDivElement>(null);
   const screenRef = useRef<Screen>('title');
@@ -82,11 +82,12 @@ export default function Home({ initialDay }: { initialDay: string }) {
   const [waitingForLandscape, setWaitingForLandscape] = useState(false);
   const [muted, setMuted] = useState(false);
   const mutedRef = useRef(false);
-  const [hud, setHud] = useState<Hud>({ sparks: 0, total: sparkSeed.length, lives: 3, hits: 0, time: 0, best: null, checkpoint: 0, progress: 0, dashReady: true, shield: 0 });
+  const [hud, setHud] = useState<Hud>({ sparks: 0, total: sparkSeed.length, lives: 3, hits: 0, time: 0, best: null, checkpoint: 0, progress: 0, dashReady: true, shield: 0, signatureCount: 0 });
   const [finalResult, setFinalResult] = useState<Hud | null>(null);
   const finalResultRef = useRef<Hud | null>(null);
   const resultHud = finalResult ?? hud;
   const earnedMedal = challengeMedal(objectiveId, resultHud);
+  const localScore = crestScoreBreakdown({ time: resultHud.time, sparks: resultHud.sparks, total: resultHud.total, ...(isSeries ? { signatureCount: resultHud.signatureCount } : { medal: earnedMedal }) });
   const objectiveResult = objectiveResultLabel(objectiveId, resultHud);
   const routeChallengeId = isSeries ? seriesWeek!.id : dailyChallengeId;
   const bestStorageKey = runStorageKey('best', { courseId: course.id, challengeId: routeChallengeId, modifierId: modifier.id, practice: isPractice });
@@ -108,6 +109,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
   const [runStartState, setRunStartState] = useState<'idle' | 'connecting' | 'error'>('idle');
   const [runStartError, setRunStartError] = useState('');
   const [rank, setRank] = useState<number | null>(null);
+  const [scoreResult, setScoreResult] = useState<{ score: number; breakdown: CrestScoreBreakdown; contribution: number } | null>(null);
   const [homePanel, setHomePanel] = useState<HomePanel>('none');
   const homePanelRef = useRef<HTMLElement>(null);
   const homePanelTriggerRef = useRef<HTMLElement | null>(null);
@@ -395,7 +397,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
   function dismissModifierCoach() {
     setShowModifierCoach(false);
     coachPauseRef.current = dashCoachRef.current;
-    window.localStorage.setItem(`crestbound-twist-seen-${localDay}-${modifier.id}`, '1');
+    window.localStorage.setItem(isSeries ? `crestbound-series-mechanic-seen-${activeSeries?.series.id ?? 'series'}` : `crestbound-twist-seen-${localDay}-${modifier.id}`, '1');
     track('modifier_learned');
   }
 
@@ -412,9 +414,9 @@ export default function Home({ initialDay }: { initialDay: string }) {
     setFinalResult(null);
     setHomePanel('none');
     resetRef.current?.();
-    setSubmitState('idle'); setRank(null); runIdRef.current = null;
+    setSubmitState('idle'); setRank(null); setScoreResult(null); runIdRef.current = null;
     const shouldWaitForLandscape = window.matchMedia('(orientation: portrait) and (pointer: coarse)').matches;
-    if (!isPractice) {
+    {
       setRunStartState('connecting');
       setRunStartError('');
       const controller = new AbortController();
@@ -423,7 +425,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
         const response = await fetch('/api/run', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'start', playerId: playerIdRef.current, courseId: dailyCourse.id, modifierId: dailyModifier.id, challengeId: dailyChallengeId }),
+          body: JSON.stringify({ action: 'start', playerId: playerIdRef.current, courseId: isSeries ? 'declarations' : dailyCourse.id, modifierId: isSeries ? 'clear' : dailyModifier.id, challengeId: isSeries ? seriesWeek!.id : dailyChallengeId }),
           signal: controller.signal,
         });
         const data = await response.json().catch(() => null) as { runId?: string; error?: string } | null;
@@ -448,7 +450,9 @@ export default function Home({ initialDay }: { initialDay: string }) {
     setWaitingForLandscape(shouldWaitForLandscape);
     setGameScreen('playing');
     const needsCoach = !window.localStorage.getItem('crestbound-dash-learned');
-    const needsModifierCoach = !isPractice && !window.localStorage.getItem(`crestbound-twist-seen-${localDay}-${modifier.id}`);
+    const needsModifierCoach = isSeries
+      ? !window.localStorage.getItem(`crestbound-series-mechanic-seen-${activeSeries?.series.id ?? 'series'}`)
+      : !window.localStorage.getItem(`crestbound-twist-seen-${localDay}-${modifier.id}`);
     coachPauseRef.current = needsCoach || needsModifierCoach;
     dashCoachRef.current = needsCoach; setShowDashCoach(needsCoach); track(isSeries ? 'series_start' : 'run_start');
     setShowModifierCoach(needsModifierCoach);
@@ -489,6 +493,22 @@ export default function Home({ initialDay }: { initialDay: string }) {
     setStreak(next);
   }
 
+  async function postDailyRun(runResult: Hud, cleanName: string) {
+    if (!runIdRef.current) return;
+    setSubmitState('saving');
+    setSubmitError('');
+    window.localStorage.setItem('crestbound-nickname', cleanName); setNickname(cleanName);
+    try {
+      const response = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'finish', runId: runIdRef.current, playerId: playerIdRef.current, courseId: dailyCourse.id, modifierId: dailyModifier.id, challengeId: dailyChallengeId, name: cleanName, scoreMs: Math.round(runResult.time * 1000), sparks: runResult.sparks, lightTotal: runResult.total, hits: runResult.hits }) });
+      const data = await response.json() as { rank?: number; score?: number; breakdown?: CrestScoreBreakdown; community?: { lights: number; players: number; goal: number; contribution: number }; error?: string };
+      if (!response.ok) throw new Error(data.error);
+      setRank(data.rank ?? null);
+      setScoreResult({ score: data.score ?? localScore.total, breakdown: data.breakdown ?? localScore, contribution: data.community?.contribution ?? runResult.sparks });
+      if (data.community) setCommunity((current) => ({ ...current, lights: data.community!.lights, players: data.community!.players, goal: data.community!.goal }));
+      setSubmitState('saved'); setBoard('daily'); void loadBoard('daily');
+    } catch (error) { setSubmitError(error instanceof Error ? error.message : 'Couldn\'t post this run.'); setSubmitState('error'); }
+  }
+
   async function submitRun(event: FormEvent) {
     event.preventDefault();
     const nicknameResult = checkNickname(nickname);
@@ -497,17 +517,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
       setSubmitState('error');
       return;
     }
-    setSubmitState('saving');
-    setSubmitError('');
-    const cleanName = nicknameResult.name;
-    const runResult = finalResultRef.current ?? hud;
-    window.localStorage.setItem('crestbound-nickname', cleanName); setNickname(cleanName);
-    try {
-      const response = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'finish', runId: runIdRef.current, playerId: playerIdRef.current, courseId: dailyCourse.id, modifierId: dailyModifier.id, challengeId: dailyChallengeId, name: cleanName, scoreMs: Math.round(runResult.time * 1000), sparks: runResult.sparks }) });
-      const data = await response.json() as { rank?: number; error?: string };
-      if (!response.ok) throw new Error(data.error);
-      setRank(data.rank ?? null); setSubmitState('saved'); setBoard('daily'); void loadBoard('daily');
-    } catch (error) { setSubmitError(error instanceof Error ? error.message : 'Couldn\'t post this run.'); setSubmitState('error'); }
+    await postDailyRun(finalResultRef.current ?? hud, nicknameResult.name);
   }
 
   function syncTouchInput() {
@@ -682,9 +692,12 @@ export default function Home({ initialDay }: { initialDay: string }) {
     const player = { x: checkpoints[0], y: 538, w: 46, h: 82, vx: 0, vy: 0, grounded: true, jumps: 0, dashTime: 0, dashCooldown: 0, facing: 1, invuln: 1.25 };
     let sparks = sparkSeed.map((item) => ({ ...item }));
     let enemies = enemySeed.map((item) => ({ ...item }));
+    let activeSpikes = spikeZones.map((item) => ({ ...item }));
+    let rallyPoints = rallySeed.map((item) => ({ ...item }));
     let lives = 3;
     let hits = 0;
     let collected = 0;
+    let signatureCount = 0;
     let { elapsed, lastHud } = resetRunTiming();
     let cameraX = 0;
     let checkpointIndex = 0;
@@ -741,10 +754,12 @@ export default function Home({ initialDay }: { initialDay: string }) {
       player.x = checkpoints[0]; player.y = 620 - player.h; player.vx = 0; player.vy = 0; player.grounded = true; player.invuln = 1.25; player.jumps = 0;
       sparks = sparkSeed.map((item) => ({ ...item }));
       enemies = enemySeed.map((item) => ({ ...item }));
-      lives = 3; hits = 0; collected = 0; ({ elapsed, lastHud } = resetRunTiming()); cameraX = 0; checkpointIndex = 0; jumpBuffer = 0; coyote = 0; previousJump = false; previousDash = false; trace = []; traceTimer = 0; stormShield = 0; runEnded = false;
+      activeSpikes = spikeZones.map((item) => ({ ...item }));
+      rallyPoints = rallySeed.map((item) => ({ ...item }));
+      lives = 3; hits = 0; collected = 0; signatureCount = 0; ({ elapsed, lastHud } = resetRunTiming()); cameraX = 0; checkpointIndex = 0; jumpBuffer = 0; coyote = 0; previousJump = false; previousDash = false; trace = []; traceTimer = 0; stormShield = 0; runEnded = false;
       window.clearTimeout(gameNoticeTimerRef.current); setGameNotice(null);
       const storedBest = window.localStorage.getItem(bestStorageKey);
-      setHud({ sparks: 0, total: sparkSeed.length, lives: 3, hits: 0, time: 0, best: storedBest ? Number(storedBest) : null, checkpoint: 0, progress: 0, dashReady: true, shield: 0 });
+      setHud({ sparks: 0, total: sparkSeed.length, lives: 3, hits: 0, time: 0, best: storedBest ? Number(storedBest) : null, checkpoint: 0, progress: 0, dashReady: true, shield: 0, signatureCount: 0 });
     };
     resetRef.current = reset;
 
@@ -784,21 +799,24 @@ export default function Home({ initialDay }: { initialDay: string }) {
       const input = inputState();
       const direction = Number(input.right) - Number(input.left);
       if (direction) player.facing = direction;
-      if (direction && player.vx && Math.sign(player.vx) !== direction) player.vx *= .38;
-      const acceleration = player.grounded ? 2200 : 1450;
-      player.vx += direction * acceleration * dt;
-      if (!direction) player.vx *= Math.pow(player.grounded ? 0.0008 : 0.08, dt);
-      player.vx += tailwindAcceleration(modifier.id, direction) * dt;
-      player.vx = Math.max(-horizontalSpeedLimit(modifier.id, -1), Math.min(horizontalSpeedLimit(modifier.id, direction), player.vx));
+      if (player.dashTime > 0) player.vx = dashVelocity(player.dashTime, player.facing, player.vx);
+      else {
+        if (direction && player.vx && Math.sign(player.vx) !== direction) player.vx *= .38;
+        const acceleration = player.grounded ? 2200 : 1450;
+        player.vx += direction * acceleration * dt;
+        if (!direction) player.vx *= Math.pow(player.grounded ? 0.0008 : 0.08, dt);
+        player.vx += tailwindAcceleration(modifier.id, direction) * dt;
+        player.vx = Math.max(-horizontalSpeedLimit(modifier.id, -1), Math.min(horizontalSpeedLimit(modifier.id, direction), player.vx));
+      }
 
       if (input.jump && !previousJump) jumpBuffer = 0.12;
       if (jumpBuffer > 0 && (player.grounded || coyote > 0 || player.jumps < 2)) {
-        player.vy = player.jumps === 1 ? -610 : -690;
+        player.vy = jumpVelocityForModifier(modifier.id, player.jumps);
         player.grounded = false; coyote = 0; jumpBuffer = 0; player.jumps += 1; tone('jump');
       }
-      if (!input.jump && player.vy < -260) player.vy += 1450 * dt;
+      if (!input.jump && player.vy < -260) player.vy += jumpReleaseGravity(modifier.id) * dt;
       if (input.dash && !previousDash && player.dashCooldown <= 0) {
-        player.dashTime = 0.17; player.dashCooldown = 0.82; player.vx = player.facing * 900; player.vy *= 0.18; screenShake = .08; tone('dash');
+        player.dashTime = 0.22; player.dashCooldown = 0.9; player.vx = player.facing * 900; player.vy *= 0.18; screenShake = .08; tone('dash');
         if (dashCoachRef.current) dismissDashCoach(true);
       }
       previousJump = input.jump;
@@ -837,7 +855,20 @@ export default function Home({ initialDay }: { initialDay: string }) {
       }
       player.x = Math.max(0, Math.min(WORLD_W - player.w, player.x));
       if (player.y > 800) hurt('fall');
-      spikeZones.forEach((spike) => { if (overlap(player.x + 7, player.y + 12, player.w - 14, player.h - 12, spike.x, spike.y, spike.w, 28)) hurt(); });
+      activeSpikes.forEach((spike) => { if (overlap(player.x + 7, player.y + 12, player.w - 14, player.h - 12, spike.x, spike.y, spike.w, 28)) hurt(); });
+
+      rallyPoints.forEach((rally) => {
+        if (rally.triggered || Math.abs(player.x + player.w / 2 - rally.x) > 54 || Math.abs(player.y + player.h / 2 - rally.y) > 76) return;
+        rally.triggered = true;
+        signatureCount += 1;
+        const clearUntil = rally.x + 1050;
+        activeSpikes = activeSpikes.filter((spike) => spike.x < rally.x || spike.x > clearUntil);
+        enemies.forEach((enemy) => { if (enemy.x >= rally.x && enemy.x <= clearUntil) enemy.alive = false; });
+        screenShake = .18;
+        showGameNotice(`DECLARATION ${signatureCount}/3 · PATH CLEARED`, 'power');
+        tone('checkpoint');
+        track('series_signature', { signatureCount, progress: player.x, elapsedMs: elapsed * 1000 });
+      });
 
       enemies.forEach((enemy) => {
         if (!enemy.alive) return;
@@ -882,7 +913,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
           window.localStorage.setItem(ghostStorageKey, JSON.stringify(trace));
           ghost = trace;
         }
-        const finishedRun: Hud = { sparks: collected, total: sparks.length, lives, hits, time: elapsed, best: Math.min(best, elapsed), checkpoint: checkpointIndex, progress: player.x, dashReady: player.dashCooldown <= 0, shield: stormShield };
+        const finishedRun: Hud = { sparks: collected, total: sparks.length, lives, hits, time: elapsed, best: Math.min(best, elapsed), checkpoint: checkpointIndex, progress: player.x, dashReady: player.dashCooldown <= 0, shield: stormShield, signatureCount };
         finalResultRef.current = finishedRun;
         setFinalResult(finishedRun);
         setHud(finishedRun);
@@ -894,13 +925,19 @@ export default function Home({ initialDay }: { initialDay: string }) {
           track('series_finish', { lives, progress: player.x, elapsedMs: elapsed * 1000 });
           void fetch('/api/series', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ playerId: playerIdRef.current, name: nickname, seriesId: activeSeries.series.id, weekId: seriesWeek!.id, timeMs: Math.round(elapsed * 1000), lights: collected }),
-          }).then(async (response) => response.ok ? response.json() as Promise<{ completions?: number; entries?: SeriesBoardEntry[] }> : null)
+            body: JSON.stringify({ runId: runIdRef.current, playerId: playerIdRef.current, name: nickname, seriesId: activeSeries.series.id, weekId: seriesWeek!.id, timeMs: Math.round(elapsed * 1000), lights: collected, lightTotal: sparks.length, signatureCount }),
+          }).then(async (response) => response.ok ? response.json() as Promise<{ score?: number; breakdown?: CrestScoreBreakdown; completions?: number; entries?: SeriesBoardEntry[]; community?: { lights: number; players: number; goal: number; contribution: number } }> : null)
             .then((data) => {
               if (data?.completions != null) setSeriesCompletions(data.completions);
               if (data?.entries) { setSeriesEntries(data.entries); setSeriesBoardStatus('ready'); }
+              if (data?.score && data.breakdown) setScoreResult({ score: data.score, breakdown: data.breakdown, contribution: data.community?.contribution ?? collected });
+              if (data?.community) setCommunity((current) => ({ ...current, lights: data.community!.lights, players: data.community!.players, goal: data.community!.goal }));
             })
             .catch(() => undefined);
+        }
+        if (!isSeries) {
+          const storedName = checkNickname(nickname);
+          if (storedName.ok) void postDailyRun(finishedRun, storedName.name);
         }
         flushTelemetry();
         tone('win'); setGameScreen('won');
@@ -909,7 +946,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
       if (elapsed - lastHud > 0.2) {
         lastHud = elapsed;
         const stored = window.localStorage.getItem(bestStorageKey);
-        setHud({ sparks: collected, total: sparks.length, lives, hits, time: elapsed, best: stored ? Number(stored) : null, checkpoint: checkpointIndex, progress: player.x, dashReady: player.dashCooldown <= 0, shield: stormShield });
+        setHud({ sparks: collected, total: sparks.length, lives, hits, time: elapsed, best: stored ? Number(stored) : null, checkpoint: checkpointIndex, progress: player.x, dashReady: player.dashCooldown <= 0, shield: stormShield, signatureCount });
       }
     }
 
@@ -1099,11 +1136,20 @@ export default function Home({ initialDay }: { initialDay: string }) {
         drawSign(11280, 545, modifier.name.toUpperCase(), '#78d7d2');
         drawSign(14290, 540, 'FINAL PUSH', '#ef6f52');
       }
-      spikeZones.forEach((spike) => {
+      activeSpikes.forEach((spike) => {
         if (!visible(spike.x, spike.w)) return;
         ctx.fillStyle = '#071316'; ctx.fillRect(spike.x, spike.y + 20, spike.w, 8);
         ctx.fillStyle = '#f06f52';
         for (let x = spike.x; x < spike.x + spike.w; x += 24) { ctx.beginPath(); ctx.moveTo(x, spike.y + 24); ctx.lineTo(x + 12, spike.y); ctx.lineTo(x + 24, spike.y + 24); ctx.closePath(); ctx.fill(); }
+      });
+      rallyPoints.forEach((rally, index) => {
+        if (rally.triggered || !visible(rally.x - 32, 64)) return;
+        const pulse = 1 + (Math.floor(elapsed * 5 + index) % 2) * 4;
+        ctx.fillStyle = '#071316'; ctx.fillRect(rally.x - 26, rally.y - 32, 52, 56);
+        ctx.fillStyle = '#f8e45c'; ctx.fillRect(rally.x - 20, rally.y - 26, 40, 44);
+        ctx.fillStyle = '#ef4638'; ctx.fillRect(rally.x - 14, rally.y - 18, 28, 22);
+        ctx.fillStyle = '#071316'; ctx.fillRect(rally.x - 5, rally.y - 13, 10, 12); ctx.fillRect(rally.x - 2, rally.y + 7, 4, 16);
+        ctx.strokeStyle = '#f8e45c'; ctx.lineWidth = 4; ctx.strokeRect(rally.x - 32 - pulse, rally.y - 38 - pulse, 64 + pulse * 2, 68 + pulse * 2);
       });
       checkpoints.slice(1).forEach((x, index) => {
         if (!visible(x, 42)) return;
@@ -1276,12 +1322,12 @@ export default function Home({ initialDay }: { initialDay: string }) {
                 {runStartState === 'error' && <p className="run-start-error" role="alert"><b>RUN NOT STARTED</b><span>{runStartError}</span></p>}
                 <div className="daily-glance">
                   <div className="home-social-stats">
-                    <span><small>FASTEST</small><b>{entries[0] ? `${entries[0].name} · ${formatTime(entries[0].timeMs / 1000)}` : 'CLAIM #1'}</b></span>
+                    <span><small>TOP SCORE</small><b>{entries[0] ? `${entries[0].name} · ${entries[0].score.toLocaleString()}` : 'CLAIM #1'}</b></span>
                     <span><small>TODAY</small><b>{community.players} {community.players === 1 ? 'RUNNER' : 'RUNNERS'}</b></span>
                   </div>
                   <div className="community-progress">
-                    <div><span>COMMUNITY LIGHT</span><b>{community.lights.toLocaleString()} / {community.goal.toLocaleString()}</b></div>
-                    <progress aria-label={`${community.lights} of ${community.goal} community lights collected today`} max={community.goal} value={Math.min(community.lights, community.goal)} />
+                    <div><span>COMMUNITY LIGHT · WEEK</span><b>{community.lights.toLocaleString()} / {community.goal.toLocaleString()}</b></div>
+                    <progress aria-label={`${community.lights} of ${community.goal} community lights collected this week`} max={community.goal} value={Math.min(community.lights, community.goal)} />
                   </div>
                 </div>
                 <div className="home-links">
@@ -1297,16 +1343,16 @@ export default function Home({ initialDay }: { initialDay: string }) {
               <div className="board-tabs">
                 {(['daily', 'weekly', 'all'] as Board[]).map((item) => <button className={board === item ? 'active' : ''} aria-pressed={board === item} type="button" key={item} onClick={() => setBoard(item)}>{item === 'daily' ? 'TODAY' : item === 'weekly' ? 'WEEK' : 'ALL'}</button>)}
               </div>
-              <div className="board-legend" aria-hidden="true"><span>RANK</span><span>RUNNER</span><span>{board === 'weekly' ? 'POINTS' : 'TIME'}</span><span>{board === 'weekly' ? 'DAYS' : 'LIGHT'}</span></div>
+              <div className="board-legend score-board" aria-hidden="true"><span>RANK</span><span>RUNNER</span><span>SCORE</span></div>
               <ol className="board-list" aria-live="polite">
                 {boardStatus === 'loading' && <li className="board-message">LOADING RUNS...</li>}
                 {boardStatus === 'offline' && <li className="board-message">BOARD COMES ONLINE WHEN PUBLISHED.</li>}
                 {boardStatus === 'ready' && entries.length === 0 && <li className="board-message">NO FINISHERS YET. CLAIM #1.</li>}
-                {boardStatus === 'ready' && entries.slice(0, 7).map((entry) => <li key={`${entry.rank}-${entry.name}`}><b>#{entry.rank}</b><span>{entry.name}</span><time>{board === 'weekly' ? `${entry.points ?? 0} PT` : formatTime(entry.timeMs / 1000)}</time><small>{board === 'weekly' ? `${entry.runs ?? 0}D` : `${entry.sparks}◆`}</small></li>)}
+                {boardStatus === 'ready' && entries.slice(0, 7).map((entry) => <li className="score-board" key={`${entry.rank}-${entry.name}`}><b>#{entry.rank}</b><span>{entry.name}</span><time>{entry.score.toLocaleString()}</time></li>)}
               </ol>
-              {community.playerRank && <div className="nearby-rivals"><b>YOUR NEARBY RIVALS // #{community.playerRank}</b>{community.nearby.map((entry) => <span key={`${entry.rank}-${entry.name}`}>#{entry.rank} {entry.name} <time>{formatTime(entry.timeMs / 1000)}</time></span>)}</div>}
+              {community.playerRank && <div className="nearby-rivals"><b>YOUR NEARBY RIVALS // #{community.playerRank}</b>{community.nearby.map((entry) => <span key={`${entry.rank}-${entry.name}`}>#{entry.rank} {entry.name} <time>{entry.score.toLocaleString()}</time></span>)}</div>}
               {community.recent.length > 0 && <p className="recent-finishers">JUST RAN: {community.recent.join(' · ')}</p>}
-              <p>{board === 'weekly' ? 'WEEKLY POINTS COME FROM EACH DAY’S BEST RUN: FINISH SPEED + LIGHT. MORE DAYS PLAYED BUILDS THE TOTAL.' : 'FASTEST VERIFIED TIME WINS. LIGHT BREAKS AN EXACT TIE AND SHOWS WHAT THAT SAME RUN COLLECTED.'}</p>
+              <p>{board === 'weekly' ? 'YOUR BEST CREST SCORE FROM EACH DAY BUILDS YOUR WEEKLY TOTAL.' : 'HIGH SCORE WINS: FINISH THE ROUTE, MOVE FAST, COLLECT LIGHT, AND COMPLETE THE CHALLENGE.'}</p>
               <button className="panel-close" type="button" onClick={closeHomePanel}>Close</button>
             </aside>}
             {homePanel === 'help' && <aside ref={homePanelRef} className="how-to home-panel" role="dialog" aria-modal="true" aria-labelledby="help-title" tabIndex={-1}>
@@ -1314,7 +1360,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
               <p className="kicker">READY, SUNNY?</p><h2 id="help-title">How to Play</h2>
               <div><b>RUN</b><span>Arrow keys / A D / touch arrows</span><b>JUMP</b><span>Space / touch JUMP · tap twice</span><b>DASH</b><span>Shift or X / touch DASH · recharges</span></div>
               <p>Touch controls appear automatically. Turn your phone sideways for the full course.</p>
-              <section className="scoring-directory"><h3>How You Win</h3><article><b>1 · TIME</b><span>The fastest verified finish ranks #1 on today&apos;s leaderboard. If times tie exactly, more Light wins.</span></article><article><b>2 · DAILY MEDAL</b><span>Today&apos;s challenge awards Bronze, Silver, or Gold. Its target may reward speed, Light, or a clean run.</span></article><article><b>3 · LIGHT</b><span>Light helps earn challenge medals, powers Dash, and fills Suncrest&apos;s shared community goal.</span></article><article><b>4 · WEEKLY POINTS</b><span>Each day&apos;s best run earns points from finish speed plus Light. Playing across the week builds your total.</span></article></section>
+              <section className="scoring-directory"><h3>How You Win</h3><article><b>1 · FINISH</b><span>Clear the route to lock in 500 points.</span></article><article><b>2 · MOVE FAST</b><span>A faster finish earns a larger Pace Bonus.</span></article><article><b>3 · COLLECT LIGHT</b><span>Your percentage of available Light earns up to 800 points. Every completed run also adds all of its Light to Suncrest&apos;s weekly community goal.</span></article><article><b>4 · COMPLETE THE CHALLENGE</b><span>Silver adds 100 points and Gold adds 200. Series Routes award this bonus through their signature objective.</span></article></section>
               <section className="world-rules"><h3>World Rules</h3><article><b>GOLD LIGHT</b><span>Shortens Dash recharge.</span></article><article><b>STORM LIGHT</b><span>Teal. In Spark Storm, fully recharges Dash and shields one hit for seven seconds.</span></article><article><b>CHECKPOINT</b><span>Saves your route and restores one life, up to three.</span></article><article><b>ENEMY</b><span>Dash through it or land on it from above.</span></article></section>
               <section className="challenge-directory"><h3>Daily Challenge</h3><article><b>{objective.name}{!isPractice ? ' · TODAY' : ''}</b><span>{objective.description}. Finish for Bronze; hit the listed target for Silver or Gold.</span></article><p>Everyone gets the same seeded skyline each day. The route, challenge, and leaderboard reset together at midnight Central.</p></section>
               <section className="twist-directory"><h3>Daily Twists</h3>{modifierSpecs.map((item) => <article className={item.id === modifier.id && !isPractice ? 'today' : ''} key={item.id}><b>{item.name}{item.id === modifier.id && !isPractice ? ' · TODAY' : ''}</b><span>{item.description}</span></article>)}</section>
@@ -1324,14 +1370,14 @@ export default function Home({ initialDay }: { initialDay: string }) {
             {homePanel === 'series' && <aside ref={homePanelRef} className="course-picker series-picker home-panel" role="dialog" aria-modal="true" aria-labelledby="series-title" tabIndex={-1}>
               <button className="panel-dismiss" type="button" aria-label="Close Series Routes" onClick={closeHomePanel}>X</button>
               <p className="kicker">NOW AT SUNCREST</p><h2 id="series-title">Series Routes</h2>
-              {activeSeries && seriesWeek ? <><section className="series-feature"><div className="series-wordmark"><small>TAKE A STAND</small><b>DECLARATIONS</b></div><p>{seriesMessage?.description || activeSeries.series.description}</p><div className="series-week"><span>{seriesWeekIndex === activeSeries.weekIndex ? 'THIS WEEK' : `WEEK ${seriesWeekIndex + 1} ARCHIVE`} · {seriesMessage?.title || seriesWeek.title}</span><b>{seriesWeek.routeName}</b>{seriesMessage?.speaker && <small>{seriesMessage.speaker}</small>}</div><div className="series-week-dots" aria-label={`${completedSeriesWeeks.length} of ${activeSeries.series.weeks.length} routes completed`}>{activeSeries.series.weeks.map((week, index) => { const locked = index > activeSeries.weekIndex; const state = [completedSeriesWeeks.includes(week.id) ? 'complete' : '', index === activeSeries.weekIndex ? 'current' : '', index === seriesWeekIndex ? 'selected' : ''].filter(Boolean).join(' '); return <button type="button" className={state} disabled={locked} aria-label={locked ? `Week ${index + 1} unlocks ${week.sunday}` : `Select week ${index + 1}: ${week.title}`} aria-pressed={index === seriesWeekIndex} onClick={() => setSeriesWeekIndex(index)} key={week.id}>{locked ? '—' : index + 1}</button>; })}</div></section><button className="series-play" type="button" onClick={() => { pendingSeriesStartRef.current = true; setSeriesMode(true); closeHomePanel(); }}>Play {seriesWeekIndex === activeSeries.weekIndex ? 'This Week' : `Week ${seriesWeekIndex + 1}`} ▶</button><button className="series-results-button" type="button" onClick={() => openHomePanel('series-results')}><span><small>SELECTED ROUTE</small><strong>Results &amp; Leaderboard</strong></span><b>{seriesCompletions} {seriesCompletions === 1 ? 'FINISHER' : 'FINISHERS'} →</b></button><div className="series-resources"><button className="message-link" type="button" onClick={() => { track('message_open'); openSeriesResource(seriesMessage?.title || 'This Week\'s Message', seriesMessage?.appUrl || seriesMessage?.url || activeSeries.series.messageUrl); }}>{seriesMessage ? "Watch This Week's Message" : 'Message Details'}</button>{seriesMessage?.discussionGuideUrl && <button type="button" onClick={() => openSeriesResource('Discussion Guide', seriesMessage.discussionGuideUrl!)}>Discussion Guide</button>}{seriesMessage?.readingGuideUrl && <button type="button" onClick={() => openSeriesResource('Reading Guide', seriesMessage.readingGuideUrl!)}>Reading Guide</button>}</div></> : <p>No Series Route is active today. The daily Crestbound route is still ready to run.</p>}
+              {activeSeries && seriesWeek ? <><section className="series-feature"><div className="series-wordmark"><small>TAKE A STAND</small><b>DECLARATIONS</b></div><p>{activeSeries.series.description}</p><div className="series-week"><span>{seriesWeekIndex === activeSeries.weekIndex ? 'THIS WEEK' : `WEEK ${seriesWeekIndex + 1} ARCHIVE`} · {seriesMessage?.title || seriesWeek.title}</span><b>{seriesWeek.routeName}</b>{seriesMessage?.speaker && <small>{seriesMessage.speaker}</small>}</div><div className="series-week-dots" aria-label={`${completedSeriesWeeks.length} of ${activeSeries.series.weeks.length} routes completed`}>{activeSeries.series.weeks.map((week, index) => { const locked = index > activeSeries.weekIndex; const state = [completedSeriesWeeks.includes(week.id) ? 'complete' : '', index === activeSeries.weekIndex ? 'current' : '', index === seriesWeekIndex ? 'selected' : ''].filter(Boolean).join(' '); return <button type="button" className={state} disabled={locked} aria-label={locked ? `Week ${index + 1} unlocks ${week.sunday}` : `Select week ${index + 1}: ${week.title}`} aria-pressed={index === seriesWeekIndex} onClick={() => setSeriesWeekIndex(index)} key={week.id}>{locked ? '—' : index + 1}</button>; })}</div></section><button className="series-play" type="button" onClick={() => { pendingSeriesStartRef.current = true; setSeriesMode(true); closeHomePanel(); }}>Play {seriesWeekIndex === activeSeries.weekIndex ? 'This Week' : `Week ${seriesWeekIndex + 1}`} ▶</button><button className="series-results-button" type="button" onClick={() => openHomePanel('series-results')}><span><small>SELECTED ROUTE</small><strong>Results &amp; Leaderboard</strong></span><b>{seriesCompletions} {seriesCompletions === 1 ? 'FINISHER' : 'FINISHERS'} →</b></button><div className="series-resources"><button className="message-link" type="button" onClick={() => { track('message_open'); openSeriesResource(seriesMessage?.title || 'This Week\'s Message', seriesMessage?.appUrl || seriesMessage?.url || activeSeries.series.messageUrl); }}>{seriesMessage ? "Watch This Week's Message" : 'Message Details'}</button>{seriesMessage?.discussionGuideUrl && <button type="button" onClick={() => openSeriesResource('Discussion Guide', seriesMessage.discussionGuideUrl!)}>Discussion Guide</button>}{seriesMessage?.readingGuideUrl && <button type="button" onClick={() => openSeriesResource('Reading Guide', seriesMessage.readingGuideUrl!)}>Reading Guide</button>}</div></> : <p>No Series Route is active today. The daily Crestbound route is still ready to run.</p>}
               <button className="panel-close" type="button" onClick={closeHomePanel}>Close</button>
             </aside>}
             {homePanel === 'series-results' && <aside ref={homePanelRef} className="course-picker series-picker series-results-panel home-panel" role="dialog" aria-modal="true" aria-labelledby="series-results-panel-title" tabIndex={-1}>
               <button className="panel-dismiss" type="button" aria-label="Close Series Route results" onClick={closeHomePanel}>X</button>
               <button className="series-results-back" type="button" onClick={() => setHomePanel('series')}>← Series Routes</button>
               <p className="kicker">{seriesWeek?.routeName || 'SERIES ROUTE'}</p><h2 id="series-results-panel-title">Results &amp; Leaderboard</h2>
-              <section className="series-results" aria-label="Selected Series Route results"><header><div><small>SELECTED ROUTE</small><h3>Top Results</h3></div><b>{seriesCompletions} {seriesCompletions === 1 ? 'FINISHER' : 'FINISHERS'}</b></header><div className="series-result-legend" aria-hidden="true"><span>RANK</span><span>RUNNER</span><span>TIME</span><span>LIGHT</span></div><ol>{seriesBoardStatus === 'loading' && <li className="series-result-message">LOADING RESULTS…</li>}{seriesBoardStatus === 'offline' && <li className="series-result-message">RESULTS ARE TEMPORARILY OFFLINE.</li>}{seriesBoardStatus === 'ready' && seriesEntries.length === 0 && <li className="series-result-message">BE THE FIRST TO FINISH THIS ROUTE.</li>}{seriesBoardStatus === 'ready' && seriesEntries.slice(0, 7).map((entry) => <li className={entry.isPlayer ? 'you' : ''} key={`${entry.rank}-${entry.name}`}><b>#{entry.rank}</b><span>{entry.name}</span><time>{formatTime(entry.timeMs / 1000)}</time><small>{entry.lights}◆</small></li>)}</ol><p>Each runner appears once with their fastest finish. Light breaks an exact tie.</p></section>
+              <section className="series-results" aria-label="Selected Series Route results"><header><div><small>SELECTED ROUTE</small><h3>Top Results</h3></div><b>{seriesCompletions} {seriesCompletions === 1 ? 'FINISHER' : 'FINISHERS'}</b></header><div className="series-result-legend score-board" aria-hidden="true"><span>RANK</span><span>RUNNER</span><span>SCORE</span></div><ol>{seriesBoardStatus === 'loading' && <li className="series-result-message">LOADING RESULTS…</li>}{seriesBoardStatus === 'offline' && <li className="series-result-message">RESULTS ARE TEMPORARILY OFFLINE.</li>}{seriesBoardStatus === 'ready' && seriesEntries.length === 0 && <li className="series-result-message">BE THE FIRST TO FINISH THIS ROUTE.</li>}{seriesBoardStatus === 'ready' && seriesEntries.slice(0, 7).map((entry) => <li className={`${entry.isPlayer ? 'you ' : ''}score-board`} key={`${entry.rank}-${entry.name}`}><b>#{entry.rank}</b><span>{entry.name}</span><time>{entry.score.toLocaleString()}</time></li>)}</ol><p>Your best Crest Score appears here. Declarations rewards finding all three rally points.</p></section>
               <button className="panel-close" type="button" onClick={() => setHomePanel('series')}>Back to Series Routes</button>
             </aside>}
             {homePanel === 'resource' && seriesResource && <aside ref={homePanelRef} className="message-viewer home-panel" role="dialog" aria-modal="true" aria-labelledby="resource-title" tabIndex={-1}>
@@ -1345,9 +1391,15 @@ export default function Home({ initialDay }: { initialDay: string }) {
         {screen === 'over' && <div ref={gameModalRef} className="game-modal" role="dialog" aria-modal="true" aria-labelledby="over-title" tabIndex={-1}><p>LIGHT LOST</p><h2 id="over-title">That route got you.</h2><p>Use the high paths, save your dash, and hit enemies from above.</p><button type="button" onClick={() => void startGame()}>Run It Back</button><button className="secondary" type="button" onClick={() => { setGameScreen('title'); if (isSeries) openHomePanel('series'); }}>{isSeries ? 'Back to Series Routes' : 'Back to Home'}</button></div>}
         {screen === 'won' && (
           <div ref={gameModalRef} className="game-modal win-modal" role="dialog" aria-modal="true" aria-labelledby="win-title" tabIndex={-1}>
-            <p>LIGHT RESTORED // {earnedMedal} MEDAL</p><h2 id="win-title">Skyline cleared.</h2>
-            <div className="result-grid"><span><b>{formatTime(resultHud.time)}</b><small>FINISH</small></span><span><b>{resultHud.sparks}/{resultHud.total}</b><small>LIGHT</small></span><span><b>{resultHud.best ? formatTime(resultHud.best) : '—'}</b><small>BEST</small></span></div>
-            <div className="result-priority"><b>{isSeries ? 'SERIES ROUTE COMPLETE' : 'RANKED BY FINISH TIME'}</b><span>{isSeries ? 'Your completion is saved to this Declarations series.' : `Light counts toward ${objective.name} and the community goal.`}</span></div>
+            <p>{isSeries ? `DECLARATIONS ${resultHud.signatureCount}/3` : `LIGHT RESTORED // ${earnedMedal} MEDAL`}</p><h2 id="win-title">Route cleared.</h2>
+            <div className="score-tally" aria-label={`Crest Score ${(scoreResult?.score ?? localScore.total).toLocaleString()}`}>
+              <span><small>ROUTE COMPLETE</small><b>+{(scoreResult?.breakdown.finish ?? localScore.finish).toLocaleString()}</b></span>
+              <span><small>PACE BONUS · {formatTime(resultHud.time)}</small><b>+{(scoreResult?.breakdown.pace ?? localScore.pace).toLocaleString()}</b></span>
+              <span><small>LIGHT · {resultHud.sparks}/{resultHud.total}</small><b>+{(scoreResult?.breakdown.light ?? localScore.light).toLocaleString()}</b></span>
+              <span><small>{isSeries ? `DECLARATIONS · ${resultHud.signatureCount}/3` : `${earnedMedal} CHALLENGE`}</small><b>+{(scoreResult?.breakdown.bonus ?? localScore.bonus).toLocaleString()}</b></span>
+              <strong><small>CREST SCORE</small><b>{(scoreResult?.score ?? localScore.total).toLocaleString()}</b></strong>
+            </div>
+            <div className="result-priority"><b>+{resultHud.sparks} COMMUNITY LIGHT</b><span>Every verified finish helps Suncrest reach this week&apos;s shared goal.</span></div>
             <div className={`challenge-result ${earnedMedal.toLowerCase()}`}><b>{objective.name}</b><span>{objectiveResult}</span></div>
             {isSeries ? <div className="rank-callout">DECLARATION MADE // {seriesCompletions} SUNCRESTERS THIS WEEK</div> : submitState !== 'saved' ? <form className="score-form" onSubmit={submitRun} noValidate>
               <label htmlFor="nickname">POST TO TODAY&apos;S BOARD</label>
@@ -1355,13 +1407,18 @@ export default function Home({ initialDay }: { initialDay: string }) {
               <small>Family-friendly nicknames only. Don&apos;t use your real name.{!runIdRef.current ? ' Online posting is unavailable for this run.' : ''}</small>
               {submitState === 'error' && <em role="alert">{submitError || 'COULDN\'T POST. TRY AGAIN.'}</em>}
             </form> : <div className="rank-callout">RUN POSTED {rank ? `// TODAY #${rank}` : '// TO TODAY'}</div>}
-            <button type="button" onClick={() => void startGame()}>Beat Your Time</button>
-            <button className="secondary" type="button" onClick={() => { if (isSeries) setSeriesMode(false); setGameScreen('title'); if (!isSeries) openHomePanel('leaderboard'); void loadBoard('daily'); }}>{isSeries ? 'Return to Today' : 'View Leaderboard'}</button>
+            <div className="result-actions">
+              <button type="button" onClick={() => void startGame()}>Run It Again</button>
+              {activeSeries && !isSeries && <button className="series-result-cta" type="button" onClick={() => { setGameScreen('title'); setSeriesWeekIndex(activeSeries.weekIndex); openHomePanel('series'); }}>Run a Series Route</button>}
+              {isSeries && <button className="series-result-cta" type="button" onClick={() => { setSeriesMode(false); setGameScreen('title'); }}>Run Today&apos;s Route</button>}
+              {isSeries && seriesMessage && <button className="secondary" type="button" onClick={() => { setGameScreen('title'); setSeriesWeekIndex(seriesWeekIndex); openSeriesResource(seriesMessage.title, seriesMessage.appUrl || seriesMessage.url); }}>Open This Week&apos;s Message</button>}
+              <button className="secondary" type="button" onClick={() => { if (isSeries) setSeriesMode(false); setGameScreen('title'); if (!isSeries) openHomePanel('leaderboard'); void loadBoard('daily'); }}>{isSeries ? 'Back to Home' : 'View Leaderboard'}</button>
+            </div>
           </div>
         )}
 
         {screen === 'playing' && (
-          <>{waitingForLandscape && <div className="rotate-prompt"><span aria-hidden="true">↻</span><strong>Turn Sideways to Start</strong><small>Your run and timer are paused until the phone is in landscape.</small></div>}{showModifierCoach && !waitingForLandscape ? <div className="dash-coach modifier-coach"><b>TODAY&apos;S TWIST · {modifier.name}</b><span>{modifier.description}</span><button type="button" onClick={dismissModifierCoach}>LET&apos;S RUN</button></div> : showDashCoach && !waitingForLandscape && <div className="dash-coach"><b>DASH IS YOUR EDGE</b><span>Press SHIFT or X — or tap DASH — to burst through hazards. The HUD tells you when it recharges.</span><button type="button" onClick={() => dismissDashCoach()}>GOT IT</button></div>}<div ref={touchControlsRef} className="touch-controls" aria-label="Touch controls">
+          <>{waitingForLandscape && <div className="rotate-prompt"><span aria-hidden="true">↻</span><strong>Turn Sideways to Start</strong><small>Your run and timer are paused until the phone is in landscape.</small></div>}{showModifierCoach && !waitingForLandscape ? <div className="dash-coach modifier-coach"><b>{isSeries ? 'DECLARATIONS · TAKE A STAND' : `TODAY'S TWIST · ${modifier.name}`}</b><span>{isSeries ? 'Find all three rally points. Each one clears the hazards ahead and builds your Series bonus.' : modifier.description}</span><button type="button" onClick={dismissModifierCoach}>LET&apos;S RUN</button></div> : showDashCoach && !waitingForLandscape && <div className="dash-coach"><b>DASH IS YOUR EDGE</b><span>Press SHIFT or X — or tap DASH — to burst through hazards and enemies. The HUD tells you when it recharges.</span><button type="button" onClick={() => dismissDashCoach()}>GOT IT</button></div>}<div ref={touchControlsRef} className="touch-controls" aria-label="Touch controls">
             <div><button type="button" data-control="left" aria-label="Move left" onPointerDown={(event) => beginPress('left', event)} onPointerUp={(event) => endPress('left', event)} onPointerCancel={(event) => endPress('left', event)} onLostPointerCapture={(event) => endPress('left', event)}>←</button><button type="button" data-control="right" aria-label="Move right" onPointerDown={(event) => beginPress('right', event)} onPointerUp={(event) => endPress('right', event)} onPointerCancel={(event) => endPress('right', event)} onLostPointerCapture={(event) => endPress('right', event)}>→</button></div>
             <div><button className={hud.dashReady ? 'dash-control ready' : 'dash-control'} type="button" data-control="dash" aria-label={hud.dashReady ? 'Dash ready' : 'Dash charging'} onPointerDown={(event) => beginPress('dash', event)} onPointerUp={(event) => endPress('dash', event)} onPointerCancel={(event) => endPress('dash', event)} onLostPointerCapture={(event) => endPress('dash', event)}>DASH</button><button className="jump-control" type="button" data-control="jump" aria-label="Jump — tap twice for double jump" onPointerDown={(event) => beginPress('jump', event)} onPointerUp={(event) => endPress('jump', event)} onPointerCancel={(event) => endPress('jump', event)} onLostPointerCapture={(event) => endPress('jump', event)}>JUMP 2X</button></div>
           </div></>

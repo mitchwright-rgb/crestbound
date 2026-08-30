@@ -40,6 +40,9 @@ export const schemaStatements = [
     sparks INTEGER NOT NULL DEFAULT 0 CHECK(sparks BETWEEN 0 AND 64),
     course_id TEXT NOT NULL,
     modifier_id TEXT NOT NULL,
+    crest_score INTEGER NOT NULL DEFAULT 0,
+    light_total INTEGER NOT NULL DEFAULT 0,
+    hits INTEGER NOT NULL DEFAULT 0,
     day_key TEXT NOT NULL,
     week_key TEXT NOT NULL,
     created_at INTEGER NOT NULL,
@@ -75,8 +78,22 @@ export const schemaStatements = [
     week_id TEXT NOT NULL,
     best_time_ms INTEGER NOT NULL CHECK(best_time_ms BETWEEN 10000 AND 900000),
     lights INTEGER NOT NULL DEFAULT 0 CHECK(lights BETWEEN 0 AND 120),
+    best_score INTEGER NOT NULL DEFAULT 0,
+    light_total INTEGER NOT NULL DEFAULT 0,
+    signature_count INTEGER NOT NULL DEFAULT 0,
     completed_at INTEGER NOT NULL,
     UNIQUE(player_id, week_id)
   )`,
   `CREATE INDEX IF NOT EXISTS idx_series_completions_series_week ON series_completions(series_id, week_id, completed_at)`,
+  `CREATE TABLE IF NOT EXISTS community_light_contributions (
+    contribution_id TEXT PRIMARY KEY,
+    player_id TEXT NOT NULL,
+    source TEXT NOT NULL CHECK(source IN ('daily', 'series')),
+    source_id TEXT NOT NULL,
+    lights INTEGER NOT NULL CHECK(lights BETWEEN 0 AND 120),
+    day_key TEXT NOT NULL,
+    week_key TEXT NOT NULL,
+    created_at INTEGER NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_community_light_week ON community_light_contributions(week_key, created_at)`,
 ];

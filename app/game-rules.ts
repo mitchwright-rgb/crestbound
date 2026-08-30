@@ -2,6 +2,7 @@ export type ModifierId = 'clear' | 'tailwind' | 'moonstep' | 'sparkstorm';
 export type TouchControl = 'left' | 'right' | 'jump' | 'dash';
 export type DailyObjectiveId = 'sprint' | 'light_hunt' | 'clean_run' | 'skyline_mastery';
 export type ChallengeMedal = 'BRONZE' | 'SILVER' | 'GOLD';
+export type CrestScoreBreakdown = { finish: number; pace: number; light: number; bonus: number; total: number };
 
 export const dailyObjectiveSpecs: Record<DailyObjectiveId, { name: string; short: string; description: string }> = {
   sprint: { name: 'Skyline Sprint', short: 'BEAT THE CLOCK', description: 'Gold under 0:55 · Silver under 1:15' },
@@ -95,7 +96,30 @@ export function runStorageKey(kind: 'best' | 'ghost', context: { courseId: strin
 }
 
 export function gravityForModifier(modifierId: ModifierId) {
-  return modifierId === 'moonstep' ? 1350 : 1850;
+  return modifierId === 'moonstep' ? 1050 : 1850;
+}
+
+export function jumpVelocityForModifier(modifierId: ModifierId, jumpNumber: number) {
+  if (modifierId === 'moonstep') return jumpNumber === 1 ? -700 : -780;
+  return jumpNumber === 1 ? -610 : -690;
+}
+
+export function jumpReleaseGravity(modifierId: ModifierId) {
+  return modifierId === 'moonstep' ? 650 : 1450;
+}
+
+export function dashVelocity(dashTime: number, facing: number, currentVelocity: number) {
+  return dashTime > 0 ? (facing < 0 ? -900 : 900) : currentVelocity;
+}
+
+export function crestScoreBreakdown(result: { time: number; sparks: number; total: number; medal?: ChallengeMedal; signatureCount?: number }): CrestScoreBreakdown {
+  const finish = 500;
+  const pace = Math.max(0, 1200 - Math.floor(Math.max(0, result.time) * 10));
+  const light = result.total > 0 ? Math.round(Math.min(1, Math.max(0, result.sparks / result.total)) * 800) : 0;
+  const bonus = result.signatureCount == null
+    ? result.medal === 'GOLD' ? 200 : result.medal === 'SILVER' ? 100 : 0
+    : result.signatureCount >= 3 ? 200 : result.signatureCount === 2 ? 100 : 0;
+  return { finish, pace, light, bonus, total: finish + pace + light + bonus };
 }
 
 export function tailwindAcceleration(modifierId: ModifierId, direction: number) {

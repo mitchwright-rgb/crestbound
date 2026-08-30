@@ -3,7 +3,8 @@ import type { ModifierId } from './game-rules';
 export type Platform = { x: number; y: number; w: number; h: number; moving?: boolean; phase?: number; baseY?: number };
 export type Spark = { x: number; y: number; taken?: boolean; secret?: boolean; storm?: boolean };
 export type Enemy = { x: number; y: number; minX: number; maxX: number; speed: number; dir: number; alive: boolean };
-export type CourseData = { platforms: Platform[]; spikeZones: Array<{ x: number; y: number; w: number }>; sparkSeed: Spark[]; enemySeed: Enemy[]; checkpoints: number[] };
+export type RallyPoint = { x: number; y: number; triggered?: boolean };
+export type CourseData = { platforms: Platform[]; spikeZones: Array<{ x: number; y: number; w: number }>; sparkSeed: Spark[]; enemySeed: Enemy[]; checkpoints: number[]; rallyPoints?: RallyPoint[] };
 
 const SECTION_W = 760;
 const SECTION_COUNT = 20;

@@ -79,11 +79,20 @@ export function buildDeclarationsCourse(weekIndex: number, seed: number): Course
     }
   });
 
+  const rallyPoints = [4, 9, 14].map((section) => {
+    const targetX = section * SECTION_W + 370;
+    const surface = platforms
+      .filter((platform) => targetX >= platform.x && targetX <= platform.x + platform.w)
+      .sort((a, b) => a.y - b.y)[0];
+    return { x: targetX, y: (surface?.y ?? 620) - 54 };
+  });
+
   return {
     platforms: platforms.sort((a, b) => a.x - b.x || a.y - b.y),
     spikeZones: spikeZones.filter((spike) => !CHECKPOINTS.some((checkpoint) => checkpoint + CHECKPOINT_CLEARANCE > spike.x && checkpoint - CHECKPOINT_CLEARANCE < spike.x + spike.w)),
     sparkSeed: sparkSeed.sort((a, b) => a.x - b.x),
     enemySeed,
     checkpoints: CHECKPOINTS,
+    rallyPoints,
   };
 }
