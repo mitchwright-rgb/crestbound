@@ -76,16 +76,27 @@ export async function POST(request: Request) {
   const objective = dailyObjectiveForSerial(scheduled.serial, scheduled.courseIndex);
   const medal = challengeMedal(objective, { time: scoreMs / 1000, sparks, total: routeTotal, lives: Math.max(0, 3 - hits), hits });
   const breakdown = crestScoreBreakdown({ time: scoreMs / 1000, sparks, total: routeTotal, medal });
-  await db.batch([
-    db.prepare('UPDATE game_runs SET completed_at = ? WHERE id = ? AND completed_at IS NULL').bind(now, runId),
-    db.prepare(`INSERT INTO players (player_id, nickname, created_at, last_seen_at) VALUES (?, ?, ?, ?)
-      ON CONFLICT(player_id) DO UPDATE SET nickname = excluded.nickname, last_seen_at = excluded.last_seen_at`).bind(playerId, name, now, now),
-    db.prepare(`INSERT INTO crest_scores (run_id, player_id, player_name, score_ms, sparks, course_id, modifier_id, challenge_id, crest_score, light_total, hits, day_key, week_key, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(runId, playerId, name, scoreMs, sparks, courseId, modifierId, challengeId, breakdown.total, routeTotal, hits, keys.day, keys.week, now),
-    db.prepare(`INSERT INTO community_light_contributions (contribution_id, player_id, source, source_id, lights, day_key, week_key, created_at)
-      VALUES (?, ?, 'daily', ?, ?, ?, ?, ?) ON CONFLICT(contribution_id) DO NOTHING`).bind(runId, playerId, challengeId, sparks, keys.day, keys.week, now),
-    db.prepare('INSERT INTO game_events (player_id, event_name, course_id, day_key, created_at) VALUES (?, ?, ?, ?, ?)').bind(playerId, 'run_finish', courseId, keys.day, now),
-  ]);
+  try {
+    await db.batch([
+      db.prepare('UPDATE game_runs SET completed_at = ? WHERE id = ? AND completed_at IS NULL').bind(now, runId),
+      db.prepare(`INSERT INTO players (player_id, nickname, created_at, last_seen_at) VALUES (?, ?, ?, ?)
+        ON CONFLICT(player_id) DO UPDATE SET nickname = excluded.nickname, last_seen_at = excluded.last_seen_at`).bind(playerId, name, now, now),
+      db.prepare(`INSERT INTO crest_scores (run_id, player_id, player_name, score_ms, sparks, course_id, modifier_id, challenge_id, crest_score, light_total, hits, day_key, week_key, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).bind(runId, playerId, name, scoreMs, sparks, courseId, modifierId, challengeId, breakdown.total, routeTotal, hits, keys.day, keys.week, now),
+      db.prepare(`INSERT INTO community_light_contributions (contribution_id, player_id, source, source_id, lights, day_key, week_key, created_at)
+        VALUES (?, ?, 'daily', ?, ?, ?, ?, ?) ON CONFLICT(contribution_id) DO NOTHING`).bind(runId, playerId, challengeId, sparks, keys.day, keys.week, now),
+      db.prepare('INSERT INTO game_events (player_id, event_name, course_id, day_key, created_at) VALUES (?, ?, ?, ?, ?)').bind(playerId, 'run_finish', courseId, keys.day, now),
+    ]);
+  } catch (error) {
+    console.error('Daily run save failed', {
+      runId,
+      courseId,
+      sparks,
+      routeTotal,
+      message: error instanceof Error ? error.message : String(error),
+    });
+    return NextResponse.json({ error: 'We couldn\'t post this run. Please try again—your result is still on this screen.' }, { status: 500 });
+  }
   const rank = await db.prepare(`WITH player_runs AS (
     SELECT player_id, score_ms, sparks, crest_score, ROW_NUMBER() OVER (
       PARTITION BY player_id

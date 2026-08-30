@@ -37,7 +37,7 @@ export const schemaStatements = [
     player_id TEXT NOT NULL,
     player_name TEXT NOT NULL CHECK(length(player_name) BETWEEN 2 AND 12),
     score_ms INTEGER NOT NULL CHECK(score_ms BETWEEN 10000 AND 900000),
-    sparks INTEGER NOT NULL DEFAULT 0 CHECK(sparks BETWEEN 0 AND 64),
+    sparks INTEGER NOT NULL DEFAULT 0 CHECK(sparks >= 0),
     course_id TEXT NOT NULL,
     modifier_id TEXT NOT NULL,
     crest_score INTEGER NOT NULL DEFAULT 0,
@@ -46,6 +46,7 @@ export const schemaStatements = [
     day_key TEXT NOT NULL,
     week_key TEXT NOT NULL,
     created_at INTEGER NOT NULL,
+    challenge_id TEXT NOT NULL DEFAULT 'legacy',
     FOREIGN KEY(run_id) REFERENCES game_runs(id)
   )`,
   `CREATE TABLE IF NOT EXISTS game_events (

@@ -258,6 +258,15 @@ test('production hosting migrations include Crest Score and every-run Community 
   assert.match(migration, /contribution_id TEXT PRIMARY KEY/);
 });
 
+test('daily scores accept every verified Light on generated routes', () => {
+  const migration = readFileSync(new URL('../drizzle/0006_expand_daily_light.sql', import.meta.url), 'utf8');
+  const schema = readFileSync(new URL('../db/schema.ts', import.meta.url), 'utf8');
+  assert.match(migration, /sparks INTEGER NOT NULL DEFAULT 0 CHECK\(sparks >= 0\)/);
+  assert.doesNotMatch(migration, /sparks BETWEEN 0 AND 64/);
+  assert.match(schema, /sparks INTEGER NOT NULL DEFAULT 0 CHECK\(sparks >= 0\)/);
+  assert.match(schema, /challenge_id TEXT NOT NULL DEFAULT 'legacy'/);
+});
+
 test('post-run layouts keep Daily and Series results distinct and landscape-safe', () => {
   const game = readFileSync(new URL('./crestbound-game.tsx', import.meta.url), 'utf8');
   const styles = readFileSync(new URL('./globals.css', import.meta.url), 'utf8');
