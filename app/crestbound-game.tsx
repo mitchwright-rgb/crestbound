@@ -1386,19 +1386,23 @@ export default function Home({ initialDay }: { initialDay: string }) {
             {homePanel === 'leaderboard' && <aside ref={homePanelRef} className="leaderboard home-panel" role="dialog" aria-modal="true" aria-labelledby="leaderboard-title" tabIndex={-1}>
               <button className="panel-dismiss" type="button" aria-label="Close leaderboard" onClick={closeHomePanel}>X</button>
               <div className="board-heading"><span id="leaderboard-title">TOP RUNS</span><small>{board === 'daily' ? 'TODAY' : board === 'weekly' ? 'THIS WEEK' : 'ALL TIME'}</small></div>
-              <div className="board-tabs">
-                {(['daily', 'weekly', 'all'] as Board[]).map((item) => <button className={board === item ? 'active' : ''} aria-pressed={board === item} type="button" key={item} onClick={() => setBoard(item)}>{item === 'daily' ? 'TODAY' : item === 'weekly' ? 'WEEK' : 'ALL'}</button>)}
+              <div className="board-table">
+                <div className="board-tabs">
+                  {(['daily', 'weekly', 'all'] as Board[]).map((item) => <button className={board === item ? 'active' : ''} aria-pressed={board === item} type="button" key={item} onClick={() => setBoard(item)}>{item === 'daily' ? 'TODAY' : item === 'weekly' ? 'WEEK' : 'ALL'}</button>)}
+                </div>
+                <div className="board-legend score-board" aria-hidden="true"><span>RANK</span><span>RUNNER</span><span>SCORE</span></div>
+                <ol className="board-list" aria-live="polite">
+                  {boardStatus === 'loading' && <li className="board-message">LOADING RUNS...</li>}
+                  {boardStatus === 'offline' && <li className="board-message">BOARD COMES ONLINE WHEN PUBLISHED.</li>}
+                  {boardStatus === 'ready' && entries.length === 0 && <li className="board-message">NO FINISHERS YET. CLAIM #1.</li>}
+                  {boardStatus === 'ready' && entries.slice(0, 7).map((entry) => <li className="score-board" key={`${entry.rank}-${entry.name}`}><b>#{entry.rank}</b><span>{entry.name}</span><time>{entry.score.toLocaleString()}</time></li>)}
+                </ol>
               </div>
-              <div className="board-legend score-board" aria-hidden="true"><span>RANK</span><span>RUNNER</span><span>SCORE</span></div>
-              <ol className="board-list" aria-live="polite">
-                {boardStatus === 'loading' && <li className="board-message">LOADING RUNS...</li>}
-                {boardStatus === 'offline' && <li className="board-message">BOARD COMES ONLINE WHEN PUBLISHED.</li>}
-                {boardStatus === 'ready' && entries.length === 0 && <li className="board-message">NO FINISHERS YET. CLAIM #1.</li>}
-                {boardStatus === 'ready' && entries.slice(0, 7).map((entry) => <li className="score-board" key={`${entry.rank}-${entry.name}`}><b>#{entry.rank}</b><span>{entry.name}</span><time>{entry.score.toLocaleString()}</time></li>)}
-              </ol>
-              {community.playerRank && <div className="nearby-rivals"><b>YOUR NEARBY RIVALS // #{community.playerRank}</b>{community.nearby.map((entry) => <span key={`${entry.rank}-${entry.name}`}>#{entry.rank} {entry.name} <time>{entry.score.toLocaleString()}</time></span>)}</div>}
-              {community.recent.length > 0 && <p className="recent-finishers">JUST RAN: {community.recent.join(' · ')}</p>}
-              <p>{board === 'weekly' ? 'YOUR BEST CREST SCORE FROM EACH DAY BUILDS YOUR WEEKLY TOTAL.' : 'HIGH SCORE WINS: FINISH THE ROUTE, MOVE FAST, COLLECT LIGHT, AND COMPLETE THE CHALLENGE.'}</p>
+              <div className="board-context">
+                {board === 'daily' && community.playerRank && community.playerRank > 7 && <div className="nearby-rivals"><b>YOUR NEARBY RIVALS // #{community.playerRank}</b>{community.nearby.map((entry) => <span key={`${entry.rank}-${entry.name}`}>#{entry.rank} {entry.name} <time>{entry.score.toLocaleString()}</time></span>)}</div>}
+                {board === 'daily' && community.recent.length > 0 && <p className="recent-finishers">JUST RAN: {community.recent.join(' · ')}</p>}
+                <p>{board === 'weekly' ? 'YOUR BEST CREST SCORE FROM EACH DAY BUILDS YOUR WEEKLY TOTAL.' : 'HIGH SCORE WINS: FINISH, MOVE FAST, COLLECT LIGHT, AND COMPLETE THE CHALLENGE.'}</p>
+              </div>
               <button className="panel-close" type="button" onClick={closeHomePanel}>Close</button>
             </aside>}
             {homePanel === 'help' && <aside ref={homePanelRef} className="how-to home-panel" role="dialog" aria-modal="true" aria-labelledby="help-title" tabIndex={-1}>

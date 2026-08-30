@@ -315,10 +315,12 @@ test('menu guidance uses readable in-place views instead of a scrolling document
   assert.match(styles, /\.win-modal \.result-actions \{ grid-template-columns: 1fr 1fr/);
   assert.match(styles, /\.help-play \{[\s\S]*?align-content: start/);
   assert.match(styles, /\.leaderboard \.board-list li\.score-board \{ align-items: start; align-content: start/);
-  assert.match(styles, /\.leaderboard\.home-panel \{[\s\S]*?margin: 0/);
+  assert.match(styles, /\.leaderboard\.home-panel \{[\s\S]*?display: flex;[\s\S]*?flex-direction: column;[\s\S]*?margin: 0/);
   assert.match(styles, /\.leaderboard \.board-tabs button \{ min-height: 44px/);
   assert.match(styles, /\.leaderboard \.board-list \{ min-height: 0; display: flex; flex-direction: column/);
-  assert.match(styles, /grid-template-rows: 56px 50px 32px minmax\(0, 1fr\) auto auto auto 44px/);
+  assert.match(styles, /\.board-table \{ min-height: 0; display: grid; grid-template-rows: auto auto minmax\(0, 1fr\)/);
+  assert.match(game, /<div className="board-table">[\s\S]*?<ol className="board-list"/);
+  assert.match(game, /<div className="board-context">[\s\S]*?<button className="panel-close"/);
   assert.match(styles, /\.series-results-panel\.home-panel \{[\s\S]*?height: auto;[\s\S]*?grid-template-rows: 44px auto auto 44px/);
   assert.match(styles, /\.series-results-panel \.series-results ol \{[\s\S]*?display: flex; flex-direction: column/);
   assert.match(game, /<header><h3>Top Scores<\/h3>/);
