@@ -77,7 +77,9 @@ export async function GET(request: Request) {
   return NextResponse.json({
     board,
     entries: rows.map((entry, index) => ({ rank: index + 1, name: publicNickname(entry.player_name), score: entry.crest_score, timeMs: entry.score_ms, sparks: entry.sparks, points: entry.points, runs: entry.runs })),
-    players: summary?.players ?? 0, lights: summary?.lights ?? 0, goal: 2500,
+    players: ranked.length,
+    weeklyPlayers: summary?.players ?? 0,
+    lights: summary?.lights ?? 0, goal: 2500,
     playerRank: player?.rank ?? null,
     nearby: nearby.map((entry) => ({ rank: entry.rank, name: publicNickname(entry.player_name), score: entry.crest_score, timeMs: entry.score_ms, sparks: entry.sparks })),
     recent: recent.results.map((entry) => publicNickname(entry.player_name)),

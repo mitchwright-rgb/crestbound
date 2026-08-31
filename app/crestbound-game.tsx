@@ -108,6 +108,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
   const [board, setBoard] = useState<Board>('daily');
   const [entries, setEntries] = useState<BoardEntry[]>([]);
   const [dailyLeader, setDailyLeader] = useState<BoardEntry | null | undefined>(undefined);
+  const [dailyPlayers, setDailyPlayers] = useState<number | undefined>(undefined);
   const [boardStatus, setBoardStatus] = useState<'loading' | 'ready' | 'offline'>('loading');
   const [nickname, setNickname] = useState('');
   const [submitState, setSubmitState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -312,17 +313,20 @@ export default function Home({ initialDay }: { initialDay: string }) {
   const loadDailySummary = useCallback(async () => {
     const requestId = ++dailySummaryRequestRef.current;
     setDailyLeader(undefined);
+    setDailyPlayers(undefined);
     try {
       const params = new URLSearchParams({ board: 'daily', courseId: dailyCourse.id, playerId: playerIdRef.current });
       const response = await fetch(`/api/leaderboard?${params}`, { cache: 'no-store' });
       if (!response.ok) throw new Error('Daily summary unavailable');
-      const data = await response.json() as { entries?: BoardEntry[]; players?: number; lights?: number; goal?: number; nearby?: BoardEntry[]; playerRank?: number | null; recent?: string[] };
+      const data = await response.json() as { entries?: BoardEntry[]; players?: number; weeklyPlayers?: number; lights?: number; goal?: number; nearby?: BoardEntry[]; playerRank?: number | null; recent?: string[] };
       if (requestId !== dailySummaryRequestRef.current) return;
       setDailyLeader(data.entries?.[0] ?? null);
-      setCommunity({ players: data.players ?? 0, lights: data.lights ?? 0, goal: data.goal ?? 2500, nearby: data.nearby ?? [], playerRank: data.playerRank ?? null, recent: data.recent ?? [] });
+      setDailyPlayers(data.players ?? 0);
+      setCommunity({ players: data.weeklyPlayers ?? 0, lights: data.lights ?? 0, goal: data.goal ?? 2500, nearby: data.nearby ?? [], playerRank: data.playerRank ?? null, recent: data.recent ?? [] });
     } catch {
       if (requestId !== dailySummaryRequestRef.current) return;
       setDailyLeader(undefined);
+      setDailyPlayers(undefined);
     }
   }, [dailyCourse.id]);
 
@@ -1397,7 +1401,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
                 <div className="daily-glance">
                   <div className="home-social-stats">
                     <span><small>TODAY&apos;S TOP</small><b>{dailyLeader === undefined ? 'CHECKING…' : dailyLeader ? `${dailyLeader.name} · ${dailyLeader.score.toLocaleString()}` : 'CLAIM #1'}</b></span>
-                    <span><small>TODAY</small><b>{community.players} {community.players === 1 ? 'RUNNER' : 'RUNNERS'}</b></span>
+                    <span><small>TODAY</small><b>{dailyPlayers === undefined ? 'CHECKING…' : `${dailyPlayers} ${dailyPlayers === 1 ? 'RUNNER' : 'RUNNERS'}`}</b></span>
                   </div>
                   <div className="community-progress">
                     <div><span>COMMUNITY LIGHT · WEEK</span><b>{community.lights.toLocaleString()} / {community.goal.toLocaleString()}</b></div>

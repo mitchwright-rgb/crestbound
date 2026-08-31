@@ -328,12 +328,19 @@ test('menu guidance uses readable in-place views instead of a scrolling document
 
 test('home summary stays pinned to today while leaderboard filters change', () => {
   const game = readFileSync(new URL('./crestbound-game.tsx', import.meta.url), 'utf8');
+  const leaderboard = readFileSync(new URL('./api/leaderboard/route.ts', import.meta.url), 'utf8');
   assert.match(game, /const \[dailyLeader, setDailyLeader\]/);
+  assert.match(game, /const \[dailyPlayers, setDailyPlayers\]/);
   assert.match(game, /const loadDailySummary = useCallback/);
   assert.match(game, /board: 'daily'/);
   assert.match(game, /setDailyLeader\(data\.entries\?\.\[0\] \?\? null\)/);
+  assert.match(game, /setDailyPlayers\(data\.players \?\? 0\)/);
   assert.match(game, /TODAY&apos;S TOP/);
+  assert.match(game, /dailyPlayers === undefined \? 'CHECKING…'/);
   assert.doesNotMatch(game, /<small>TOP SCORE<\/small><b>\{entries\[0\]/);
+  assert.doesNotMatch(game, /<small>TODAY<\/small><b>\{community\.players/);
+  assert.match(leaderboard, /players: ranked\.length/);
+  assert.match(leaderboard, /weeklyPlayers: summary\?\.players \?\? 0/);
   assert.match(game, /const requestId = \+\+boardRequestRef\.current/);
   assert.match(game, /const requestId = \+\+dailySummaryRequestRef\.current/);
   assert.match(game, /if \(requestId !== boardRequestRef\.current\) return/);
