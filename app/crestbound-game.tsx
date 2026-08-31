@@ -103,8 +103,11 @@ export default function Home({ initialDay }: { initialDay: string }) {
   const homeTrackedRef = useRef<string | null>(null);
   const dashCoachRef = useRef(false);
   const runMetricsRef = useRef({ dashCount: 0 });
+  const boardRequestRef = useRef(0);
+  const dailySummaryRequestRef = useRef(0);
   const [board, setBoard] = useState<Board>('daily');
   const [entries, setEntries] = useState<BoardEntry[]>([]);
+  const [dailyLeader, setDailyLeader] = useState<BoardEntry | null | undefined>(undefined);
   const [boardStatus, setBoardStatus] = useState<'loading' | 'ready' | 'offline'>('loading');
   const [nickname, setNickname] = useState('');
   const [submitState, setSubmitState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -288,18 +291,38 @@ export default function Home({ initialDay }: { initialDay: string }) {
   }, [activeSeries]);
 
   const loadBoard = useCallback(async (nextBoard: Board) => {
+    const requestId = ++boardRequestRef.current;
     setBoardStatus('loading');
     try {
       const params = new URLSearchParams({ board: nextBoard, courseId: dailyCourse.id, playerId: playerIdRef.current });
       const response = await fetch(`/api/leaderboard?${params}`, { cache: 'no-store' });
       if (!response.ok) throw new Error('Leaderboard unavailable');
-      const data = await response.json() as { entries?: BoardEntry[]; players?: number; lights?: number; goal?: number; nearby?: BoardEntry[]; playerRank?: number | null; recent?: string[] };
-      setEntries(data.entries ?? []);
-      setCommunity({ players: data.players ?? 0, lights: data.lights ?? 0, goal: data.goal ?? 2500, nearby: data.nearby ?? [], playerRank: data.playerRank ?? null, recent: data.recent ?? [] });
+      const data = await response.json() as { entries?: BoardEntry[] };
+      const nextEntries = data.entries ?? [];
+      if (requestId !== boardRequestRef.current) return;
+      setEntries(nextEntries);
       setBoardStatus('ready');
     } catch {
+      if (requestId !== boardRequestRef.current) return;
       setEntries([]);
       setBoardStatus('offline');
+    }
+  }, [dailyCourse.id]);
+
+  const loadDailySummary = useCallback(async () => {
+    const requestId = ++dailySummaryRequestRef.current;
+    setDailyLeader(undefined);
+    try {
+      const params = new URLSearchParams({ board: 'daily', courseId: dailyCourse.id, playerId: playerIdRef.current });
+      const response = await fetch(`/api/leaderboard?${params}`, { cache: 'no-store' });
+      if (!response.ok) throw new Error('Daily summary unavailable');
+      const data = await response.json() as { entries?: BoardEntry[]; players?: number; lights?: number; goal?: number; nearby?: BoardEntry[]; playerRank?: number | null; recent?: string[] };
+      if (requestId !== dailySummaryRequestRef.current) return;
+      setDailyLeader(data.entries?.[0] ?? null);
+      setCommunity({ players: data.players ?? 0, lights: data.lights ?? 0, goal: data.goal ?? 2500, nearby: data.nearby ?? [], playerRank: data.playerRank ?? null, recent: data.recent ?? [] });
+    } catch {
+      if (requestId !== dailySummaryRequestRef.current) return;
+      setDailyLeader(undefined);
     }
   }, [dailyCourse.id]);
 
@@ -307,6 +330,11 @@ export default function Home({ initialDay }: { initialDay: string }) {
     const load = window.setTimeout(() => { void loadBoard(board); }, 0);
     return () => window.clearTimeout(load);
   }, [board, loadBoard]);
+
+  useEffect(() => {
+    const load = window.setTimeout(() => { void loadDailySummary(); }, 0);
+    return () => window.clearTimeout(load);
+  }, [loadDailySummary]);
 
   const stopMusic = useCallback(() => {
     const music = musicRef.current;
@@ -532,7 +560,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
       setRank(data.rank ?? null);
       setScoreResult({ score: data.score ?? localScore.total, breakdown: data.breakdown ?? localScore, contribution: data.community?.contribution ?? runResult.sparks });
       if (data.community) setCommunity((current) => ({ ...current, lights: data.community!.lights, players: data.community!.players, goal: data.community!.goal }));
-      setSubmitState('saved'); setBoard('daily'); void loadBoard('daily');
+      setSubmitState('saved'); setBoard('daily'); void loadBoard('daily'); void loadDailySummary();
     } catch (error) { setSubmitError(error instanceof Error ? error.message : 'Couldn\'t post this run.'); setSubmitState('error'); }
   }
 
@@ -1368,7 +1396,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
                 {runStartState === 'error' && <p className="run-start-error" role="alert"><b>RUN NOT STARTED</b><span>{runStartError}</span></p>}
                 <div className="daily-glance">
                   <div className="home-social-stats">
-                    <span><small>TOP SCORE</small><b>{entries[0] ? `${entries[0].name} · ${entries[0].score.toLocaleString()}` : 'CLAIM #1'}</b></span>
+                    <span><small>TODAY&apos;S TOP</small><b>{dailyLeader === undefined ? 'CHECKING…' : dailyLeader ? `${dailyLeader.name} · ${dailyLeader.score.toLocaleString()}` : 'CLAIM #1'}</b></span>
                     <span><small>TODAY</small><b>{community.players} {community.players === 1 ? 'RUNNER' : 'RUNNERS'}</b></span>
                   </div>
                   <div className="community-progress">

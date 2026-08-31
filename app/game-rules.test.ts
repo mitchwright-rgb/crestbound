@@ -325,3 +325,17 @@ test('menu guidance uses readable in-place views instead of a scrolling document
   assert.match(styles, /\.series-results-panel \.series-results ol \{[\s\S]*?display: flex; flex-direction: column/);
   assert.match(game, /<header><h3>Top Scores<\/h3>/);
 });
+
+test('home summary stays pinned to today while leaderboard filters change', () => {
+  const game = readFileSync(new URL('./crestbound-game.tsx', import.meta.url), 'utf8');
+  assert.match(game, /const \[dailyLeader, setDailyLeader\]/);
+  assert.match(game, /const loadDailySummary = useCallback/);
+  assert.match(game, /board: 'daily'/);
+  assert.match(game, /setDailyLeader\(data\.entries\?\.\[0\] \?\? null\)/);
+  assert.match(game, /TODAY&apos;S TOP/);
+  assert.doesNotMatch(game, /<small>TOP SCORE<\/small><b>\{entries\[0\]/);
+  assert.match(game, /const requestId = \+\+boardRequestRef\.current/);
+  assert.match(game, /const requestId = \+\+dailySummaryRequestRef\.current/);
+  assert.match(game, /if \(requestId !== boardRequestRef\.current\) return/);
+  assert.match(game, /if \(requestId !== dailySummaryRequestRef\.current\) return/);
+});
