@@ -2,9 +2,10 @@ import { NextResponse } from 'next/server';
 import { chicagoKeys, database } from '@/lib/db';
 import { rateLimit } from '@/lib/rate-limit';
 import { normalizeEventMetadata } from '@/lib/telemetry';
+import { seriesCourseIds } from '@/app/series-routes';
 
 const events = new Set(['home_view', 'run_start', 'dash_learned', 'modifier_learned', 'scoring_learned', 'checkpoint', 'life_lost', 'run_over', 'run_finish', 'personal_best', 'replay', 'pause', 'quit', 'orientation_wait', 'leaderboard_open', 'series_open', 'series_start', 'series_finish', 'series_signature', 'message_open']);
-const courses = new Set(['goldline', 'crosswind', 'nightshift', 'declarations']);
+const courses = new Set(['goldline', 'crosswind', 'nightshift', ...seriesCourseIds]);
 
 export async function POST(request: Request) {
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;

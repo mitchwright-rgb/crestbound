@@ -5,9 +5,9 @@ import { rateLimit } from '@/lib/rate-limit';
 import { dailyChallengeIdForDay } from '@/lib/daily-challenge';
 import { buildSeededCourse } from '@/app/course-generator';
 import { challengeMedal, crestScoreBreakdown, dailyObjectiveForSerial } from '@/app/game-rules';
-import { activeSeriesForDay } from '@/app/series-routes';
+import { activeSeriesForDay, seriesCourseIds } from '@/app/series-routes';
 
-const courses = new Set(['goldline', 'crosswind', 'nightshift', 'declarations']);
+const courses = new Set(['goldline', 'crosswind', 'nightshift', ...seriesCourseIds]);
 const modifiers = new Set(['clear', 'tailwind', 'moonstep', 'sparkstorm']);
 const validId = (value: unknown) => /^[0-9a-f-]{36}$/i.test(String(value ?? ''));
 
@@ -38,7 +38,7 @@ export async function POST(request: Request) {
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(new Date());
     const activeSeries = activeSeriesForDay(today);
     const seriesWeekIndex = activeSeries?.series.weeks.findIndex((week) => week.id === challengeId) ?? -1;
-    const validSeries = courseId === 'declarations' && modifierId === 'clear' && Boolean(activeSeries) && seriesWeekIndex >= 0 && seriesWeekIndex <= activeSeries!.weekIndex;
+    const validSeries = courseId === activeSeries?.series.id && modifierId === 'clear' && seriesWeekIndex >= 0 && seriesWeekIndex <= activeSeries.weekIndex;
     const validDaily = courseId === scheduled.courseId && modifierId === scheduled.modifierId && challengeId === scheduled.challengeId;
     if (!validId(playerId) || !courses.has(courseId) || !modifiers.has(modifierId) || (!validDaily && !validSeries)) return NextResponse.json({ error: 'That route is not currently available.' }, { status: 400 });
     const allowance = await rateLimit(request, 'run-start', playerId, 20, 10 * 60_000);

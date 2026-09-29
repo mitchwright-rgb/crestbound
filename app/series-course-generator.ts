@@ -15,7 +15,7 @@ function elevated(platforms: Platform[], x: number, y: number, w: number, moving
   platforms.push({ x, y, w, h: 24, moving, phase, baseY: moving ? y : undefined });
 }
 
-export function buildDeclarationsCourse(weekIndex: number, seed: number): CourseData {
+export function buildSeriesCourse(weekIndex: number, seed: number): CourseData {
   const platforms: Platform[] = [];
   const spikeZones: CourseData['spikeZones'] = [];
   const sparkSeed: Spark[] = [];
@@ -29,8 +29,8 @@ export function buildDeclarationsCourse(weekIndex: number, seed: number): Course
     platforms.push({ x, y: 620, w: width, h: 120 });
     sparkSeed.push({ x: x + 104, y: 554 });
 
-    // Each arrangement has a different protest-stage grammar: risers,
-    // scaffolds, banner bridges, speaker towers, or a deliberate high road.
+    // Each week gets a distinct rooftop grammar while retaining the same
+    // checkpoint and recovery guarantees.
     if (pattern === 0) {
       elevated(platforms, x + 105, 500, 165);
       elevated(platforms, x + 330, 405, 185);
@@ -96,3 +96,6 @@ export function buildDeclarationsCourse(weekIndex: number, seed: number): Course
     rallyPoints,
   };
 }
+
+// Kept as an alias so stored Declarations tests and old imports remain compatible.
+export const buildDeclarationsCourse = buildSeriesCourse;

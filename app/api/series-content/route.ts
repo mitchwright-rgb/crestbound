@@ -14,6 +14,7 @@ export async function GET(request: Request) {
   if (requestedIndex < 0 || requestedIndex > active.weekIndex) return NextResponse.json({ active: true, available: false }, { status: 404 });
   const selectedWeek = active.series.weeks[requestedIndex];
   try {
+    if (!active.series.seriesUrl) return NextResponse.json({ active: true, available: false });
     const seriesResponse = await fetch(active.series.seriesUrl, { headers: { 'User-Agent': 'Crestbound/1.0 (+https://suncrest.org)' } });
     if (!seriesResponse.ok) throw new Error('Series page unavailable');
     const summaries = parseSeriesMessages(await seriesResponse.text());

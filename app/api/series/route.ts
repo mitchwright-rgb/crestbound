@@ -4,7 +4,7 @@ import { checkNickname, publicNickname } from '@/lib/nickname';
 import { rateLimit } from '@/lib/rate-limit';
 import { activeSeriesForDay, seriesWeekSeed } from '@/app/series-routes';
 import { crestScoreBreakdown } from '@/app/game-rules';
-import { buildDeclarationsCourse } from '@/app/series-course-generator';
+import { buildSeriesCourse } from '@/app/series-course-generator';
 
 const validId = (value: unknown) => /^[0-9a-f-]{36}$/i.test(String(value ?? ''));
 
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
   const suppliedNickname = String(body?.name ?? '').trim();
   const nickname = suppliedNickname ? checkNickname(suppliedNickname) : null;
   const weekIndex = active?.series.weeks.findIndex((week) => week.id === weekId) ?? -1;
-  const expectedTotal = active && weekIndex >= 0 ? buildDeclarationsCourse(weekIndex, seriesWeekSeed(active.series.weeks[weekIndex].sunday)).sparkSeed.length : -1;
+  const expectedTotal = active && weekIndex >= 0 ? buildSeriesCourse(weekIndex, seriesWeekSeed(active.series.weeks[weekIndex].sunday)).sparkSeed.length : -1;
   if (!active || weekIndex < 0 || weekIndex > active.weekIndex || !validId(playerId) || !validId(runId) || seriesId !== active.series.id || !Number.isFinite(timeMs) || timeMs < 10000 || timeMs > 900000 || !Number.isInteger(lights) || lights < 0 || lights > expectedTotal || lightTotal !== expectedTotal || !Number.isInteger(signatureCount) || signatureCount < 0 || signatureCount > 3) {
     return NextResponse.json({ error: 'That Series Route could not be verified.' }, { status: 400 });
   }
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
     FROM game_runs r JOIN run_context c ON c.run_id = r.id WHERE r.id = ?`).bind(runId)
     .first<{ started_at: number; completed_at: number | null; player_id: string; course_id: string; modifier_id: string; challenge_id: string }>();
   const wallTime = run ? now - run.started_at : 0;
-  if (!run || run.completed_at || run.player_id !== playerId || run.course_id !== 'declarations' || run.modifier_id !== 'clear' || run.challenge_id !== weekId || wallTime < 10000 || timeMs > wallTime + 3000) {
+  if (!run || run.completed_at || run.player_id !== playerId || run.course_id !== active.series.id || run.modifier_id !== 'clear' || run.challenge_id !== weekId || wallTime < 10000 || timeMs > wallTime + 3000) {
     return NextResponse.json({ error: 'That Series Route could not be verified.' }, { status: 409 });
   }
   const breakdown = crestScoreBreakdown({ time: timeMs / 1000, sparks: lights, total: lightTotal, signatureCount });

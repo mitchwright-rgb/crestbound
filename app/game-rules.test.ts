@@ -162,7 +162,14 @@ test('Declarations rolls to a new weekly route every Sunday and remains availabl
   assert.equal(activeSeriesForDay('2026-08-23')?.week.id, 'declarations-2026-w2');
   assert.equal(activeSeriesForDay('2026-09-13')?.week.id, 'declarations-2026-w5');
   assert.equal(activeSeriesForDay('2026-09-19')?.week.id, 'declarations-2026-w5');
-  assert.equal(activeSeriesForDay('2026-09-20'), null);
+  assert.equal(activeSeriesForDay('2026-09-20')?.week.id, 'at-the-movies-2026-w1');
+  assert.equal(activeSeriesForDay('2026-09-26')?.week.id, 'at-the-movies-2026-w1');
+  assert.equal(activeSeriesForDay('2026-09-27')?.week.id, 'at-the-movies-2026-w2');
+  assert.equal(activeSeriesForDay('2026-10-03')?.week.id, 'at-the-movies-2026-w2');
+  assert.equal(activeSeriesForDay('2026-10-04'), null);
+  assert.equal(activeSeriesForDay('2026-10-11')?.series.id, 'soundtrack-2026');
+  assert.equal(activeSeriesForDay('2026-11-01')?.series.id, 'trust-issues-2026');
+  assert.equal(activeSeriesForDay('2026-12-06')?.series.id, 'behold-2026');
 });
 
 test('Suncrest message pages expose the exact weekly content and resource links', () => {
@@ -277,13 +284,13 @@ test('post-run layouts keep Daily and Series results distinct and landscape-safe
   const game = readFileSync(new URL('./crestbound-game.tsx', import.meta.url), 'utf8');
   const styles = readFileSync(new URL('./globals.css', import.meta.url), 'utf8');
   assert.match(game, /isSeries \? 'series-win' : 'daily-win'/);
-  assert.match(game, /DECLARATION BEACONS/);
+  assert.match(game, /mechanicName/);
   assert.match(game, /SERIES RUN RECORDED/);
   assert.match(game, /NEW PERSONAL BEST/);
   assert.match(game, /POINTS FROM YOUR BEST/);
   assert.match(game, /BADGE EARNED/);
   assert.match(game, /series-completion-progress/);
-  assert.match(game, /ACTIVATE 3 DECLARATION BEACONS/);
+  assert.match(game, /mechanicAction/);
   assert.match(game, /series-status/);
   assert.match(game, /Back to Series Routes/);
   assert.match(game, /Watch This Week&apos;s Message/);
