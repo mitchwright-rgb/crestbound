@@ -10,12 +10,13 @@ const numericColumns = new Set([
   'hits', 'created_at', 'best_time_ms', 'lights', 'best_score', 'signature_count',
   'request_count', 'expires_at', 'completions', 'players', 'rank', 'runs', 'points',
   'route_seed',
+  'starts', 'finishes', 'abandoned', 'active', 'avg_time_ms', 'avg_hits', 'avg_light_percent', 'avg_score',
 ]);
 
 function normalizeRow<T>(row: QueryRow): T {
   return Object.fromEntries(Object.entries(row).map(([key, value]) => [
     key,
-    typeof value === 'string' && numericColumns.has(key) && /^-?\d+$/.test(value) ? Number(value) : value,
+    typeof value === 'string' && numericColumns.has(key) && /^-?\d+(?:\.\d+)?$/.test(value) ? Number(value) : value,
   ])) as T;
 }
 

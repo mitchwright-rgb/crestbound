@@ -5,10 +5,11 @@ import { SoundKind, soundSources, soundVolumes } from './audio-assets';
 import { challengeMedal, chicagoDayKey, collectLightPower, crestScoreBreakdown, dailyObjectiveSpecs, dashVelocity, formatDailyReset, gravityForModifier, horizontalSpeedLimit, jumpReleaseGravity, jumpVelocityForModifier, millisecondsUntilNextChicagoDay, musicTrackForCourse, musicTrackForSeries, objectiveResultLabel, resetRunTiming, resolveDamage, runStorageKey, seriesBeaconReached, tailwindAcceleration, touchInputFromControls, type CrestScoreBreakdown } from './game-rules';
 import { buildSeededCourse } from './course-generator';
 import { buildSeriesCourse } from './series-course-generator';
-import { activeSeriesForDay, completedSeriesWeekIds, seriesWeekSeed } from './series-routes';
+import { completedSeriesWeekIds, seriesWeekSeed } from './series-routes';
 import { checkNickname } from '@/lib/nickname';
 import { dailyChallengeIdForDay } from '@/lib/daily-challenge';
 import { routeConditionSpecs, type DailyRouteConfig } from '@/lib/daily-route';
+import type { ActiveSeries } from '@/lib/series-route-data';
 
 type Screen = 'title' | 'playing' | 'paused' | 'won' | 'over';
 type Hud = { sparks: number; total: number; lives: number; hits: number; time: number; best: number | null; checkpoint: number; progress: number; dashReady: boolean; shield: number; signatureCount: number };
@@ -46,7 +47,7 @@ function formatTime(seconds: number) {
   return `${minutes}:${remainder}`;
 }
 
-export default function Home({ initialDay, initialDailyRoute }: { initialDay: string; initialDailyRoute: DailyRouteConfig }) {
+export default function Home({ initialDay, initialDailyRoute, initialActiveSeries }: { initialDay: string; initialDailyRoute: DailyRouteConfig; initialActiveSeries: ActiveSeries | null }) {
   const localDay = initialDay;
   const daySerial = initialDailyRoute.serial;
   const dailyChallengeId = initialDailyRoute.challengeId || dailyChallengeIdForDay(localDay);
@@ -55,7 +56,7 @@ export default function Home({ initialDay, initialDailyRoute }: { initialDay: st
   const dailyModifier = modifierSpecs.find((item) => item.id === initialDailyRoute.modifierId) ?? modifierSpecs[0];
   const dailyObjectiveId = initialDailyRoute.objectiveId;
   const dailyCondition = routeConditionSpecs[initialDailyRoute.conditionId];
-  const activeSeries = useMemo(() => activeSeriesForDay(localDay), [localDay]);
+  const activeSeries = initialActiveSeries;
   const [seriesMode, setSeriesMode] = useState(false);
   const [seriesWeekIndex, setSeriesWeekIndex] = useState(activeSeries?.weekIndex ?? 0);
   const seriesWeek = activeSeries?.series.weeks[seriesWeekIndex] ?? null;

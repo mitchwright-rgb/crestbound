@@ -109,7 +109,7 @@ export const schemaStatements = [
     course_id TEXT NOT NULL CHECK(course_id IN ('goldline', 'crosswind', 'nightshift')),
     modifier_id TEXT NOT NULL CHECK(modifier_id IN ('clear', 'tailwind', 'moonstep', 'sparkstorm')),
     objective_id TEXT NOT NULL CHECK(objective_id IN ('sprint', 'light_hunt', 'clean_run', 'skyline_mastery')),
-    condition_id TEXT NOT NULL CHECK(condition_id IN ('standard', 'light_rush', 'rooftop_rumble', 'checkpoint_charge')),
+    condition_id TEXT NOT NULL,
     updated_at BIGINT NOT NULL
   )`,
   `CREATE TABLE IF NOT EXISTS admin_audit_log (
@@ -118,4 +118,16 @@ export const schemaStatements = [
     details TEXT NOT NULL,
     created_at BIGINT NOT NULL
   )`,
+  `ALTER TABLE daily_route_overrides DROP CONSTRAINT IF EXISTS daily_route_overrides_condition_id_check`,
+  `CREATE TABLE IF NOT EXISTS series_week_overrides (
+    week_id TEXT PRIMARY KEY,
+    series_id TEXT NOT NULL,
+    sunday TEXT NOT NULL,
+    title TEXT NOT NULL,
+    route_name TEXT NOT NULL,
+    objective_id TEXT NOT NULL,
+    message_url TEXT,
+    updated_at BIGINT NOT NULL
+  )`,
+  `CREATE INDEX IF NOT EXISTS idx_series_week_overrides_series ON series_week_overrides(series_id, sunday)`,
 ];

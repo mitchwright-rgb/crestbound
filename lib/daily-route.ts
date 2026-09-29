@@ -4,7 +4,7 @@ import { dailyChallengeIdForDay } from './daily-challenge.ts';
 export const dailyCourseIds = ['goldline', 'crosswind', 'nightshift'] as const;
 export type DailyCourseId = typeof dailyCourseIds[number];
 
-export const routeConditionIds = ['standard', 'light_rush', 'rooftop_rumble', 'checkpoint_charge'] as const;
+export const routeConditionIds = ['standard', 'light_rush', 'rooftop_rumble', 'checkpoint_charge', 'moving_city', 'hidden_light', 'storm_chase'] as const;
 export type RouteConditionId = typeof routeConditionIds[number];
 
 export const routeConditionSpecs: Record<RouteConditionId, { name: string; description: string }> = {
@@ -12,6 +12,9 @@ export const routeConditionSpecs: Record<RouteConditionId, { name: string; descr
   light_rush: { name: 'Light Rush', description: 'Extra Light rewards the high road in every section.' },
   rooftop_rumble: { name: 'Rooftop Rumble', description: 'More enemy encounters make Dash timing matter.' },
   checkpoint_charge: { name: 'Checkpoint Charge', description: 'Storm Lights near checkpoints recharge Dash and shield Sunny.' },
+  moving_city: { name: 'Moving City', description: 'More rooftop platforms rise and fall, changing jump timing.' },
+  hidden_light: { name: 'Hidden Light', description: 'Secret Light rewards exploration above the obvious route.' },
+  storm_chase: { name: 'Storm Chase', description: 'Faster enemies guard a chain of Dash-charging Storm Lights.' },
 };
 
 export type DailyRouteConfig = {
@@ -30,7 +33,7 @@ export function defaultDailyRoute(day: string): DailyRouteConfig {
   const serial = Math.floor(new Date(`${day}T12:00:00Z`).getTime() / 86400000);
   const courseIndex = ((serial % dailyCourseIds.length) + dailyCourseIds.length) % dailyCourseIds.length;
   const modifiers: ModifierId[] = ['clear', 'tailwind', 'moonstep', 'sparkstorm'];
-  const conditions: RouteConditionId[] = ['standard', 'light_rush', 'rooftop_rumble', 'checkpoint_charge'];
+  const conditions: RouteConditionId[] = ['standard', 'light_rush', 'rooftop_rumble', 'checkpoint_charge', 'moving_city', 'hidden_light', 'storm_chase'];
   return {
     day,
     serial,

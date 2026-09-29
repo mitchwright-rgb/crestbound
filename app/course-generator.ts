@@ -82,6 +82,12 @@ export function buildSeededCourse(courseIndex: number, modifierId: ModifierId, s
     }
 
     const sectionPlatforms = platforms.filter((platform) => platform.x >= x && platform.x < x + SECTION_W && platform.y < 600);
+    if (conditionId === 'moving_city' && section > 0 && sectionPlatforms.length) {
+      const movingPlatform = sectionPlatforms[(section + pattern) % sectionPlatforms.length];
+      movingPlatform.moving = true;
+      movingPlatform.baseY = movingPlatform.y;
+      movingPlatform.phase = section * .71 + pattern;
+    }
     sectionPlatforms.forEach((platform, platformIndex) => {
       sparkSeed.push({ x: platform.x + platform.w / 2, y: platform.y - 50, secret: platformIndex === sectionPlatforms.length - 1 && section % 4 === 1 });
     });
@@ -92,6 +98,10 @@ export function buildSeededCourse(courseIndex: number, modifierId: ModifierId, s
         ? { x: bonusPlatform.x + Math.min(bonusPlatform.w - 35, 58 + (section % 3) * 36), y: bonusPlatform.y - 50, secret: section % 4 === 0 }
         : { x: x + Math.min(width - 70, 320), y: 554 });
     }
+    if (conditionId === 'hidden_light' && section > 0 && sectionPlatforms.length) {
+      const highest = [...sectionPlatforms].sort((a, b) => a.y - b.y)[0];
+      sparkSeed.push({ x: highest.x + Math.max(36, highest.w - 44), y: highest.y - 78, secret: true });
+    }
 
     const enemyFrequency = courseIndex === 2 ? 1 : courseIndex === 1 ? 2 : 3;
     if (section > 0 && section % enemyFrequency === 0 && width >= 470) {
@@ -101,6 +111,11 @@ export function buildSeededCourse(courseIndex: number, modifierId: ModifierId, s
     if (conditionId === 'rooftop_rumble' && section > 0 && section % 2 === 1 && width >= 470) {
       const enemyX = x + Math.min(width - 100, 165 + pattern * 42);
       enemySeed.push({ x: enemyX, y: 570, minX: x + 70, maxX: x + width - 70, speed: 138 + courseIndex * 24 + (section % 3) * 18, dir: section % 2 ? -1 : 1, alive: true });
+    }
+    if (conditionId === 'storm_chase' && section > 0 && section % 2 === 0 && width >= 470) {
+      const enemyX = x + Math.min(width - 92, 210 + pattern * 48);
+      enemySeed.push({ x: enemyX, y: 570, minX: x + 60, maxX: x + width - 60, speed: 185 + courseIndex * 22 + (section % 3) * 20, dir: section % 4 ? -1 : 1, alive: true });
+      sparkSeed.push({ x: Math.max(x + 110, enemyX - 76), y: 535, storm: true });
     }
   }
 

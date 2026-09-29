@@ -10,6 +10,7 @@ import { checkNickname, publicNickname } from '../lib/nickname.ts';
 import { normalizeEventMetadata } from '../lib/telemetry.ts';
 import { parseMessageDetails, parseSeriesMessages } from '../lib/suncrest-messages.ts';
 import { defaultDailyRoute } from '../lib/daily-route.ts';
+import { difficultyStatus } from '../lib/difficulty.ts';
 
 test('Moonstep lowers gravity while other twists preserve standard gravity', () => {
   assert.equal(gravityForModifier('moonstep'), 1050);
@@ -147,8 +148,8 @@ test('server and client share one authoritative Chicago day during hydration', (
   const pageSource = readFileSync(new URL('./page.tsx', import.meta.url), 'utf8');
   const gameSource = readFileSync(new URL('./crestbound-game.tsx', import.meta.url), 'utf8');
   assert.match(pageSource, /const day = chicagoDayKey\(\)/);
-  assert.match(pageSource, /<CrestboundGame initialDay=\{day\} initialDailyRoute=\{dailyRoute\}/);
-  assert.match(gameSource, /function Home\(\{ initialDay, initialDailyRoute \}/);
+  assert.match(pageSource, /<CrestboundGame initialDay=\{day\} initialDailyRoute=\{dailyRoute\} initialActiveSeries=\{activeSeries\}/);
+  assert.match(gameSource, /function Home\(\{ initialDay, initialDailyRoute, initialActiveSeries \}/);
   assert.match(gameSource, /const localDay = initialDay/);
 });
 
@@ -164,6 +165,20 @@ test('daily rotation includes deterministic, visible route conditions', () => {
     assert.ok(buildSeededCourse(courseIndex, 'clear', first.serial, 'rooftop_rumble').enemySeed.length > buildSeededCourse(courseIndex, 'clear', first.serial, 'standard').enemySeed.length);
   }
   assert.ok(charged.sparkSeed.filter((light) => light.storm).length >= 4);
+  const moving = buildSeededCourse(0, 'clear', first.serial, 'moving_city');
+  const hidden = buildSeededCourse(0, 'clear', first.serial, 'hidden_light');
+  const chase = buildSeededCourse(0, 'clear', first.serial, 'storm_chase');
+  assert.ok(moving.platforms.filter((platform) => platform.moving).length > base.platforms.filter((platform) => platform.moving).length);
+  assert.ok(hidden.sparkSeed.filter((light) => light.secret).length > base.sparkSeed.filter((light) => light.secret).length);
+  assert.ok(chase.sparkSeed.some((light) => light.storm));
+  assert.ok(chase.enemySeed.length > base.enemySeed.length);
+});
+
+test('difficulty health waits for evidence and flags genuinely punishing route mixes', () => {
+  assert.equal(difficultyStatus({ starts: 4, finishes: 0, avg_hits: 3 }), 'LEARNING');
+  assert.equal(difficultyStatus({ starts: 20, finishes: 14, avg_hits: 1.2 }), 'HEALTHY');
+  assert.equal(difficultyStatus({ starts: 20, finishes: 7, avg_hits: 1.8 }), 'WATCH');
+  assert.equal(difficultyStatus({ starts: 20, finishes: 3, avg_hits: 2.8 }), 'TOO HARD');
 });
 
 test('event metadata keeps useful product signals without accepting arbitrary data', () => {

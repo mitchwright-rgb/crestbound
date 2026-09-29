@@ -6,6 +6,7 @@ export type SeriesWeek = {
   title: string;
   routeName: string;
   objective: DailyObjectiveId;
+  messageUrl?: string;
 };
 
 export type SeriesRoute = {

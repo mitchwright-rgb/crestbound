@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { chicagoKeys, database, weeklyCommunityLight } from '@/lib/db';
 import { checkNickname, publicNickname } from '@/lib/nickname';
 import { rateLimit } from '@/lib/rate-limit';
-import { activeSeriesForDay, seriesWeekSeed } from '@/app/series-routes';
+import { seriesWeekSeed } from '@/app/series-routes';
+import { effectiveActiveSeriesForDay } from '@/lib/series-route-data';
 import { crestScoreBreakdown } from '@/app/game-rules';
 import { buildSeriesCourse } from '@/app/series-course-generator';
 
@@ -33,7 +34,7 @@ async function seriesLeaderboard(db: ReturnType<typeof database>, seriesId: stri
 }
 
 export async function GET(request: Request) {
-  const active = activeSeriesForDay(localDay());
+  const active = await effectiveActiveSeriesForDay(localDay());
   if (!active) return NextResponse.json({ active: false, completions: 0, completedWeeks: [] });
   const params = new URL(request.url).searchParams;
   const playerId = params.get('playerId') ?? '';
@@ -58,7 +59,7 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const active = activeSeriesForDay(localDay());
+  const active = await effectiveActiveSeriesForDay(localDay());
   const body = await request.json().catch(() => null) as Record<string, unknown> | null;
   const playerId = String(body?.playerId ?? '');
   const seriesId = String(body?.seriesId ?? '');

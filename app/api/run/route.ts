@@ -4,9 +4,10 @@ import { checkNickname } from '@/lib/nickname';
 import { rateLimit } from '@/lib/rate-limit';
 import { buildSeededCourse } from '@/app/course-generator';
 import { challengeMedal, crestScoreBreakdown } from '@/app/game-rules';
-import { activeSeriesForDay, seriesCourseIds } from '@/app/series-routes';
+import { seriesCourseIds } from '@/app/series-routes';
+import { effectiveActiveSeriesForDay } from '@/lib/series-route-data';
 import { effectiveDailyRoute } from '@/lib/daily-route-data';
-import { dailyCourseIds, type RouteConditionId } from '@/lib/daily-route';
+import { dailyCourseIds, routeConditionIds, type RouteConditionId } from '@/lib/daily-route';
 import type { DailyObjectiveId, ModifierId } from '@/app/game-rules';
 
 const courses = new Set(['goldline', 'crosswind', 'nightshift', ...seriesCourseIds]);
@@ -26,11 +27,10 @@ export async function POST(request: Request) {
   const courseId = String(body.courseId ?? '');
   const modifierId = String(body.modifierId ?? '');
   const challengeId = String(body.challengeId ?? '');
-  const scheduled = await scheduledRun();
 
   if (body.action === 'start') {
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(new Date());
-    const activeSeries = activeSeriesForDay(today);
+    const [scheduled, activeSeries] = await Promise.all([scheduledRun(), effectiveActiveSeriesForDay(today)]);
     const seriesWeekIndex = activeSeries?.series.weeks.findIndex((week) => week.id === challengeId) ?? -1;
     const validSeries = courseId === activeSeries?.series.id && modifierId === 'clear' && seriesWeekIndex >= 0 && seriesWeekIndex <= activeSeries.weekIndex;
     const validDaily = courseId === scheduled.courseId && modifierId === scheduled.modifierId && challengeId === scheduled.challengeId;
@@ -66,7 +66,7 @@ export async function POST(request: Request) {
   const wallTime = run ? Date.now() - run.started_at : 0;
   if (!run || run.completed_at || run.player_id !== playerId || run.course_id !== courseId || run.modifier_id !== modifierId || run.challenge_id !== challengeId || wallTime < 10000 || scoreMs > wallTime + 3000) return NextResponse.json({ error: 'That run could not be verified.' }, { status: 409 });
   const runCourseIndex = dailyCourseIds.indexOf(run.course_id as typeof dailyCourseIds[number]);
-  if (runCourseIndex < 0 || !['sprint', 'light_hunt', 'clean_run', 'skyline_mastery'].includes(run.objective_id) || !['standard', 'light_rush', 'rooftop_rumble', 'checkpoint_charge'].includes(run.condition_id)) return NextResponse.json({ error: 'That run could not be verified.' }, { status: 409 });
+  if (runCourseIndex < 0 || !['sprint', 'light_hunt', 'clean_run', 'skyline_mastery'].includes(run.objective_id) || !routeConditionIds.includes(run.condition_id)) return NextResponse.json({ error: 'That run could not be verified.' }, { status: 409 });
   const routeTotal = buildSeededCourse(runCourseIndex, run.modifier_id, run.route_seed, run.condition_id).sparkSeed.length;
   if (sparks > routeTotal || lightTotal !== routeTotal) return NextResponse.json({ error: 'That run could not be verified.' }, { status: 400 });
 
