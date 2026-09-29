@@ -1,8 +1,69 @@
-import { env } from 'cloudflare:workers';
+import { neon, type NeonQueryFunction } from '@neondatabase/serverless';
 import { schemaStatements } from '@/db/schema';
 
+type QueryRow = Record<string, unknown>;
+type QueryResult<T> = { results: T[] };
+type RunResult = { success: boolean; meta: { changes: number; last_row_id: number } };
+
+const numericColumns = new Set([
+  'id', 'started_at', 'completed_at', 'score_ms', 'sparks', 'crest_score', 'light_total',
+  'hits', 'created_at', 'best_time_ms', 'lights', 'best_score', 'signature_count',
+  'request_count', 'expires_at', 'completions', 'players', 'rank', 'runs', 'points',
+]);
+
+function normalizeRow<T>(row: QueryRow): T {
+  return Object.fromEntries(Object.entries(row).map(([key, value]) => [
+    key,
+    typeof value === 'string' && numericColumns.has(key) && /^-?\d+$/.test(value) ? Number(value) : value,
+  ])) as T;
+}
+
+function postgresQuery(query: string) {
+  let index = 0;
+  return query.replace(/\?/g, () => `$${++index}`);
+}
+
+let sqlClient: NeonQueryFunction<false, false> | null = null;
+function sql() {
+  if (!sqlClient) {
+    const url = process.env.DATABASE_URL;
+    if (!url) throw new Error('DATABASE_URL is not configured. Connect a Neon database before running the API.');
+    sqlClient = neon(url);
+  }
+  return sqlClient;
+}
+
+export class PreparedStatement {
+  constructor(readonly query: string, readonly params: unknown[] = []) {}
+  bind(...params: unknown[]) { return new PreparedStatement(this.query, params); }
+  async all<T>(): Promise<QueryResult<T>> {
+    const rows = await sql().query(postgresQuery(this.query), this.params);
+    return { results: rows.map((row) => normalizeRow<T>(row as QueryRow)) };
+  }
+  async first<T>(): Promise<T | null> {
+    const result = await this.all<T>();
+    return result.results[0] ?? null;
+  }
+  async run(): Promise<RunResult> {
+    const statement = /^\s*(INSERT|UPDATE|DELETE)\b/i.test(this.query) && !/\bRETURNING\b/i.test(this.query)
+      ? `${this.query} RETURNING *`
+      : this.query;
+    const rows = await sql().query(postgresQuery(statement), this.params);
+    const first = rows[0] as QueryRow | undefined;
+    return { success: true, meta: { changes: rows.length, last_row_id: Number(first?.id ?? 0) } };
+  }
+}
+
+export type CrestboundDatabase = ReturnType<typeof database>;
+
 export function database() {
-  return (env as unknown as { DB: D1Database }).DB;
+  return {
+    prepare(query: string) { return new PreparedStatement(query); },
+    async batch(statements: PreparedStatement[]) {
+      const results = await sql().transaction((transaction) => statements.map((statement) => transaction.query(postgresQuery(statement.query), statement.params)));
+      return results.map((rows) => ({ results: rows.map((row) => normalizeRow(row as QueryRow)) }));
+    },
+  };
 }
 
 let initialized: Promise<void> | null = null;
@@ -27,7 +88,7 @@ export function chicagoKeys(now = new Date()) {
   return { day, week: sunday.toISOString().slice(0, 10) };
 }
 
-export async function weeklyCommunityLight(db: D1Database, weekKey: string) {
+export async function weeklyCommunityLight(db: CrestboundDatabase, weekKey: string) {
   return db.prepare(`WITH earned_light AS (
     SELECT player_id, lights
     FROM community_light_contributions

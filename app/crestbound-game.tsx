@@ -699,8 +699,9 @@ export default function Home({ initialDay }: { initialDay: string }) {
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const context = canvas.getContext('2d');
-    if (!context) return;
+    const canvasContext = canvas.getContext('2d');
+    if (!canvasContext) return;
+    const context: CanvasRenderingContext2D = canvasContext;
     const touchLandscape = window.matchMedia('(pointer: coarse) and (orientation: landscape)');
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     const atmosphere = isSeries ?

@@ -94,7 +94,7 @@ export async function POST(request: Request) {
     ON CONFLICT(player_id, week_id) DO UPDATE SET
       best_time_ms = CASE WHEN excluded.best_score > series_completions.best_score OR (excluded.best_score = series_completions.best_score AND excluded.best_time_ms < series_completions.best_time_ms) THEN excluded.best_time_ms ELSE series_completions.best_time_ms END,
       lights = CASE WHEN excluded.best_score > series_completions.best_score OR (excluded.best_score = series_completions.best_score AND excluded.best_time_ms < series_completions.best_time_ms) THEN excluded.lights ELSE series_completions.lights END,
-      best_score = MAX(series_completions.best_score, excluded.best_score),
+      best_score = GREATEST(series_completions.best_score, excluded.best_score),
       light_total = CASE WHEN excluded.best_score >= series_completions.best_score THEN excluded.light_total ELSE series_completions.light_total END,
       signature_count = CASE WHEN excluded.best_score >= series_completions.best_score THEN excluded.signature_count ELSE series_completions.signature_count END,
       completed_at = excluded.completed_at`
