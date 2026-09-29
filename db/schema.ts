@@ -29,6 +29,7 @@ export const schemaStatements = [
     player_id TEXT NOT NULL,
     course_id TEXT NOT NULL,
     modifier_id TEXT NOT NULL,
+    challenge_id TEXT NOT NULL DEFAULT 'legacy',
     FOREIGN KEY(run_id) REFERENCES game_runs(id)
   )`,
   `CREATE TABLE IF NOT EXISTS crest_scores (
