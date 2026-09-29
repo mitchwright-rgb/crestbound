@@ -2,12 +2,13 @@
 
 import { FormEvent, PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SoundKind, soundSources, soundVolumes } from './audio-assets';
-import { challengeMedal, chicagoDayKey, collectLightPower, crestScoreBreakdown, dailyObjectiveForSerial, dailyObjectiveSpecs, dashVelocity, formatDailyReset, gravityForModifier, horizontalSpeedLimit, jumpReleaseGravity, jumpVelocityForModifier, millisecondsUntilNextChicagoDay, musicTrackForCourse, musicTrackForSeries, objectiveResultLabel, resetRunTiming, resolveDamage, runStorageKey, seriesBeaconReached, tailwindAcceleration, touchInputFromControls, type CrestScoreBreakdown } from './game-rules';
+import { challengeMedal, chicagoDayKey, collectLightPower, crestScoreBreakdown, dailyObjectiveSpecs, dashVelocity, formatDailyReset, gravityForModifier, horizontalSpeedLimit, jumpReleaseGravity, jumpVelocityForModifier, millisecondsUntilNextChicagoDay, musicTrackForCourse, musicTrackForSeries, objectiveResultLabel, resetRunTiming, resolveDamage, runStorageKey, seriesBeaconReached, tailwindAcceleration, touchInputFromControls, type CrestScoreBreakdown } from './game-rules';
 import { buildSeededCourse } from './course-generator';
 import { buildSeriesCourse } from './series-course-generator';
 import { activeSeriesForDay, completedSeriesWeekIds, seriesWeekSeed } from './series-routes';
 import { checkNickname } from '@/lib/nickname';
 import { dailyChallengeIdForDay } from '@/lib/daily-challenge';
+import { routeConditionSpecs, type DailyRouteConfig } from '@/lib/daily-route';
 
 type Screen = 'title' | 'playing' | 'paused' | 'won' | 'over';
 type Hud = { sparks: number; total: number; lives: number; hits: number; time: number; best: number | null; checkpoint: number; progress: number; dashReady: boolean; shield: number; signatureCount: number };
@@ -45,14 +46,15 @@ function formatTime(seconds: number) {
   return `${minutes}:${remainder}`;
 }
 
-export default function Home({ initialDay }: { initialDay: string }) {
-  const [localDay, setLocalDay] = useState(initialDay);
-  const daySerial = Math.floor(new Date(`${localDay}T12:00:00Z`).getTime() / 86400000);
-  const dailyChallengeId = dailyChallengeIdForDay(localDay);
-  const dailyCourseIndex = ((daySerial % courseSpecs.length) + courseSpecs.length) % courseSpecs.length;
+export default function Home({ initialDay, initialDailyRoute }: { initialDay: string; initialDailyRoute: DailyRouteConfig }) {
+  const localDay = initialDay;
+  const daySerial = initialDailyRoute.serial;
+  const dailyChallengeId = initialDailyRoute.challengeId || dailyChallengeIdForDay(localDay);
+  const dailyCourseIndex = initialDailyRoute.courseIndex;
   const dailyCourse = courseSpecs[dailyCourseIndex];
-  const dailyModifier = modifierSpecs[((daySerial + dailyCourseIndex) % modifierSpecs.length + modifierSpecs.length) % modifierSpecs.length];
-  const dailyObjectiveId = dailyObjectiveForSerial(daySerial, dailyCourseIndex);
+  const dailyModifier = modifierSpecs.find((item) => item.id === initialDailyRoute.modifierId) ?? modifierSpecs[0];
+  const dailyObjectiveId = initialDailyRoute.objectiveId;
+  const dailyCondition = routeConditionSpecs[initialDailyRoute.conditionId];
   const activeSeries = useMemo(() => activeSeriesForDay(localDay), [localDay]);
   const [seriesMode, setSeriesMode] = useState(false);
   const [seriesWeekIndex, setSeriesWeekIndex] = useState(activeSeries?.weekIndex ?? 0);
@@ -69,7 +71,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
   const routeSeed = isSeries ? seriesWeekSeed(seriesWeek!.sunday) : daySerial;
   const courseData = useMemo(() => isSeries
     ? buildSeriesCourse(seriesWeekIndex, routeSeed)
-    : buildSeededCourse(activeCourseIndex, modifier.id, routeSeed), [activeCourseIndex, isSeries, modifier.id, routeSeed, seriesWeekIndex]);
+    : buildSeededCourse(activeCourseIndex, modifier.id, routeSeed, initialDailyRoute.conditionId), [activeCourseIndex, initialDailyRoute.conditionId, isSeries, modifier.id, routeSeed, seriesWeekIndex]);
   const { platforms, spikeZones, sparkSeed, enemySeed, checkpoints, rallyPoints: rallySeed = [] } = courseData;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const touchControlsRef = useRef<HTMLDivElement>(null);
@@ -274,7 +276,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
       setStreak(Number(window.localStorage.getItem('crestbound-streak')) || 0);
       setDailyReset(formatDailyReset(millisecondsUntilNextChicagoDay()));
       const currentDay = chicagoDayKey();
-      if (currentDay !== localDay && screenRef.current === 'title') setLocalDay(currentDay);
+      if (currentDay !== localDay && screenRef.current === 'title') window.location.reload();
     };
     syncReturnLoop();
     const timer = window.setInterval(syncReturnLoop, 30_000);
@@ -284,7 +286,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
   useEffect(() => {
     if (screen !== 'title') return;
     const currentDay = chicagoDayKey();
-    if (currentDay !== localDay) setLocalDay(currentDay);
+    if (currentDay !== localDay) window.location.reload();
   }, [localDay, screen]);
 
   useEffect(() => {
@@ -443,7 +445,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
   function dismissModifierCoach() {
     setShowModifierCoach(false);
     coachPauseRef.current = dashCoachRef.current;
-    window.localStorage.setItem(isSeries ? `crestbound-series-mechanic-seen-${seriesWeek?.id ?? activeSeries?.series.id ?? 'series'}` : `crestbound-twist-seen-${localDay}-${modifier.id}`, '1');
+    window.localStorage.setItem(isSeries ? `crestbound-series-mechanic-seen-${seriesWeek?.id ?? activeSeries?.series.id ?? 'series'}` : `crestbound-twist-seen-${localDay}-${modifier.id}-${initialDailyRoute.conditionId}`, '1');
     track('modifier_learned');
   }
 
@@ -511,7 +513,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
     const needsCoach = !window.localStorage.getItem('crestbound-dash-learned');
     const needsModifierCoach = isSeries
       ? !window.localStorage.getItem(`crestbound-series-mechanic-seen-${seriesWeek?.id ?? activeSeries?.series.id ?? 'series'}`)
-      : !window.localStorage.getItem(`crestbound-twist-seen-${localDay}-${modifier.id}`);
+      : !window.localStorage.getItem(`crestbound-twist-seen-${localDay}-${modifier.id}-${initialDailyRoute.conditionId}`);
     coachPauseRef.current = needsCoach || needsModifierCoach;
     dashCoachRef.current = needsCoach; setShowDashCoach(needsCoach); track(isSeries ? 'series_start' : 'run_start');
     setShowModifierCoach(needsModifierCoach);
@@ -1413,6 +1415,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
                   <span>SUNNY&apos;S RUN · TODAY</span>
                   <b>{dailyCourse.name}</b>
                   <em>{dailyModifier.name} · {dailyObjectiveSpecs[dailyObjectiveId].name}</em>
+                  <small className="route-condition">{dailyCondition.name} · {dailyCondition.description}</small>
                   {streak > 0 && <small className="streak-badge" title={`New route in ${dailyReset}`}>{streak} day streak</small>}
                 </div>
                 <button className="play-button" type="button" disabled={runStartState === 'connecting'} onClick={() => void startGame(true)}>{runStartState === 'connecting' ? 'Connecting Ranked Run…' : 'Run with Sunny'} {runStartState !== 'connecting' && <span aria-hidden="true">▶</span>}</button>
@@ -1463,7 +1466,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
                 {(['play', 'score', 'world'] as HelpTab[]).map((tab) => <button id={`help-tab-${tab}`} className={helpTab === tab ? 'active' : ''} type="button" role="tab" aria-selected={helpTab === tab} aria-controls="help-tabpanel" onClick={() => setHelpTab(tab)} key={tab}>{tab === 'play' ? 'Play' : tab === 'score' ? 'Score' : 'World'}</button>)}
               </div>
               <div id="help-tabpanel" className="help-content" role="tabpanel" aria-labelledby={`help-tab-${helpTab}`}>
-                {helpTab === 'play' && <section className="help-play"><div className="control-directory"><article><b>RUN</b><span>Arrows · A/D · touch</span></article><article><b>JUMP 2X</b><span>Space or JUMP · tap twice</span></article><article><b>DASH</b><span>Shift · X · DASH</span></article></div><div className="today-guide"><small>TODAY&apos;S ROUTE</small><b>{modifier.name} · {objective.name}</b><span>{modifier.description}</span><span>{objective.description}. Finish for Bronze; reach the target for Silver or Gold.</span></div><p>Touch controls appear automatically. Turn your phone sideways before the timer starts.</p><p className="app-tip"><b>FULL SCREEN</b> On iPhone, tap Share → Add to Home Screen.</p></section>}
+                {helpTab === 'play' && <section className="help-play"><div className="control-directory"><article><b>RUN</b><span>Arrows · A/D · touch</span></article><article><b>JUMP 2X</b><span>Space or JUMP · tap twice</span></article><article><b>DASH</b><span>Shift · X · DASH</span></article></div><div className="today-guide"><small>TODAY&apos;S ROUTE</small><b>{modifier.name} · {objective.name}</b><span>{modifier.description}</span>{!isSeries && <span><b>{dailyCondition.name}:</b> {dailyCondition.description}</span>}<span>{objective.description}. Finish for Bronze; reach the target for Silver or Gold.</span></div><p>Touch controls appear automatically. Turn your phone sideways before the timer starts.</p><p className="app-tip"><b>FULL SCREEN</b> On iPhone, tap Share → Add to Home Screen.</p></section>}
                 {helpTab === 'score' && <section className="scoring-directory help-card-grid"><article><b>+500 · FINISH</b><span>Clear the route to bank a score.</span></article><article><b>UP TO +1,200 · PACE</b><span>Finish faster for more points.</span></article><article><b>UP TO +800 · LIGHT</b><span>Collect a larger share of the route&apos;s Light.</span></article><article><b>UP TO +200 · CHALLENGE</b><span>Earn Silver or Gold—or complete the Series objective.</span></article><p><b>EVERY FINISH COUNTS</b> All collected Light also goes to Suncrest&apos;s weekly community goal. Highest score wins; time breaks an exact tie.</p></section>}
                 {helpTab === 'world' && <section className="help-world"><div className="world-rules help-card-grid"><article><b>GOLD LIGHT</b><span>Shortens Dash recharge.</span></article><article><b>STORM LIGHT</b><span>Readies Dash and shields one hit.</span></article><article><b>CHECKPOINT</b><span>Saves progress and restores one life.</span></article><article><b>ENEMY</b><span>Dash through or land from above.</span></article></div><div className="twist-directory"><h3>Daily Twists</h3>{modifierSpecs.map((item) => <article className={item.id === modifier.id && !isPractice ? 'today' : ''} key={item.id}><b>{item.name}{item.id === modifier.id && !isPractice ? ' · TODAY' : ''}</b><span>{item.shortDescription}</span></article>)}</div></section>}
               </div>
@@ -1525,7 +1528,7 @@ export default function Home({ initialDay }: { initialDay: string }) {
         )}
 
         {screen === 'playing' && (
-          <>{waitingForLandscape && <div className="rotate-prompt"><span aria-hidden="true">↻</span><strong>Turn Sideways to Start</strong><small>Your run and timer are paused until the phone is in landscape.</small></div>}{showModifierCoach && !waitingForLandscape ? <div className="dash-coach modifier-coach"><b>{isSeries ? `EXCLUSIVE CHALLENGE · ${activeSeries?.series.mechanicName ?? 'SERIES MARKS'}` : `TODAY'S TWIST · ${modifier.name}`}</b><span>{isSeries ? activeSeries?.series.mechanicHelp : modifier.description}</span><button type="button" onClick={dismissModifierCoach}>LET&apos;S RUN</button></div> : showDashCoach && !waitingForLandscape && <div className="dash-coach"><b>DASH IS YOUR EDGE</b><span>Press SHIFT or X — or tap DASH — to burst through hazards and enemies. The HUD tells you when it recharges.</span><button type="button" onClick={() => dismissDashCoach()}>GOT IT</button></div>}<div ref={touchControlsRef} className="touch-controls" aria-label="Touch controls">
+          <>{waitingForLandscape && <div className="rotate-prompt"><span aria-hidden="true">↻</span><strong>Turn Sideways to Start</strong><small>Your run and timer are paused until the phone is in landscape.</small></div>}{showModifierCoach && !waitingForLandscape ? <div className="dash-coach modifier-coach"><b>{isSeries ? `EXCLUSIVE CHALLENGE · ${activeSeries?.series.mechanicName ?? 'SERIES MARKS'}` : `${modifier.name} + ${dailyCondition.name}`}</b><span>{isSeries ? activeSeries?.series.mechanicHelp : `${modifier.description} ${dailyCondition.description}`}</span><button type="button" onClick={dismissModifierCoach}>LET&apos;S RUN</button></div> : showDashCoach && !waitingForLandscape && <div className="dash-coach"><b>DASH IS YOUR EDGE</b><span>Press SHIFT or X — or tap DASH — to burst through hazards and enemies. The HUD tells you when it recharges.</span><button type="button" onClick={() => dismissDashCoach()}>GOT IT</button></div>}<div ref={touchControlsRef} className="touch-controls" aria-label="Touch controls">
             <div><button type="button" data-control="left" aria-label="Move left" onPointerDown={(event) => beginPress('left', event)} onPointerUp={(event) => endPress('left', event)} onPointerCancel={(event) => endPress('left', event)} onLostPointerCapture={(event) => endPress('left', event)}>←</button><button type="button" data-control="right" aria-label="Move right" onPointerDown={(event) => beginPress('right', event)} onPointerUp={(event) => endPress('right', event)} onPointerCancel={(event) => endPress('right', event)} onLostPointerCapture={(event) => endPress('right', event)}>→</button></div>
             <div><button className={hud.dashReady ? 'dash-control ready' : 'dash-control'} type="button" data-control="dash" aria-label={hud.dashReady ? 'Dash ready' : 'Dash charging'} onPointerDown={(event) => beginPress('dash', event)} onPointerUp={(event) => endPress('dash', event)} onPointerCancel={(event) => endPress('dash', event)} onLostPointerCapture={(event) => endPress('dash', event)}>DASH</button><button className="jump-control" type="button" data-control="jump" aria-label="Jump — tap twice for double jump" onPointerDown={(event) => beginPress('jump', event)} onPointerUp={(event) => endPress('jump', event)} onPointerCancel={(event) => endPress('jump', event)} onLostPointerCapture={(event) => endPress('jump', event)}>JUMP 2X</button></div>
           </div></>

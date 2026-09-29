@@ -9,6 +9,7 @@ const numericColumns = new Set([
   'id', 'started_at', 'completed_at', 'score_ms', 'sparks', 'crest_score', 'light_total',
   'hits', 'created_at', 'best_time_ms', 'lights', 'best_score', 'signature_count',
   'request_count', 'expires_at', 'completions', 'players', 'rank', 'runs', 'points',
+  'route_seed',
 ]);
 
 function normalizeRow<T>(row: QueryRow): T {

@@ -1,4 +1,5 @@
 import type { ModifierId } from './game-rules';
+import type { RouteConditionId } from '@/lib/daily-route';
 
 export type Platform = { x: number; y: number; w: number; h: number; moving?: boolean; phase?: number; baseY?: number };
 export type Spark = { x: number; y: number; taken?: boolean; secret?: boolean; storm?: boolean };
@@ -22,7 +23,7 @@ function elevated(platforms: Platform[], x: number, y: number, w: number, moving
   platforms.push({ x, y, w, h: 24, moving, phase, baseY: moving ? y : undefined });
 }
 
-export function buildSeededCourse(courseIndex: number, modifierId: ModifierId, seed: number): CourseData {
+export function buildSeededCourse(courseIndex: number, modifierId: ModifierId, seed: number, conditionId: RouteConditionId = 'standard'): CourseData {
   const platforms: Platform[] = [];
   const spikeZones: Array<{ x: number; y: number; w: number }> = [];
   const sparkSeed: Spark[] = [];
@@ -85,11 +86,26 @@ export function buildSeededCourse(courseIndex: number, modifierId: ModifierId, s
       sparkSeed.push({ x: platform.x + platform.w / 2, y: platform.y - 50, secret: platformIndex === sectionPlatforms.length - 1 && section % 4 === 1 });
     });
 
+    if (conditionId === 'light_rush' && section > 0) {
+      const bonusPlatform = sectionPlatforms[section % Math.max(1, sectionPlatforms.length)];
+      sparkSeed.push(bonusPlatform
+        ? { x: bonusPlatform.x + Math.min(bonusPlatform.w - 35, 58 + (section % 3) * 36), y: bonusPlatform.y - 50, secret: section % 4 === 0 }
+        : { x: x + Math.min(width - 70, 320), y: 554 });
+    }
+
     const enemyFrequency = courseIndex === 2 ? 1 : courseIndex === 1 ? 2 : 3;
     if (section > 0 && section % enemyFrequency === 0 && width >= 470) {
       const enemyX = x + Math.min(width - 90, 270 + pattern * 45);
       enemySeed.push({ x: enemyX, y: 570, minX: x + 60, maxX: x + width - 60, speed: 110 + courseIndex * 34 + (section % 4) * 16, dir: section % 2 ? -1 : 1, alive: true });
     }
+    if (conditionId === 'rooftop_rumble' && section > 0 && section % 2 === 1 && width >= 470) {
+      const enemyX = x + Math.min(width - 100, 165 + pattern * 42);
+      enemySeed.push({ x: enemyX, y: 570, minX: x + 70, maxX: x + width - 70, speed: 138 + courseIndex * 24 + (section % 3) * 18, dir: section % 2 ? -1 : 1, alive: true });
+    }
+  }
+
+  if (conditionId === 'checkpoint_charge') {
+    CHECKPOINTS.slice(1, -1).forEach((checkpoint, index) => sparkSeed.push({ x: checkpoint + 92, y: 535 - (index % 2) * 42, storm: true }));
   }
 
   if (modifierId === 'sparkstorm') {

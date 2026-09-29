@@ -9,6 +9,7 @@ import { activeSeriesForDay, completedSeriesWeekIds, declarationsSeries, seriesW
 import { checkNickname, publicNickname } from '../lib/nickname.ts';
 import { normalizeEventMetadata } from '../lib/telemetry.ts';
 import { parseMessageDetails, parseSeriesMessages } from '../lib/suncrest-messages.ts';
+import { defaultDailyRoute } from '../lib/daily-route.ts';
 
 test('Moonstep lowers gravity while other twists preserve standard gravity', () => {
   assert.equal(gravityForModifier('moonstep'), 1050);
@@ -145,9 +146,24 @@ test('daily reset countdown targets the next Chicago calendar day', () => {
 test('server and client share one authoritative Chicago day during hydration', () => {
   const pageSource = readFileSync(new URL('./page.tsx', import.meta.url), 'utf8');
   const gameSource = readFileSync(new URL('./crestbound-game.tsx', import.meta.url), 'utf8');
-  assert.match(pageSource, /<CrestboundGame initialDay=\{chicagoDayKey\(\)\}/);
-  assert.match(gameSource, /function Home\(\{ initialDay \}/);
-  assert.doesNotMatch(gameSource, /^const localDay\s*=/m);
+  assert.match(pageSource, /const day = chicagoDayKey\(\)/);
+  assert.match(pageSource, /<CrestboundGame initialDay=\{day\} initialDailyRoute=\{dailyRoute\}/);
+  assert.match(gameSource, /function Home\(\{ initialDay, initialDailyRoute \}/);
+  assert.match(gameSource, /const localDay = initialDay/);
+});
+
+test('daily rotation includes deterministic, visible route conditions', () => {
+  const first = defaultDailyRoute('2026-09-29');
+  assert.deepEqual(first, defaultDailyRoute('2026-09-29'));
+  assert.notEqual(first.conditionId, defaultDailyRoute('2026-09-30').conditionId);
+  const base = buildSeededCourse(0, 'clear', first.serial, 'standard');
+  const lights = buildSeededCourse(0, 'clear', first.serial, 'light_rush');
+  const charged = buildSeededCourse(0, 'clear', first.serial, 'checkpoint_charge');
+  assert.ok(lights.sparkSeed.length > base.sparkSeed.length);
+  for (const courseIndex of [0, 1, 2]) {
+    assert.ok(buildSeededCourse(courseIndex, 'clear', first.serial, 'rooftop_rumble').enemySeed.length > buildSeededCourse(courseIndex, 'clear', first.serial, 'standard').enemySeed.length);
+  }
+  assert.ok(charged.sparkSeed.filter((light) => light.storm).length >= 4);
 });
 
 test('event metadata keeps useful product signals without accepting arbitrary data', () => {
@@ -275,6 +291,15 @@ test('production hosting migrations include Crest Score and every-run Community 
   assert.match(migration, /ALTER TABLE series_completions ADD COLUMN best_score/);
   assert.match(migration, /CREATE TABLE IF NOT EXISTS community_light_contributions/);
   assert.match(migration, /contribution_id TEXT PRIMARY KEY/);
+});
+
+test('production hosting migration includes staff route controls and audit history', () => {
+  const migration = readFileSync(new URL('../drizzle/0007_admin_routes.sql', import.meta.url), 'utf8');
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS daily_route_overrides/);
+  assert.match(migration, /condition_id TEXT NOT NULL/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS admin_audit_log/);
+  assert.match(migration, /ALTER TABLE run_context ADD COLUMN IF NOT EXISTS condition_id/);
+  assert.match(migration, /ALTER TABLE run_context ADD COLUMN IF NOT EXISTS route_seed/);
 });
 
 test('daily scores accept every verified Light on generated routes', () => {

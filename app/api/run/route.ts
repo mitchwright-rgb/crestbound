@@ -2,26 +2,20 @@ import { NextResponse } from 'next/server';
 import { chicagoKeys, database, weeklyCommunityLight } from '@/lib/db';
 import { checkNickname } from '@/lib/nickname';
 import { rateLimit } from '@/lib/rate-limit';
-import { dailyChallengeIdForDay } from '@/lib/daily-challenge';
 import { buildSeededCourse } from '@/app/course-generator';
-import { challengeMedal, crestScoreBreakdown, dailyObjectiveForSerial } from '@/app/game-rules';
+import { challengeMedal, crestScoreBreakdown } from '@/app/game-rules';
 import { activeSeriesForDay, seriesCourseIds } from '@/app/series-routes';
+import { effectiveDailyRoute } from '@/lib/daily-route-data';
+import { dailyCourseIds, type RouteConditionId } from '@/lib/daily-route';
+import type { DailyObjectiveId, ModifierId } from '@/app/game-rules';
 
 const courses = new Set(['goldline', 'crosswind', 'nightshift', ...seriesCourseIds]);
 const modifiers = new Set(['clear', 'tailwind', 'moonstep', 'sparkstorm']);
 const validId = (value: unknown) => /^[0-9a-f-]{36}$/i.test(String(value ?? ''));
 
-function scheduledRun() {
+async function scheduledRun() {
   const day = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(new Date());
-  const serial = Math.floor(new Date(`${day}T12:00:00Z`).getTime() / 86400000);
-  const courseIndex = ((serial % 3) + 3) % 3;
-  return {
-    serial,
-    courseIndex,
-    challengeId: dailyChallengeIdForDay(day),
-    courseId: ['goldline', 'crosswind', 'nightshift'][courseIndex],
-    modifierId: ['clear', 'tailwind', 'moonstep', 'sparkstorm'][((serial + courseIndex) % 4 + 4) % 4],
-  };
+  return effectiveDailyRoute(day);
 }
 
 export async function POST(request: Request) {
@@ -32,7 +26,7 @@ export async function POST(request: Request) {
   const courseId = String(body.courseId ?? '');
   const modifierId = String(body.modifierId ?? '');
   const challengeId = String(body.challengeId ?? '');
-  const scheduled = scheduledRun();
+  const scheduled = await scheduledRun();
 
   if (body.action === 'start') {
     const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Chicago' }).format(new Date());
@@ -47,7 +41,8 @@ export async function POST(request: Request) {
     const startedAt = Date.now();
     await db.batch([
       db.prepare('INSERT INTO game_runs (id, started_at) VALUES (?, ?)').bind(id, startedAt),
-      db.prepare('INSERT INTO run_context (run_id, player_id, course_id, modifier_id, challenge_id) VALUES (?, ?, ?, ?, ?)').bind(id, playerId, courseId, modifierId, challengeId),
+      db.prepare(`INSERT INTO run_context (run_id, player_id, course_id, modifier_id, challenge_id, objective_id, condition_id, route_seed)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`).bind(id, playerId, courseId, modifierId, challengeId, validDaily ? scheduled.objectiveId : 'skyline_mastery', validDaily ? scheduled.conditionId : 'standard', validDaily ? scheduled.serial : 0),
     ]);
     return NextResponse.json({ runId: id });
   }
@@ -61,19 +56,23 @@ export async function POST(request: Request) {
   const hits = Math.round(Number(body.hits));
   if (!nickname.ok) return NextResponse.json({ error: nickname.message }, { status: 400 });
   const name = nickname.name;
-  const routeTotal = buildSeededCourse(scheduled.courseIndex, modifierId as 'clear' | 'tailwind' | 'moonstep' | 'sparkstorm', scheduled.serial).sparkSeed.length;
-  if (!validId(runId) || !validId(playerId) || !courses.has(courseId) || !modifiers.has(modifierId) || courseId !== scheduled.courseId || modifierId !== scheduled.modifierId || challengeId !== scheduled.challengeId || !Number.isFinite(scoreMs) || scoreMs < 10000 || scoreMs > 900000 || !Number.isInteger(sparks) || sparks < 0 || sparks > routeTotal || lightTotal !== routeTotal || !Number.isInteger(hits) || hits < 0 || hits > 99) return NextResponse.json({ error: 'That run could not be verified.' }, { status: 400 });
+  if (!validId(runId) || !validId(playerId) || !courses.has(courseId) || !modifiers.has(modifierId) || !Number.isFinite(scoreMs) || scoreMs < 10000 || scoreMs > 900000 || !Number.isInteger(sparks) || sparks < 0 || !Number.isInteger(lightTotal) || lightTotal < 1 || !Number.isInteger(hits) || hits < 0 || hits > 99) return NextResponse.json({ error: 'That run could not be verified.' }, { status: 400 });
   const allowance = await rateLimit(request, 'run-finish', playerId, 20, 10 * 60_000);
   if (!allowance.allowed) return NextResponse.json({ error: 'Too many score attempts. Try again shortly.' }, { status: 429, headers: { 'Retry-After': String(allowance.retryAfter) } });
 
-  const run = await db.prepare(`SELECT r.started_at, r.completed_at, c.player_id, c.course_id, c.modifier_id, c.challenge_id
-    FROM game_runs r JOIN run_context c ON c.run_id = r.id WHERE r.id = ?`).bind(runId).first<{ started_at: number; completed_at: number | null; player_id: string; course_id: string; modifier_id: string; challenge_id: string }>();
+  const run = await db.prepare(`SELECT r.started_at, r.completed_at, c.player_id, c.course_id, c.modifier_id, c.challenge_id,
+      c.objective_id, c.condition_id, c.route_seed
+    FROM game_runs r JOIN run_context c ON c.run_id = r.id WHERE r.id = ?`).bind(runId).first<{ started_at: number; completed_at: number | null; player_id: string; course_id: string; modifier_id: ModifierId; challenge_id: string; objective_id: DailyObjectiveId; condition_id: RouteConditionId; route_seed: number }>();
   const wallTime = run ? Date.now() - run.started_at : 0;
   if (!run || run.completed_at || run.player_id !== playerId || run.course_id !== courseId || run.modifier_id !== modifierId || run.challenge_id !== challengeId || wallTime < 10000 || scoreMs > wallTime + 3000) return NextResponse.json({ error: 'That run could not be verified.' }, { status: 409 });
+  const runCourseIndex = dailyCourseIds.indexOf(run.course_id as typeof dailyCourseIds[number]);
+  if (runCourseIndex < 0 || !['sprint', 'light_hunt', 'clean_run', 'skyline_mastery'].includes(run.objective_id) || !['standard', 'light_rush', 'rooftop_rumble', 'checkpoint_charge'].includes(run.condition_id)) return NextResponse.json({ error: 'That run could not be verified.' }, { status: 409 });
+  const routeTotal = buildSeededCourse(runCourseIndex, run.modifier_id, run.route_seed, run.condition_id).sparkSeed.length;
+  if (sparks > routeTotal || lightTotal !== routeTotal) return NextResponse.json({ error: 'That run could not be verified.' }, { status: 400 });
 
   const now = Date.now();
   const keys = chicagoKeys(new Date(now));
-  const objective = dailyObjectiveForSerial(scheduled.serial, scheduled.courseIndex);
+  const objective = run.objective_id;
   const medal = challengeMedal(objective, { time: scoreMs / 1000, sparks, total: routeTotal, lives: Math.max(0, 3 - hits), hits });
   const breakdown = crestScoreBreakdown({ time: scoreMs / 1000, sparks, total: routeTotal, medal });
   try {
