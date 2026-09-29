@@ -257,6 +257,12 @@ test('production hosting migrations include the daily challenge columns', () => 
   assert.match(migration, /ALTER TABLE crest_scores ADD COLUMN challenge_id/);
 });
 
+test('Postgres rate limiting qualifies the upsert counter column', () => {
+  const rateLimit = readFileSync(new URL('../lib/rate-limit.ts', import.meta.url), 'utf8');
+  assert.match(rateLimit, /request_count = request_limits\.request_count \+ 1/);
+  assert.doesNotMatch(rateLimit, /request_count = request_count \+ 1/);
+});
+
 test('production hosting migrations include Series Route completions', () => {
   const migration = readFileSync(new URL('../drizzle/0004_series_routes.sql', import.meta.url), 'utf8');
   assert.match(migration, /CREATE TABLE IF NOT EXISTS series_completions/);

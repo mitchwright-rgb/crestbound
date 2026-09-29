@@ -11,7 +11,7 @@ export async function rateLimit(request: Request, scope: string, subject: string
   const expiresAt = (bucket + 1) * windowMs;
   const db = database();
   await db.prepare(`INSERT INTO request_limits (bucket_key, request_count, expires_at) VALUES (?, 1, ?)
-    ON CONFLICT(bucket_key) DO UPDATE SET request_count = request_count + 1`).bind(bucketKey, expiresAt).run();
+    ON CONFLICT(bucket_key) DO UPDATE SET request_count = request_limits.request_count + 1`).bind(bucketKey, expiresAt).run();
   const row = await db.prepare('SELECT request_count FROM request_limits WHERE bucket_key = ?').bind(bucketKey).first<{ request_count: number }>();
   if (scope === 'run-finish') await db.prepare('DELETE FROM request_limits WHERE expires_at < ?').bind(now).run();
   return { allowed: (row?.request_count ?? limit + 1) <= limit, retryAfter: Math.max(1, Math.ceil((expiresAt - now) / 1000)) };
