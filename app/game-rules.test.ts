@@ -5,7 +5,7 @@ import { soundSources } from './audio-assets.ts';
 import { challengeMedal, chicagoDayKey, collectLightPower, crestScoreBreakdown, dailyObjectiveForSerial, dashVelocity, formatDailyReset, gravityForModifier, horizontalSpeedLimit, jumpReleaseGravity, jumpVelocityForModifier, lightHuntTargets, millisecondsUntilNextChicagoDay, musicTrackForCourse, musicTrackForSeries, objectiveResultLabel, resetRunTiming, resolveDamage, runStorageKey, seriesBeaconReached, tailwindAcceleration, touchInputFromControls } from './game-rules.ts';
 import { buildSeededCourse, checkpointHasClearLanding, checkpointIsSupported, courseSignature, maximumGroundGap } from './course-generator.ts';
 import { buildDeclarationsCourse } from './series-course-generator.ts';
-import { activeSeriesForDay, completedSeriesWeekIds, declarationsSeries, seriesWeekSeed } from './series-routes.ts';
+import { activeSeriesForDay, completedSeriesWeekIds, declarationsSeries, messageRouteSchedule, seriesWeekSeed } from './series-routes.ts';
 import { checkNickname, publicNickname } from '../lib/nickname.ts';
 import { normalizeEventMetadata } from '../lib/telemetry.ts';
 import { parseMessageDetails, parseSeriesMessages } from '../lib/suncrest-messages.ts';
@@ -186,7 +186,7 @@ test('event metadata keeps useful product signals without accepting arbitrary da
   assert.equal(normalizeEventMetadata({ reason: 'x'.repeat(40) }), null);
 });
 
-test('Declarations rolls to a new weekly route every Sunday and remains available through Saturday', () => {
+test('Message Routes cover weekly series and the standalone Ask Me Anything weekend', () => {
   assert.equal(activeSeriesForDay('2026-08-15'), null);
   assert.equal(activeSeriesForDay('2026-08-16')?.week.id, 'declarations-2026-w1');
   assert.equal(activeSeriesForDay('2026-08-22')?.week.id, 'declarations-2026-w1');
@@ -197,7 +197,9 @@ test('Declarations rolls to a new weekly route every Sunday and remains availabl
   assert.equal(activeSeriesForDay('2026-09-26')?.week.id, 'at-the-movies-2026-w1');
   assert.equal(activeSeriesForDay('2026-09-27')?.week.id, 'at-the-movies-2026-w2');
   assert.equal(activeSeriesForDay('2026-10-03')?.week.id, 'at-the-movies-2026-w2');
-  assert.equal(activeSeriesForDay('2026-10-04'), null);
+  assert.equal(activeSeriesForDay('2026-10-04')?.series.id, 'ask-me-anything-2026');
+  assert.equal(activeSeriesForDay('2026-10-04')?.series.kind, 'special');
+  assert.equal(activeSeriesForDay('2026-10-10')?.week.id, 'ask-me-anything-2026-w1');
   assert.equal(activeSeriesForDay('2026-10-11')?.series.id, 'soundtrack-2026');
   assert.equal(activeSeriesForDay('2026-11-01')?.series.id, 'trust-issues-2026');
   assert.equal(activeSeriesForDay('2026-12-06')?.series.id, 'behold-2026');
@@ -206,11 +208,12 @@ test('Declarations rolls to a new weekly route every Sunday and remains availabl
 test('Suncrest message pages expose the exact weekly content and resource links', () => {
   const summaries = parseSeriesMessages(`<a class="sp-media-item" href="/media/87drmvz/be-consistent"><div class="sp-media-title">Be Consistent</div><div class="sp-media-subtitle">Aug 23, 2026 &nbsp;<span>&bull;</span>&nbsp; Greg Lee</div></a>`);
   assert.deepEqual(summaries, [{ title: 'Be Consistent', date: '2026-08-23', speaker: 'Greg Lee', url: 'https://suncrest.org/media/87drmvz/be-consistent' }]);
-  const details = parseMessageDetails(`<meta name="description" content="Everyday faithfulness &amp; courage." /><link rel="canonical" href="https://suncrest.org/media/87drmvz/be-consistent" /><a href="https://page.church/discuss" data-label="Discussion Guide">Discussion Guide</a><a href="https://page.church/read" data-label="Reading Guide">Reading Guide</a>`, summaries[0]);
+  const details = parseMessageDetails(`<meta name="description" content="Everyday faithfulness &amp; courage." /><meta property="og:image" content="https://assets.suncrest.org/messages/be-consistent.jpg" /><link rel="canonical" href="https://suncrest.org/media/87drmvz/be-consistent" /><a href="https://page.church/discuss" data-label="Discussion Guide">Discussion Guide</a><a href="https://page.church/read" data-label="Reading Guide">Reading Guide</a>`, summaries[0]);
   assert.equal(details.description, 'Everyday faithfulness & courage.');
   assert.equal(details.appUrl, 'https://suncrestchurch.subspla.sh/87drmvz');
   assert.equal(details.discussionGuideUrl, 'https://page.church/discuss');
   assert.equal(details.readingGuideUrl, 'https://page.church/read');
+  assert.equal(details.artworkUrl, 'https://assets.suncrest.org/messages/be-consistent.jpg');
 });
 
 test('Series Route completion progress safely reads local storage', () => {
@@ -228,6 +231,19 @@ test('each Declarations week is structurally distinct and keeps recovery points 
     assert.ok(route.platforms.some((platform) => platform.y >= 600 && 15135 >= platform.x && 15135 <= platform.x + platform.w));
     assert.ok(route.sparkSeed.length <= 120);
     assert.equal(route.rallyPoints?.length, 3);
+  }
+});
+
+test('every scheduled Message Route is automatically generated within safe limits', () => {
+  for (const route of messageRouteSchedule) {
+    for (const [index, week] of route.weeks.entries()) {
+      const course = buildDeclarationsCourse(index, seriesWeekSeed(week.sunday));
+      assert.ok(maximumGroundGap(course) <= 370, `${week.id} ground gap`);
+      assert.ok(course.checkpoints.every((checkpoint) => checkpointIsSupported(course, checkpoint)), `${week.id} supported checkpoints`);
+      assert.ok(course.checkpoints.every((checkpoint) => checkpointHasClearLanding(course, checkpoint)), `${week.id} clear checkpoints`);
+      assert.ok(course.sparkSeed.length <= 120, `${week.id} Light limit`);
+      assert.equal(course.rallyPoints?.length, 3, `${week.id} Message marks`);
+    }
   }
 });
 
@@ -326,19 +342,19 @@ test('daily scores accept every verified Light on generated routes', () => {
   assert.match(schema, /challenge_id TEXT NOT NULL DEFAULT 'legacy'/);
 });
 
-test('post-run layouts keep Daily and Series results distinct and landscape-safe', () => {
+test('post-run layouts keep Daily and Message Route results distinct and landscape-safe', () => {
   const game = readFileSync(new URL('./crestbound-game.tsx', import.meta.url), 'utf8');
   const styles = readFileSync(new URL('./globals.css', import.meta.url), 'utf8');
   assert.match(game, /isSeries \? 'series-win' : 'daily-win'/);
   assert.match(game, /mechanicName/);
-  assert.match(game, /SERIES RUN RECORDED/);
+  assert.match(game, /MESSAGE ROUTE RECORDED/);
   assert.match(game, /NEW PERSONAL BEST/);
   assert.match(game, /POINTS FROM YOUR BEST/);
   assert.match(game, /BADGE EARNED/);
   assert.match(game, /series-completion-progress/);
   assert.match(game, /mechanicAction/);
   assert.match(game, /series-status/);
-  assert.match(game, /Back to Series Routes/);
+  assert.match(game, /Back to Message Routes/);
   assert.match(game, /Watch This Week&apos;s Message/);
   assert.match(game, /crestbound-series-mechanic-seen-\$\{seriesWeek\?\.id/);
   assert.match(game, /Highest score wins\./);

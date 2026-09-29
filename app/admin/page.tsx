@@ -35,9 +35,9 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
     loadAdminAnalytics(14),
   ]);
   const overriddenWeeks = new Set(seriesOverrides.results.map((row) => row.week_id));
-  const visibleSeries = seriesSchedule.filter((series) => series.endsOn >= keys.day);
+  const visibleMessageRoutes = seriesSchedule.filter((series) => series.endsOn >= keys.day);
   return <main className={styles.shell}><div className={styles.frame}>
-    <header className={styles.header}><div><p className={styles.eyebrow}>CRESTBOUND // OWNER</p><h1>Game Control</h1><p>See how people are playing, tune future routes, and manage Series Routes. Automatic rotation stays active unless you publish a dated override.</p></div><form method="post" action="/api/admin/logout"><button className={styles.logout}>Sign Out</button></form></header>
+    <header className={styles.header}><div><p className={styles.eyebrow}>CRESTBOUND // OWNER</p><h1>Game Control</h1><p>See how people are playing, tune future routes, and manage Message Routes. Automatic rotation stays active unless you publish a dated override.</p></div><form method="post" action="/api/admin/logout"><button className={styles.logout}>Sign Out</button></form></header>
     {(params.saved || params.seriesSaved) && <p className={styles.notice}>Saved. New runs will use the updated configuration on its scheduled date.</p>}
     {(params.cleared || params.seriesCleared) && <p className={styles.notice}>Override removed. Automatic scheduling is active again.</p>}
     {params.error && <p className={`${styles.notice} ${styles.errorNotice}`}>That change was not saved. Check every field and try again.</p>}
@@ -49,7 +49,7 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
         <article><small>COMPLETION RATE</small><b>{percent(analytics.completionRate)}</b><span>{analytics.finishes} finished · {analytics.abandoned} abandoned</span></article>
         <article><small>AVERAGE FINISH</small><b>{duration(analytics.avgTimeMs)}</b><span>{analytics.avgHits.toFixed(1)} hits per finish</span></article>
         <article><small>LIGHT FOUND</small><b>{percent(analytics.avgLightPercent)}</b><span>Average share collected</span></article>
-        <article><small>SERIES ROUTES</small><b>{analytics.seriesFinishes}/{analytics.seriesStarts}</b><span>Finishes from starts</span></article>
+        <article><small>MESSAGE ROUTES</small><b>{analytics.seriesFinishes}/{analytics.seriesStarts}</b><span>Finishes from starts</span></article>
       </div>
       <div className={styles.analyticsSplit}>
         <section><h3>Route + Twist Performance</h3><div className={styles.performanceTable}><div className={styles.tableHead}><span>ROUTE MIX</span><span>FINISH</span><span>TIME</span><span>LIGHT</span><span>HEALTH</span></div>{analytics.performance.length ? analytics.performance.map((row) => { const status = difficultyStatus(row); return <div className={styles.tableRow} key={`${row.course_id}-${row.modifier_id}-${row.condition_id}`}><span><b>{courseNames[row.course_id] ?? row.course_id}</b><small>{modifierNames[row.modifier_id] ?? row.modifier_id} · {routeConditionSpecs[row.condition_id as keyof typeof routeConditionSpecs]?.name ?? row.condition_id}</small></span><span>{row.finishes}/{row.starts}</span><span>{duration(row.avg_time_ms ?? 0)}</span><span>{percent(row.avg_light_percent ?? 0)}</span><strong data-status={status}>{status}</strong></div> }) : <p className={styles.empty}>No route data yet. Analytics will fill in as people play.</p>}</div></section>
@@ -70,14 +70,14 @@ export default async function AdminPage({ searchParams }: { searchParams: Promis
       <div className={styles.conditionGuide}>{Object.entries(routeConditionSpecs).map(([id, item]) => <article key={id}><b>{item.name}</b><span>{item.description}</span></article>)}</div>
     </details>
 
-    <details className={styles.panel}><summary><span><small>SUNCREST CONTENT</small><b>Series Route Schedule</b></span><em>{visibleSeries.reduce((count, series) => count + series.weeks.length, 0)} WEEKS</em></summary>
-      <p>Change a week only when message details or timing change. Leave the message link blank to keep Crestbound&apos;s automatic Suncrest.org lookup.</p>
-      <div className={styles.seriesList}>{visibleSeries.map((series) => <details className={styles.seriesGroup} key={series.id} open={keys.day >= series.startsOn && keys.day <= series.endsOn}><summary><b>{series.name}</b><span>{series.startsOn} → {series.endsOn}</span></summary>{series.weeks.map((week) => <form action={saveSeriesWeek} className={styles.seriesWeekForm} key={week.id}>
+    <details className={styles.panel}><summary><span><small>SUNCREST CONTENT</small><b>Message Route Calendar</b></span><em>{visibleMessageRoutes.reduce((count, series) => count + series.weeks.length, 0)} ROUTES</em></summary>
+      <p>Routes generate automatically. Only change dates, message details, or a direct link when Suncrest&apos;s published information changes.</p>
+      <div className={styles.seriesList}>{visibleMessageRoutes.map((series) => <details className={styles.seriesGroup} key={series.id} open={keys.day >= series.startsOn && keys.day <= series.endsOn}><summary><b>{series.name} <small>{series.kind === 'special' ? 'SPECIAL ROUTE' : 'MESSAGE SERIES'}</small></b><span>{series.startsOn} → {series.endsOn}</span></summary>{series.weeks.map((week) => <form action={saveSeriesWeek} className={styles.seriesWeekForm} key={week.id}>
         <input type="hidden" name="weekId" value={week.id} />
         <label>SUNDAY<input type="date" name="sunday" defaultValue={week.sunday} required /></label>
         <label>MESSAGE TITLE<input name="title" defaultValue={week.title} maxLength={80} required /></label>
         <label>ROUTE NAME<input name="routeName" defaultValue={week.routeName} maxLength={80} required /></label>
-        <label>CHALLENGE<select name="objectiveId" defaultValue={week.objective}>{Object.entries(dailyObjectiveSpecs).map(([id, item]) => <option key={id} value={id}>{item.name}</option>)}</select></label>
+        <input type="hidden" name="objectiveId" value={week.objective} />
         <label className={styles.messageField}>DIRECT MESSAGE LINK · OPTIONAL<input type="url" name="messageUrl" defaultValue={week.messageUrl ?? ''} placeholder="https://suncrest.org/media/..." /></label>
         <button type="submit">{overriddenWeeks.has(week.id) ? 'Update Week' : 'Customize Week'}</button>
         {overriddenWeeks.has(week.id) && <button className={styles.inlineReset} formAction={clearSeriesWeek}>Use Automatic Details</button>}

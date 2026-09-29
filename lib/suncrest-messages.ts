@@ -1,5 +1,5 @@
 export type MessageSummary = { title: string; date: string; speaker: string; url: string };
-export type MessageDetails = MessageSummary & { appUrl: string | null; description: string; discussionGuideUrl: string | null; readingGuideUrl: string | null };
+export type MessageDetails = MessageSummary & { appUrl: string | null; artworkUrl: string | null; description: string; discussionGuideUrl: string | null; readingGuideUrl: string | null };
 
 const decode = (value: string) => value
   .replace(/&nbsp;/g, ' ')
@@ -34,5 +34,15 @@ export function parseMessageDetails(html: string, summary: MessageSummary): Mess
   const url = decode(canonical);
   const mediaId = new URL(url).pathname.match(/^\/media\/([a-z0-9]+)/i)?.[1] ?? null;
   const appUrl = mediaId ? `https://suncrestchurch.subspla.sh/${mediaId}` : null;
-  return { ...summary, url, appUrl, description, discussionGuideUrl: guide('Discussion Guide'), readingGuideUrl: guide('Reading Guide') };
+  const artwork = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)?.[1]
+    ?? html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i)?.[1]
+    ?? null;
+  let artworkUrl: string | null = null;
+  if (artwork) {
+    try {
+      const parsedArtwork = new URL(decode(artwork), 'https://suncrest.org');
+      if (parsedArtwork.protocol === 'https:') artworkUrl = parsedArtwork.toString();
+    } catch { /* Ignore malformed metadata and preserve the branded fallback. */ }
+  }
+  return { ...summary, url, appUrl, artworkUrl, description, discussionGuideUrl: guide('Discussion Guide'), readingGuideUrl: guide('Reading Guide') };
 }

@@ -40,7 +40,7 @@ export async function GET(request: Request) {
   const playerId = params.get('playerId') ?? '';
   const requestedWeekId = params.get('weekId');
   const requestedIndex = requestedWeekId ? active.series.weeks.findIndex((week) => week.id === requestedWeekId) : active.weekIndex;
-  if (requestedIndex < 0 || requestedIndex > active.weekIndex) return NextResponse.json({ error: 'That Series Route is not available yet.' }, { status: 404 });
+  if (requestedIndex < 0 || requestedIndex > active.weekIndex) return NextResponse.json({ error: 'That Message Route is not available yet.' }, { status: 404 });
   const selectedWeek = active.series.weeks[requestedIndex];
   const db = database();
   const summary = await db.prepare('SELECT COUNT(*) completions FROM series_completions WHERE series_id = ? AND week_id = ?')
@@ -74,7 +74,7 @@ export async function POST(request: Request) {
   const weekIndex = active?.series.weeks.findIndex((week) => week.id === weekId) ?? -1;
   const expectedTotal = active && weekIndex >= 0 ? buildSeriesCourse(weekIndex, seriesWeekSeed(active.series.weeks[weekIndex].sunday)).sparkSeed.length : -1;
   if (!active || weekIndex < 0 || weekIndex > active.weekIndex || !validId(playerId) || !validId(runId) || seriesId !== active.series.id || !Number.isFinite(timeMs) || timeMs < 10000 || timeMs > 900000 || !Number.isInteger(lights) || lights < 0 || lights > expectedTotal || lightTotal !== expectedTotal || !Number.isInteger(signatureCount) || signatureCount < 0 || signatureCount > 3) {
-    return NextResponse.json({ error: 'That Series Route could not be verified.' }, { status: 400 });
+    return NextResponse.json({ error: 'That Message Route could not be verified.' }, { status: 400 });
   }
   const allowance = await rateLimit(request, 'series-finish', playerId, 12, 10 * 60_000);
   if (!allowance.allowed) return NextResponse.json({ error: 'Too many completion attempts. Try again shortly.' }, { status: 429, headers: { 'Retry-After': String(allowance.retryAfter) } });
@@ -85,7 +85,7 @@ export async function POST(request: Request) {
     .first<{ started_at: number; completed_at: number | null; player_id: string; course_id: string; modifier_id: string; challenge_id: string }>();
   const wallTime = run ? now - run.started_at : 0;
   if (!run || run.completed_at || run.player_id !== playerId || run.course_id !== active.series.id || run.modifier_id !== 'clear' || run.challenge_id !== weekId || wallTime < 10000 || timeMs > wallTime + 3000) {
-    return NextResponse.json({ error: 'That Series Route could not be verified.' }, { status: 409 });
+    return NextResponse.json({ error: 'That Message Route could not be verified.' }, { status: 409 });
   }
   const breakdown = crestScoreBreakdown({ time: timeMs / 1000, sparks: lights, total: lightTotal, signatureCount });
   const keys = chicagoKeys(new Date(now));

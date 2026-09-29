@@ -18,7 +18,7 @@ type BoardEntry = { rank: number; name: string; score: number; timeMs: number; s
 type HomePanel = 'none' | 'leaderboard' | 'help' | 'series' | 'series-results' | 'resource';
 type HelpTab = 'play' | 'score' | 'world';
 type GameNotice = { text: string; kind: 'checkpoint' | 'power' };
-type SeriesMessage = { title: string; date: string; speaker: string; url: string; appUrl: string | null; description: string; discussionGuideUrl: string | null; readingGuideUrl: string | null };
+type SeriesMessage = { title: string; date: string; speaker: string; url: string; appUrl: string | null; artworkUrl: string | null; description: string; discussionGuideUrl: string | null; readingGuideUrl: string | null };
 type SeriesBoardEntry = { rank: number; name: string; score: number; timeMs: number; lights: number; isPlayer: boolean };
 
 type Community = { players: number; lights: number; goal: number; nearby: BoardEntry[]; playerRank: number | null; recent: string[] };
@@ -149,6 +149,8 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
     ? previousBestScore == null ? 'FIRST CREST SCORE' : `NEW PERSONAL BEST · +${Math.max(0, scoreDelta ?? 0).toLocaleString()}`
     : scoreDelta === 0 ? 'MATCHED YOUR BEST' : `${Math.abs(Math.min(0, scoreDelta ?? 0)).toLocaleString()} POINTS FROM YOUR BEST`;
   const seriesProgressCount = activeSeries ? activeSeries.series.weeks.filter((week) => completedSeriesWeeks.includes(week.id)).length : 0;
+  const messageRouteType = activeSeries?.series.kind === 'special' ? 'SPECIAL ROUTE' : 'SERIES ROUTE';
+  const messageRouteChallenge = activeSeries?.series.kind === 'special' ? 'EXCLUSIVE SPECIAL CHALLENGE' : 'EXCLUSIVE SERIES CHALLENGE';
 
   const showGameNotice = useCallback((text: string, kind: GameNotice['kind']) => {
     window.clearTimeout(gameNoticeTimerRef.current);
@@ -930,7 +932,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
         activeSpikes = activeSpikes.filter((spike) => spike.x < rally.x || spike.x > clearUntil);
         enemies.forEach((enemy) => { if (enemy.x >= rally.x && enemy.x <= clearUntil) enemy.alive = false; });
         screenShake = .18;
-        showGameNotice(`BEACON ${signatureCount}/3 · HAZARDS CLEARED`, 'power');
+        showGameNotice(`${activeSeries?.series.theme === 'questions' ? 'QUESTION' : 'MARK'} ${signatureCount}/3 · HAZARDS CLEARED`, 'power');
         tone('checkpoint');
         track('series_signature', { signatureCount, progress: player.x, elapsedMs: elapsed * 1000 });
       });
@@ -1061,6 +1063,22 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
           }
           ctx.fillStyle = '#ffe25f';
           for (let index = 0; index < 12; index += 1) ctx.fillRect(72 + index * 104, 388 + (index % 2) * 8, 8, 8);
+        } else if (activeSeries?.series.theme === 'questions') {
+          // Ask Me Anything: layered question marks and conversation cards
+          // echo the weekend identity while staying in Crestbound's pixel world.
+          ctx.fillStyle = 'rgba(20, 19, 44, .42)'; ctx.fillRect(0, 0, VIEW_W, 430);
+          for (let index = 0; index < 8; index += 1) {
+            const x = ((index * 244 - cameraX * (.045 + (index % 3) * .018)) % 1900 + 1900) % 1900 - 260;
+            const y = 104 + (index % 4) * 76;
+            ctx.fillStyle = index % 2 ? '#8de0db' : '#f8e45c';
+            ctx.fillRect(x, y, 74, 12); ctx.fillRect(x + 58, y + 10, 16, 34); ctx.fillRect(x + 30, y + 38, 42, 12); ctx.fillRect(x + 27, y + 48, 14, 20); ctx.fillRect(x + 27, y + 80, 14, 14);
+          }
+          ctx.fillStyle = '#ef6f52';
+          for (let card = 0; card < 5; card += 1) {
+            const x = ((card * 382 - cameraX * .055) % 2060 + 2060) % 2060 - 300;
+            ctx.fillRect(x, 350 + (card % 2) * 34, 220, 52);
+            ctx.fillStyle = '#171b1c'; ctx.fillRect(x + 20, 366 + (card % 2) * 34, 130, 7); ctx.fillRect(x + 20, 382 + (card % 2) * 34, 78, 7); ctx.fillStyle = '#ef6f52';
+          }
         } else {
           // Declarations and future generic routes retain the bold poster
           // grammar until their own series artwork becomes active.
@@ -1220,12 +1238,21 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
         ctx.fillStyle = '#fff8e9'; ctx.fillRect(x + 4, y + 4, 3, 3); ctx.fillRect(x + width - 19, y + 29, 3, 3);
       };
       if (isSeries) {
-        drawSign(760, 535, 'BE CONSISTENT', '#f8e45c', 205);
-        drawSign(3720, 545, 'OWN IT', '#ef4638');
-        drawSign(7060, 540, 'FORGIVE', '#f8e45c');
-        drawSign(8960, 535, 'SEEK WISDOM', '#ef4638', 190);
-        drawSign(11280, 545, 'THE ONE', '#f8e45c');
-        drawSign(14290, 540, 'DECLARE', '#ef4638');
+        if (activeSeries?.series.theme === 'questions') {
+          drawSign(760, 535, 'ASK', '#8de0db');
+          drawSign(3720, 545, 'WHY?', '#f8e45c');
+          drawSign(7060, 540, 'WONDER', '#ef6f52');
+          drawSign(8960, 535, 'HOW?', '#8de0db');
+          drawSign(11280, 545, 'LISTEN', '#f8e45c');
+          drawSign(14290, 540, 'KEEP ASKING', '#ef6f52', 210);
+        } else {
+          drawSign(760, 535, 'BE CONSISTENT', '#f8e45c', 205);
+          drawSign(3720, 545, 'OWN IT', '#ef4638');
+          drawSign(7060, 540, 'FORGIVE', '#f8e45c');
+          drawSign(8960, 535, 'SEEK WISDOM', '#ef4638', 190);
+          drawSign(11280, 545, 'THE ONE', '#f8e45c');
+          drawSign(14290, 540, 'DECLARE', '#ef4638');
+        }
       } else {
         drawSign(760, 535, 'KEEP GOING', '#78d7d2');
         drawSign(3720, 545, 'HALFWAY', '#f5d263');
@@ -1246,8 +1273,13 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
         ctx.globalAlpha = .22; ctx.fillStyle = '#f8e45c'; ctx.fillRect(rally.x - 5, 110, 10, Math.max(0, rally.y - 142)); ctx.globalAlpha = 1;
         ctx.fillStyle = '#071316'; ctx.fillRect(rally.x - 26, rally.y - 32, 52, 56);
         ctx.fillStyle = '#f8e45c'; ctx.fillRect(rally.x - 20, rally.y - 26, 40, 44);
-        ctx.fillStyle = '#ef4638'; ctx.fillRect(rally.x - 14, rally.y - 18, 28, 22);
-        ctx.fillStyle = '#071316'; ctx.fillRect(rally.x - 5, rally.y - 13, 10, 12); ctx.fillRect(rally.x - 2, rally.y + 7, 4, 16);
+        ctx.fillStyle = activeSeries?.series.theme === 'questions' ? '#8de0db' : '#ef4638'; ctx.fillRect(rally.x - 14, rally.y - 18, 28, 22);
+        ctx.fillStyle = '#071316';
+        if (activeSeries?.series.theme === 'questions') {
+          ctx.fillRect(rally.x - 6, rally.y - 14, 16, 5); ctx.fillRect(rally.x + 5, rally.y - 10, 5, 9); ctx.fillRect(rally.x - 1, rally.y - 3, 8, 5); ctx.fillRect(rally.x - 3, rally.y + 2, 5, 6); ctx.fillRect(rally.x - 3, rally.y + 12, 5, 5);
+        } else {
+          ctx.fillRect(rally.x - 5, rally.y - 13, 10, 12); ctx.fillRect(rally.x - 2, rally.y + 7, 4, 16);
+        }
         ctx.strokeStyle = '#f8e45c'; ctx.lineWidth = 4; ctx.strokeRect(rally.x - 32 - pulse, rally.y - 38 - pulse, 64 + pulse * 2, 68 + pulse * 2);
       });
       checkpoints.slice(1).forEach((x, index) => {
@@ -1432,7 +1464,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
                   </div>
                 </div>
                 <div className="home-links">
-                  <button className="series-routes-link" type="button" onClick={() => { setSeriesWeekIndex(activeSeries?.weekIndex ?? 0); openHomePanel('series'); track('series_open'); }}><strong>{activeSeries ? `${activeSeries.series.weeks.length} EXTRA SERIES ROUTES` : 'SERIES ROUTES'}</strong><small>{activeSeries ? `${activeSeries.series.name} · Weekly challenges →` : 'No active series today'}</small></button>
+                  <button className="series-routes-link" type="button" onClick={() => { setSeriesWeekIndex(activeSeries?.weekIndex ?? 0); openHomePanel('series'); track('series_open'); }}><strong>MESSAGE ROUTES</strong><small>{activeSeries ? `${activeSeries.series.name} · ${activeSeries.series.kind === 'special' ? 'Special challenge' : `${activeSeries.series.weeks.length} weekly challenges`} →` : 'Extra routes inspired by Suncrest messages'}</small></button>
                   <button type="button" onClick={() => { openHomePanel('leaderboard'); track('leaderboard_open'); }}>Leaderboard</button>
                   <button type="button" onClick={() => { setHelpTab('play'); openHomePanel('help'); }}>How to Play</button>
                 </div>
@@ -1474,20 +1506,20 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
               <button className="panel-close" type="button" onClick={closeHomePanel}>Got It</button>
             </aside>}
             {homePanel === 'series' && <aside ref={homePanelRef} className="course-picker series-picker home-panel" role="dialog" aria-modal="true" aria-labelledby="series-title" tabIndex={-1}>
-              <button className="panel-dismiss" type="button" aria-label="Close Series Routes" onClick={closeHomePanel}>X</button>
-              <p className="kicker">NOW AT SUNCREST</p><h2 id="series-title">Series Routes</h2>
-              {activeSeries && seriesWeek ? <><section className="series-feature" data-series-theme={activeSeries.series.theme}><div className="series-wordmark"><small>{activeSeries.series.wordmarkKicker}</small><b>{activeSeries.series.shortName}</b></div><p>{activeSeries.series.description}</p><div className="series-week"><span>{seriesWeekIndex === activeSeries.weekIndex ? 'THIS WEEK' : `WEEK ${seriesWeekIndex + 1} ARCHIVE`} · {seriesMessage?.title || seriesWeek.title}</span><b>{seriesWeek.routeName}</b>{seriesMessage?.speaker && <small>{seriesMessage.speaker}</small>}<div className="series-mechanic"><span>EXCLUSIVE SERIES CHALLENGE</span><b>{activeSeries.series.mechanicAction}</b><small>{activeSeries.series.mechanicHelp}</small></div></div><div className="series-week-dots" aria-label={`${seriesProgressCount} of ${activeSeries.series.weeks.length} routes completed`}>{activeSeries.series.weeks.map((week, index) => { const locked = index > activeSeries.weekIndex; const state = [completedSeriesWeeks.includes(week.id) ? 'complete' : '', index === activeSeries.weekIndex ? 'current' : '', index === seriesWeekIndex ? 'selected' : ''].filter(Boolean).join(' '); return <button type="button" className={state} disabled={locked} aria-label={locked ? `Week ${index + 1} unlocks ${week.sunday}` : `Select week ${index + 1}: ${week.title}`} aria-pressed={index === seriesWeekIndex} onClick={() => setSeriesWeekIndex(index)} key={week.id}>{locked ? '—' : index + 1}</button>; })}</div><div className="series-completion-progress"><span><b>{seriesProgressCount}/{activeSeries.series.weeks.length}</b> SERIES ROUTES</span><i style={{ width: `${seriesProgressCount / activeSeries.series.weeks.length * 100}%` }} /></div></section><button className="series-play" type="button" onClick={() => { pendingSeriesStartRef.current = true; setSeriesMode(true); closeHomePanel(); }}>Play {seriesWeekIndex === activeSeries.weekIndex ? 'This Week' : `Week ${seriesWeekIndex + 1}`} ▶</button><button className="series-results-button" type="button" onClick={() => openHomePanel('series-results')}><span><small>SELECTED ROUTE</small><strong>Results &amp; Leaderboard</strong></span><b>{seriesCompletions} {seriesCompletions === 1 ? 'FINISHER' : 'FINISHERS'} →</b></button><div className="series-resources"><button className="message-link" type="button" onClick={() => { track('message_open'); openSeriesResource(seriesMessage?.title || 'This Week\'s Message', seriesMessage?.appUrl || seriesMessage?.url || activeSeries.series.messageUrl); }}><span className="message-icon" aria-hidden="true">▶</span><span><strong>{seriesMessage ? "Watch This Week's Message" : 'Message Details'}</strong><small>{seriesMessage?.title || 'Connect this route to Suncrest'}</small></span></button>{seriesMessage?.discussionGuideUrl && <button type="button" onClick={() => openSeriesResource('Discussion Guide', seriesMessage.discussionGuideUrl!)}>Discussion Guide</button>}{seriesMessage?.readingGuideUrl && <button type="button" onClick={() => openSeriesResource('Reading Guide', seriesMessage.readingGuideUrl!)}>Reading Guide</button>}</div></> : <p>No Series Route is active today. The daily Crestbound route is still ready to run.</p>}
+              <button className="panel-dismiss" type="button" aria-label="Close Message Routes" onClick={closeHomePanel}>X</button>
+              <p className="kicker">NOW AT SUNCREST</p><h2 id="series-title">Message Routes</h2>
+              {activeSeries && seriesWeek ? <><section className="series-feature" data-series-theme={activeSeries.series.theme}>{seriesMessage?.artworkUrl && <div className="message-route-artwork" role="img" aria-label={`${seriesMessage.title} message artwork`} style={{ backgroundImage: `url("${seriesMessage.artworkUrl}")` }} />}<div className="series-wordmark"><small>{activeSeries.series.wordmarkKicker}</small><b>{activeSeries.series.shortName}</b><em>{messageRouteType}</em></div><p>{activeSeries.series.description}</p><div className="series-week"><span>{activeSeries.series.kind === 'special' ? 'THIS WEEKEND' : seriesWeekIndex === activeSeries.weekIndex ? 'THIS WEEK' : `WEEK ${seriesWeekIndex + 1} ARCHIVE`} · {seriesMessage?.title || seriesWeek.title}</span><b>{seriesWeek.routeName}</b>{seriesMessage?.speaker && <small>{seriesMessage.speaker}</small>}<div className="series-mechanic"><span>{messageRouteChallenge}</span><b>{activeSeries.series.mechanicAction}</b><small>{activeSeries.series.mechanicHelp}</small></div></div><div className="series-week-dots" style={{ gridTemplateColumns: `repeat(${activeSeries.series.weeks.length}, minmax(0, 1fr))` }} aria-label={`${seriesProgressCount} of ${activeSeries.series.weeks.length} routes completed`}>{activeSeries.series.weeks.map((week, index) => { const locked = index > activeSeries.weekIndex; const state = [completedSeriesWeeks.includes(week.id) ? 'complete' : '', index === activeSeries.weekIndex ? 'current' : '', index === seriesWeekIndex ? 'selected' : ''].filter(Boolean).join(' '); return <button type="button" className={state} disabled={locked} aria-label={locked ? `Week ${index + 1} unlocks ${week.sunday}` : `Select week ${index + 1}: ${week.title}`} aria-pressed={index === seriesWeekIndex} onClick={() => setSeriesWeekIndex(index)} key={week.id}>{locked ? '—' : index + 1}</button>; })}</div><div className="series-completion-progress"><span><b>{seriesProgressCount}/{activeSeries.series.weeks.length}</b> ROUTES COMPLETE</span><i style={{ width: `${seriesProgressCount / activeSeries.series.weeks.length * 100}%` }} /></div></section><button className="series-play" type="button" onClick={() => { pendingSeriesStartRef.current = true; setSeriesMode(true); closeHomePanel(); }}>Play {activeSeries.series.kind === 'special' ? 'Special Route' : seriesWeekIndex === activeSeries.weekIndex ? 'This Week' : `Week ${seriesWeekIndex + 1}`} ▶</button><button className="series-results-button" type="button" onClick={() => openHomePanel('series-results')}><span><small>SELECTED MESSAGE ROUTE</small><strong>Results &amp; Leaderboard</strong></span><b>{seriesCompletions} {seriesCompletions === 1 ? 'FINISHER' : 'FINISHERS'} →</b></button><div className="series-resources"><button className="message-link" type="button" onClick={() => { track('message_open'); openSeriesResource(seriesMessage?.title || 'This Week\'s Message', seriesMessage?.appUrl || seriesMessage?.url || activeSeries.series.messageUrl); }}><span className="message-icon" aria-hidden="true">▶</span><span><strong>{seriesMessage ? "Watch This Week's Message" : 'Message Details'}</strong><small>{seriesMessage?.title || 'Connect this route to Suncrest'}</small></span></button>{seriesMessage?.discussionGuideUrl && <button type="button" onClick={() => openSeriesResource('Discussion Guide', seriesMessage.discussionGuideUrl!)}>Discussion Guide</button>}{seriesMessage?.readingGuideUrl && <button type="button" onClick={() => openSeriesResource('Reading Guide', seriesMessage.readingGuideUrl!)}>Reading Guide</button>}</div></> : <p>No Message Route is active today. The Daily Run is still ready to play.</p>}
               <button className="panel-close" type="button" onClick={closeHomePanel}>Close</button>
             </aside>}
             {homePanel === 'series-results' && <aside ref={homePanelRef} className="course-picker series-picker series-results-panel home-panel" role="dialog" aria-modal="true" aria-labelledby="series-results-panel-title" tabIndex={-1}>
-              <button className="panel-dismiss" type="button" aria-label="Close Series Route results" onClick={closeHomePanel}>X</button>
-              <button className="series-results-back" type="button" onClick={() => setHomePanel('series')}>← Series Routes</button>
-              <p className="kicker">{seriesWeek?.routeName || 'SERIES ROUTE'}</p><h2 id="series-results-panel-title">Results &amp; Leaderboard</h2>
-              <section className="series-results" aria-label="Selected Series Route results"><header><h3>Top Scores</h3><b>{seriesCompletions} {seriesCompletions === 1 ? 'FINISHER' : 'FINISHERS'}</b></header><div className="series-result-legend score-board" aria-hidden="true"><span>RANK</span><span>RUNNER</span><span>SCORE</span></div><ol>{seriesBoardStatus === 'loading' && <li className="series-result-message">LOADING RESULTS…</li>}{seriesBoardStatus === 'offline' && <li className="series-result-message">RESULTS ARE TEMPORARILY OFFLINE.</li>}{seriesBoardStatus === 'ready' && seriesEntries.length === 0 && <li className="series-result-message">BE THE FIRST TO FINISH THIS ROUTE.</li>}{seriesBoardStatus === 'ready' && seriesEntries.slice(0, 7).map((entry) => <li className={`${entry.isPlayer ? 'you ' : ''}score-board`} key={`${entry.rank}-${entry.name}`}><b>#{entry.rank}</b><span>{entry.name}</span><time>{entry.score.toLocaleString()}</time></li>)}</ol><p>{activeSeries ? `${activeSeries.series.mechanicAction} for the full +200 Series bonus.` : 'Complete the Series challenge for the full +200 bonus.'}</p></section>
-              <button className="panel-close" type="button" onClick={() => setHomePanel('series')}>Back to Series Routes</button>
+              <button className="panel-dismiss" type="button" aria-label="Close Message Route results" onClick={closeHomePanel}>X</button>
+              <button className="series-results-back" type="button" onClick={() => setHomePanel('series')}>← Message Routes</button>
+              <p className="kicker">{seriesWeek?.routeName || 'MESSAGE ROUTE'}</p><h2 id="series-results-panel-title">Results &amp; Leaderboard</h2>
+              <section className="series-results" aria-label="Selected Message Route results"><header><h3>Top Scores</h3><b>{seriesCompletions} {seriesCompletions === 1 ? 'FINISHER' : 'FINISHERS'}</b></header><div className="series-result-legend score-board" aria-hidden="true"><span>RANK</span><span>RUNNER</span><span>SCORE</span></div><ol>{seriesBoardStatus === 'loading' && <li className="series-result-message">LOADING RESULTS…</li>}{seriesBoardStatus === 'offline' && <li className="series-result-message">RESULTS ARE TEMPORARILY OFFLINE.</li>}{seriesBoardStatus === 'ready' && seriesEntries.length === 0 && <li className="series-result-message">BE THE FIRST TO FINISH THIS ROUTE.</li>}{seriesBoardStatus === 'ready' && seriesEntries.slice(0, 7).map((entry) => <li className={`${entry.isPlayer ? 'you ' : ''}score-board`} key={`${entry.rank}-${entry.name}`}><b>#{entry.rank}</b><span>{entry.name}</span><time>{entry.score.toLocaleString()}</time></li>)}</ol><p>{activeSeries ? `${activeSeries.series.mechanicAction} for the full +200 Message Route bonus.` : 'Complete the Message Route challenge for the full +200 bonus.'}</p></section>
+              <button className="panel-close" type="button" onClick={() => setHomePanel('series')}>Back to Message Routes</button>
             </aside>}
             {homePanel === 'resource' && seriesResource && <aside ref={homePanelRef} className="message-viewer home-panel" role="dialog" aria-modal="true" aria-labelledby="resource-title" tabIndex={-1}>
-              <header><button type="button" onClick={() => setHomePanel('series')} aria-label="Back to Series Routes">← Back</button><div><small>FROM SERIES ROUTES</small><strong id="resource-title">{seriesResource.title}</strong></div></header>
+              <header><button type="button" onClick={() => setHomePanel('series')} aria-label="Back to Message Routes">← Back</button><div><small>FROM MESSAGE ROUTES</small><strong id="resource-title">{seriesResource.title}</strong></div></header>
               <iframe src={seriesResource.url} title={seriesResource.title} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
             </aside>}
           </div>
@@ -1495,7 +1527,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
 
         {showScoreIntro && <div ref={gameModalRef} className="game-modal score-intro" role="dialog" aria-modal="true" aria-labelledby="score-intro-title" tabIndex={-1}><p>BEFORE YOUR FIRST RUN</p><h2 id="score-intro-title">Highest score wins.</h2><div className="score-intro-grid"><span><b>+500</b> Finish</span><span><b>+1,200</b> Move fast</span><span><b>+800</b> Collect Light</span><span><b>+200</b> Complete the challenge</span></div><p>Faster runs earn more Pace points; time breaks an exact score tie. Every finish adds your Light to Suncrest&apos;s weekly goal.</p><button type="button" onClick={dismissScoreIntro}>Got It · Start Run</button></div>}
         {screen === 'paused' && <div ref={gameModalRef} className="game-modal" role="dialog" aria-modal="true" aria-labelledby="pause-title" tabIndex={-1}><p>RUN PAUSED</p><h2 id="pause-title">Catch your breath.</h2><button type="button" onClick={togglePause}>Resume</button><button className="secondary" type="button" onClick={() => { track('quit', { hits: hud.hits, checkpoint: hud.checkpoint, progress: hud.progress, elapsedMs: hud.time * 1000, lights: hud.sparks, lightTotal: hud.total, lightPercent: hud.total ? hud.sparks / hud.total * 100 : 0, dashCount: runMetricsRef.current.dashCount, signatureCount: hud.signatureCount }); flushTelemetry(); setGameScreen('title'); }}>Quit Run</button></div>}
-        {screen === 'over' && <div ref={gameModalRef} className="game-modal" role="dialog" aria-modal="true" aria-labelledby="over-title" tabIndex={-1}><p>LIGHT LOST</p><h2 id="over-title">That route got you.</h2><p>Use the high paths, save your dash, and hit enemies from above.</p><button type="button" onClick={() => void startGame()}>Run It Back</button><button className="secondary" type="button" onClick={() => { setGameScreen('title'); if (isSeries) openHomePanel('series'); }}>{isSeries ? 'Back to Series Routes' : 'Back to Home'}</button></div>}
+        {screen === 'over' && <div ref={gameModalRef} className="game-modal" role="dialog" aria-modal="true" aria-labelledby="over-title" tabIndex={-1}><p>LIGHT LOST</p><h2 id="over-title">That route got you.</h2><p>Use the high paths, save your dash, and hit enemies from above.</p><button type="button" onClick={() => void startGame()}>Run It Back</button><button className="secondary" type="button" onClick={() => { setGameScreen('title'); if (isSeries) openHomePanel('series'); }}>{isSeries ? 'Back to Message Routes' : 'Back to Home'}</button></div>}
         {screen === 'won' && (
           <div ref={gameModalRef} className={`game-modal win-modal ${isSeries ? 'series-win' : 'daily-win'}`} role="dialog" aria-modal="true" aria-labelledby="win-title" tabIndex={-1}>
             <p>{isSeries ? `${activeSeries?.series.mechanicName ?? 'SERIES MARKS'} ${resultHud.signatureCount}/3` : `LIGHT RESTORED // ${earnedMedal} MEDAL`}</p><h2 id="win-title">Route cleared.</h2>
@@ -1508,9 +1540,9 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
             </div>
             <div className="result-priority"><b>+{resultHud.sparks} COMMUNITY LIGHT</b><span>Every verified finish counts toward Suncrest&apos;s weekly goal.</span></div>
             {isSeries
-              ? <div className="challenge-result series-signature"><b>{activeSeries?.series.mechanicName ?? 'SERIES MARKS'}</b><span>{resultHud.signatureCount}/3 · {resultHud.signatureCount === 3 ? 'FULL +200 SERIES BONUS' : 'PARTIAL SERIES BONUS'}</span></div>
+              ? <div className="challenge-result series-signature"><b>{activeSeries?.series.mechanicName ?? 'MESSAGE MARKS'}</b><span>{resultHud.signatureCount}/3 · {resultHud.signatureCount === 3 ? 'FULL +200 MESSAGE ROUTE BONUS' : 'PARTIAL MESSAGE ROUTE BONUS'}</span></div>
               : <div className={`challenge-result ${earnedMedal.toLowerCase()}`}><b>{objective.name}</b><span>{objectiveResult}</span></div>}
-            {isSeries ? <div className={`rank-callout ${seriesBadgeNew ? 'badge-earned' : ''}`}>{seriesBadgeNew ? `BADGE EARNED · WEEK ${seriesWeekIndex + 1}` : 'SERIES RUN RECORDED'} · {seriesProgressCount}/{activeSeries?.series.weeks.length ?? 0} ROUTES</div> : submitState !== 'saved' ? <form className="score-form" onSubmit={submitRun} noValidate>
+            {isSeries ? <div className={`rank-callout ${seriesBadgeNew ? 'badge-earned' : ''}`}>{seriesBadgeNew ? activeSeries?.series.kind === 'special' ? 'SPECIAL ROUTE CLEARED' : `BADGE EARNED · WEEK ${seriesWeekIndex + 1}` : 'MESSAGE ROUTE RECORDED'} · {seriesProgressCount}/{activeSeries?.series.weeks.length ?? 0} ROUTES</div> : submitState !== 'saved' ? <form className="score-form" onSubmit={submitRun} noValidate>
               <label htmlFor="nickname">POST TO TODAY&apos;S BOARD</label>
               <div><input id="nickname" value={nickname} onChange={(event) => setNickname(event.target.value)} minLength={2} maxLength={12} placeholder="NICKNAME" autoComplete="nickname" autoCapitalize="characters" spellCheck={false} /><button type="submit" disabled={submitState === 'saving' || !runIdRef.current}>{submitState === 'saving' ? 'SAVING...' : 'POST RUN'}</button></div>
               <small>Family-friendly nicknames only. Don&apos;t use your real name.{!runIdRef.current ? ' Online posting is unavailable for this run.' : ''}</small>
@@ -1518,10 +1550,10 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
             </form> : <div className="rank-callout">RUN POSTED {rank ? `// TODAY #${rank}` : '// TO TODAY'}</div>}
             <div className="result-actions">
               <button type="button" onClick={() => void startGame()}>Run It Again</button>
-              {activeSeries && !isSeries && <button className="series-result-cta" type="button" onClick={() => { setGameScreen('title'); setSeriesWeekIndex(activeSeries.weekIndex); openHomePanel('series'); }}>Try {activeSeries.series.weeks.length} Series Challenges</button>}
+              {activeSeries && !isSeries && <button className="series-result-cta" type="button" onClick={() => { setGameScreen('title'); setSeriesWeekIndex(activeSeries.weekIndex); openHomePanel('series'); }}>Try {activeSeries.series.kind === 'special' ? activeSeries.series.name : `${activeSeries.series.weeks.length} Message Routes`}</button>}
               {isSeries && <button className="series-result-cta" type="button" onClick={() => { setSeriesMode(false); setGameScreen('title'); }}>Run Today&apos;s Route</button>}
               {isSeries && seriesMessage && <button className="message-result-cta" type="button" onClick={() => { setGameScreen('title'); setSeriesWeekIndex(seriesWeekIndex); openSeriesResource(seriesMessage.title, seriesMessage.appUrl || seriesMessage.url); }}>Watch This Week&apos;s Message</button>}
-              {isSeries && <button className="secondary series-back-action" type="button" onClick={() => { setGameScreen('title'); setSeriesWeekIndex(seriesWeekIndex); openHomePanel('series'); }}>Back to Series Routes</button>}
+              {isSeries && <button className="secondary series-back-action" type="button" onClick={() => { setGameScreen('title'); setSeriesWeekIndex(seriesWeekIndex); openHomePanel('series'); }}>Back to Message Routes</button>}
               {!isSeries && <button className="secondary" type="button" onClick={() => { setGameScreen('title'); openHomePanel('leaderboard'); void loadBoard('daily'); }}>View Leaderboard</button>}
               <button className="secondary back-home-action" type="button" onClick={() => { setSeriesMode(false); closeHomePanel(); setGameScreen('title'); }}>Back to Home</button>
             </div>
@@ -1529,7 +1561,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
         )}
 
         {screen === 'playing' && (
-          <>{waitingForLandscape && <div className="rotate-prompt"><span aria-hidden="true">↻</span><strong>Turn Sideways to Start</strong><small>Your run and timer are paused until the phone is in landscape.</small></div>}{showModifierCoach && !waitingForLandscape ? <div className="dash-coach modifier-coach"><b>{isSeries ? `EXCLUSIVE CHALLENGE · ${activeSeries?.series.mechanicName ?? 'SERIES MARKS'}` : `${modifier.name} + ${dailyCondition.name}`}</b><span>{isSeries ? activeSeries?.series.mechanicHelp : `${modifier.description} ${dailyCondition.description}`}</span><button type="button" onClick={dismissModifierCoach}>LET&apos;S RUN</button></div> : showDashCoach && !waitingForLandscape && <div className="dash-coach"><b>DASH IS YOUR EDGE</b><span>Press SHIFT or X — or tap DASH — to burst through hazards and enemies. The HUD tells you when it recharges.</span><button type="button" onClick={() => dismissDashCoach()}>GOT IT</button></div>}<div ref={touchControlsRef} className="touch-controls" aria-label="Touch controls">
+          <>{waitingForLandscape && <div className="rotate-prompt"><span aria-hidden="true">↻</span><strong>Turn Sideways to Start</strong><small>Your run and timer are paused until the phone is in landscape.</small></div>}{showModifierCoach && !waitingForLandscape ? <div className="dash-coach modifier-coach"><b>{isSeries ? `EXCLUSIVE CHALLENGE · ${activeSeries?.series.mechanicName ?? 'MESSAGE MARKS'}` : `${modifier.name} + ${dailyCondition.name}`}</b><span>{isSeries ? activeSeries?.series.mechanicHelp : `${modifier.description} ${dailyCondition.description}`}</span><button type="button" onClick={dismissModifierCoach}>LET&apos;S RUN</button></div> : showDashCoach && !waitingForLandscape && <div className="dash-coach"><b>DASH IS YOUR EDGE</b><span>Press SHIFT or X — or tap DASH — to burst through hazards and enemies. The HUD tells you when it recharges.</span><button type="button" onClick={() => dismissDashCoach()}>GOT IT</button></div>}<div ref={touchControlsRef} className="touch-controls" aria-label="Touch controls">
             <div><button type="button" data-control="left" aria-label="Move left" onPointerDown={(event) => beginPress('left', event)} onPointerUp={(event) => endPress('left', event)} onPointerCancel={(event) => endPress('left', event)} onLostPointerCapture={(event) => endPress('left', event)}>←</button><button type="button" data-control="right" aria-label="Move right" onPointerDown={(event) => beginPress('right', event)} onPointerUp={(event) => endPress('right', event)} onPointerCancel={(event) => endPress('right', event)} onLostPointerCapture={(event) => endPress('right', event)}>→</button></div>
             <div><button className={hud.dashReady ? 'dash-control ready' : 'dash-control'} type="button" data-control="dash" aria-label={hud.dashReady ? 'Dash ready' : 'Dash charging'} onPointerDown={(event) => beginPress('dash', event)} onPointerUp={(event) => endPress('dash', event)} onPointerCancel={(event) => endPress('dash', event)} onLostPointerCapture={(event) => endPress('dash', event)}>DASH</button><button className="jump-control" type="button" data-control="jump" aria-label="Jump — tap twice for double jump" onPointerDown={(event) => beginPress('jump', event)} onPointerUp={(event) => endPress('jump', event)} onPointerCancel={(event) => endPress('jump', event)} onLostPointerCapture={(event) => endPress('jump', event)}>JUMP 2X</button></div>
           </div></>

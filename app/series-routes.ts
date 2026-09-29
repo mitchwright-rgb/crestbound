@@ -9,8 +9,9 @@ export type SeriesWeek = {
   messageUrl?: string;
 };
 
-export type SeriesRoute = {
+export type MessageRoute = {
   id: string;
+  kind: 'series' | 'special';
   name: string;
   shortName: string;
   eyebrow: string;
@@ -19,7 +20,7 @@ export type SeriesRoute = {
   endsOn: string;
   messageUrl: string;
   seriesUrl: string | null;
-  theme: 'declarations' | 'movies' | 'soundtrack' | 'trust' | 'behold';
+  theme: 'declarations' | 'movies' | 'questions' | 'soundtrack' | 'trust' | 'behold';
   wordmarkKicker: string;
   mechanicName: string;
   mechanicAction: string;
@@ -27,8 +28,13 @@ export type SeriesRoute = {
   weeks: readonly SeriesWeek[];
 };
 
-export const declarationsSeries: SeriesRoute = {
+// The legacy name stays exported because persisted scores and API paths use
+// the original Series Route vocabulary. The public product is Message Routes.
+export type SeriesRoute = MessageRoute;
+
+export const declarationsSeries: MessageRoute = {
   id: 'declarations-2026',
+  kind: 'series',
   name: 'Declarations',
   shortName: 'DECLARATIONS',
   eyebrow: 'NOW AT SUNCREST',
@@ -51,10 +57,10 @@ export const declarationsSeries: SeriesRoute = {
   ],
 };
 
-export const seriesSchedule: readonly SeriesRoute[] = [
+export const messageRouteSchedule: readonly MessageRoute[] = [
   declarationsSeries,
   {
-    id: 'at-the-movies-2026', name: 'At The Movies', shortName: 'AT THE MOVIES', eyebrow: 'NOW AT SUNCREST',
+    id: 'at-the-movies-2026', kind: 'series', name: 'At The Movies', shortName: 'AT THE MOVIES', eyebrow: 'NOW AT SUNCREST',
     description: 'Step into two limited routes inspired by Suncrest’s At The Movies message series.',
     startsOn: '2026-09-20', endsOn: '2026-10-03', messageUrl: 'https://suncrest.org/messages',
     seriesUrl: 'https://suncrest.org/media/series/7y4r7gc/at-the-movies', theme: 'movies',
@@ -66,7 +72,18 @@ export const seriesSchedule: readonly SeriesRoute[] = [
     ],
   },
   {
-    id: 'soundtrack-2026', name: 'Soundtrack', shortName: 'SOUNDTRACK', eyebrow: 'COMING TO SUNCREST',
+    id: 'ask-me-anything-2026', kind: 'special', name: 'Ask Me Anything', shortName: 'ASK ME ANYTHING', eyebrow: 'ONE WEEK AT SUNCREST',
+    description: 'Bring your questions to a one-week Message Route inspired by Suncrest’s Ask Me Anything weekend.',
+    startsOn: '2026-10-04', endsOn: '2026-10-10', messageUrl: 'https://suncrest.org/messages',
+    seriesUrl: 'https://suncrest.org/messages', theme: 'questions', wordmarkKicker: 'WHAT DO YOU WANT TO KNOW?',
+    mechanicName: 'QUESTION MARKS', mechanicAction: 'FIND 3 QUESTION MARKS',
+    mechanicHelp: 'Each clears the uncertainty ahead · all 3 earn +200',
+    weeks: [
+      { id: 'ask-me-anything-2026-w1', sunday: '2026-10-04', title: 'Ask Me Anything', routeName: 'The Question Run', objective: 'light_hunt' },
+    ],
+  },
+  {
+    id: 'soundtrack-2026', kind: 'series', name: 'Soundtrack', shortName: 'SOUNDTRACK', eyebrow: 'COMING TO SUNCREST',
     description: 'Find the rhythm across weekly routes inspired by Suncrest’s Soundtrack series.',
     startsOn: '2026-10-11', endsOn: '2026-10-31', messageUrl: 'https://suncrest.org/messages', seriesUrl: null,
     theme: 'soundtrack', wordmarkKicker: 'TURN IT UP', mechanicName: 'BEAT MARKERS',
@@ -78,7 +95,7 @@ export const seriesSchedule: readonly SeriesRoute[] = [
     ],
   },
   {
-    id: 'trust-issues-2026', name: 'Trust Issues', shortName: 'TRUST ISSUES', eyebrow: 'COMING TO SUNCREST',
+    id: 'trust-issues-2026', kind: 'series', name: 'Trust Issues', shortName: 'TRUST ISSUES', eyebrow: 'COMING TO SUNCREST',
     description: 'Test your footing across weekly routes inspired by Suncrest’s Trust Issues series.',
     startsOn: '2026-11-01', endsOn: '2026-11-28', messageUrl: 'https://suncrest.org/messages', seriesUrl: null,
     theme: 'trust', wordmarkKicker: 'WATCH YOUR STEP', mechanicName: 'TRUST POINTS',
@@ -91,7 +108,7 @@ export const seriesSchedule: readonly SeriesRoute[] = [
     ],
   },
   {
-    id: 'behold-2026', name: 'Behold', shortName: 'BEHOLD', eyebrow: 'COMING TO SUNCREST',
+    id: 'behold-2026', kind: 'series', name: 'Behold', shortName: 'BEHOLD', eyebrow: 'COMING TO SUNCREST',
     description: 'Look again across weekly routes inspired by Suncrest’s Behold series.',
     startsOn: '2026-12-06', endsOn: '2026-12-26', messageUrl: 'https://suncrest.org/messages', seriesUrl: null,
     theme: 'behold', wordmarkKicker: 'LOOK AGAIN', mechanicName: 'WONDER POINTS',
@@ -104,11 +121,14 @@ export const seriesSchedule: readonly SeriesRoute[] = [
   },
 ];
 
-export const seriesCourseIds = seriesSchedule.map((series) => series.id);
-export const upcomingSeries = seriesSchedule.slice(1).map(({ name, startsOn }) => ({ name, startsOn }));
+// Compatibility exports keep existing run IDs, database rows, and API clients
+// valid while the interface moves to the broader Message Routes name.
+export const seriesSchedule = messageRouteSchedule;
+export const seriesCourseIds = messageRouteSchedule.map((route) => route.id);
+export const upcomingSeries = messageRouteSchedule.slice(1).map(({ name, startsOn }) => ({ name, startsOn }));
 
 export function activeSeriesForDay(day: string) {
-  const series = seriesSchedule.find((candidate) => day >= candidate.startsOn && day <= candidate.endsOn);
+  const series = messageRouteSchedule.find((candidate) => day >= candidate.startsOn && day <= candidate.endsOn);
   if (!series) return null;
   let weekIndex = 0;
   for (let index = 0; index < series.weeks.length; index += 1) {
