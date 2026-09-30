@@ -881,8 +881,10 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .series-week { display: grid; gap: 5px; padding: 10px 12px; border-left: 7px solid #ef4638; background: rgb(255 255 255 / 36%); }
 .series-week span { color: #171b1c !important; font: 10px/1.4 var(--font-pixel), monospace !important; }
 .series-week b { color: #171b1c !important; font: 13px/1.4 var(--font-pixel), monospace !important; }
+.series-route-chooser { display: grid; gap: 6px; }
+.series-route-count { color: #5d392e; font: 10px/1.25 var(--font-pixel), monospace; }
 .series-week-dots { display: grid !important; grid-template-columns: repeat(5, 1fr); gap: 7px !important; }
-.series-week-dots button { display: grid; min-height: 44px; place-items: center; border: 3px solid #171b1c; color: #171b1c; background: transparent; font: normal 11px/1 var(--font-pixel), monospace; cursor: pointer; }
+.series-week-dots button { min-width: 0; min-height: 44px; padding: 6px 4px; border: 3px solid #171b1c; overflow: hidden; color: #171b1c; background: transparent; font: normal 10px/1.15 var(--font-pixel), monospace; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
 .series-week-dots button.complete { color: #f8e45c; background: #171b1c; }
 .series-week-dots button.current { color: #fff; background: #ef4638; }
 .series-week-dots button.selected { outline: 3px solid #fff; outline-offset: -6px; }
@@ -900,6 +902,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .series-feature[data-series-theme="questions"] .series-week > span,
 .series-feature[data-series-theme="questions"] .series-week > b { color: #fff8e9 !important; }
 .series-feature[data-series-theme="questions"] .series-week > small { color: #bfe9e5; }
+.series-feature[data-series-theme="questions"] .series-route-count { color: #bfe9e5; }
 .series-feature[data-series-theme="questions"] .series-week-dots button { border-color: #8de0db; color: #fff8e9; }
 .series-feature[data-series-theme="questions"] .series-week-dots button.current { color: #17132c; background: #f8e45c; }
 .series-feature[data-series-theme="questions"] .series-completion-progress { border-color: #8de0db; background: rgb(255 255 255 / 7%); }
@@ -1013,7 +1016,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .series-picker:not(.series-results-panel) > .panel-close { grid-column: 2; grid-row: 5; min-height: 36px; margin: 0; }
   .series-feature { grid-template-columns: .8fr 1.2fr; gap: 8px 16px; padding: 10px; }
   .message-route-artwork { display: none; }
-  .series-wordmark, .series-week-dots, .series-completion-progress { grid-column: 1; }
+  .series-wordmark, .series-route-chooser, .series-completion-progress { grid-column: 1; }
   .series-feature > p, .series-week { grid-column: 2; }
   .series-feature > p { font-size: 12px; }
   .series-week-dots button { min-height: 36px; }
@@ -1446,7 +1449,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
     height: 100%;
     min-height: 0;
     grid-template-columns: minmax(0, .92fr) minmax(210px, 1.08fr);
-    grid-template-rows: auto minmax(0, 1fr) 38px 28px;
+    grid-template-rows: auto minmax(0, 1fr) 54px 28px;
     gap: 7px 14px;
     padding: 11px 12px;
     overflow: hidden;
@@ -1475,11 +1478,14 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .series-picker:not(.series-results-panel) .series-week span { font-size: 10px !important; }
   .series-picker:not(.series-results-panel) .series-week b { font-size: 13px !important; }
   .series-picker:not(.series-results-panel) .series-week small { font-size: 12px; }
-  .series-picker:not(.series-results-panel) .series-week-dots {
+  .series-picker:not(.series-results-panel) .series-route-chooser {
     grid-column: 1;
     grid-row: 3;
-    gap: 5px !important;
+    align-content: end;
+    gap: 4px;
   }
+  .series-picker:not(.series-results-panel) .series-route-count { font-size: 10px; }
+  .series-picker:not(.series-results-panel) .series-week-dots { gap: 5px !important; }
   .series-picker:not(.series-results-panel) .series-week-dots button { min-height: 34px; font-size: 10px; }
   .series-picker:not(.series-results-panel) .series-completion-progress {
     grid-column: 1;
@@ -1952,7 +1958,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
     height: 100%;
     min-height: 0;
     grid-template-columns: minmax(0, .9fr) minmax(220px, 1.1fr);
-    grid-template-rows: auto minmax(0, 1fr) 38px 30px;
+    grid-template-rows: auto minmax(0, 1fr) 56px 30px;
     gap: 8px 14px;
     padding: 12px;
     overflow: hidden;
@@ -1985,11 +1991,14 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .series-picker:not(.series-results-panel) .series-week small { font-size: 12px; }
   .series-picker:not(.series-results-panel) .series-mechanic { padding: 7px 8px; }
   .series-picker:not(.series-results-panel) .series-week .series-mechanic small { font-size: 10px; }
-  .series-picker:not(.series-results-panel) .series-week-dots {
+  .series-picker:not(.series-results-panel) .series-route-chooser {
     grid-column: 1;
     grid-row: 3;
-    gap: 5px !important;
+    align-content: end;
+    gap: 4px;
   }
+  .series-picker:not(.series-results-panel) .series-route-count { font-size: 10px; }
+  .series-picker:not(.series-results-panel) .series-week-dots { gap: 5px !important; }
   .series-picker:not(.series-results-panel) .series-week-dots button { min-height: 34px; font-size: 10px; }
   .series-picker:not(.series-results-panel) .series-completion-progress {
     grid-column: 1;
@@ -2029,4 +2038,92 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   }
   .series-picker:not(.series-results-panel) > .series-resources > button:not(.message-link) { display: none; }
   .series-picker:not(.series-results-panel) > .panel-close { display: none; }
+}
+
+/* Readability pass: supporting copy should remain genuinely readable in the
+   phone webview instead of shrinking into decorative micro-type. */
+.home-dashboard .daily-course span,
+.home-dashboard .daily-course em,
+.home-dashboard .daily-glance,
+.home-dashboard .daily-glance .community-progress > div,
+.home-dashboard .daily-glance .community-progress small,
+.home-dashboard .home-social-stats small,
+.home-dashboard .series-routes-link small,
+.daily-return strong,
+.daily-return small,
+.daily-challenge strong,
+.daily-challenge small { font-size: max(10px, .72rem); }
+
+.daily-course .route-condition { font-size: 12px; line-height: 1.35; }
+.home-dashboard .series-routes-link strong { font-size: 13px; }
+.series-wordmark small,
+.series-wordmark em,
+.series-route-count,
+.series-completion-progress span,
+.series-results-button small,
+.series-results-button > b { font-size: 10px; }
+.series-week span { font-size: 11px !important; }
+.series-week b { font-size: 14px !important; }
+.series-week small,
+.series-week .series-mechanic small,
+.message-link small { font-size: 12px; }
+.series-week .series-mechanic span { font-size: 10px !important; }
+.series-week .series-mechanic b { font-size: 12px !important; }
+.series-week-dots button { font-size: 10px; }
+.series-results-button strong,
+.message-link strong { font-size: 12px; }
+.course-picker .series-resources .message-link:hover,
+.course-picker .series-resources .message-link:focus-visible {
+  color: #171b1c;
+  background: #fff08a;
+}
+.board-heading small,
+.leaderboard .board-legend,
+.leaderboard .nearby-rivals b,
+.leaderboard .nearby-rivals span,
+.leaderboard .board-context > p,
+.series-results header small,
+.series-result-legend { font-size: 10px; }
+.how-to .help-tabs button,
+.control-directory article b,
+.help-card-grid article b,
+.help-world .twist-directory article b { font-size: 10px; }
+.control-directory article span,
+.help-card-grid article span,
+.help-world .twist-directory article span,
+.today-guide span { font-size: 12px; }
+.result-grid small,
+.score-form small,
+.score-form em,
+.score-form label { font-size: 10px; }
+
+@media (max-width: 700px) and (orientation: portrait) {
+  .series-picker:not(.series-results-panel) .series-feature > p { font-size: 13px; }
+  .series-picker:not(.series-results-panel) .series-route-count { font-size: 11px; }
+  .series-picker:not(.series-results-panel) .series-week-dots button { min-height: 38px; font-size: 10px; }
+  .series-picker:not(.series-results-panel) .series-completion-progress { display: none; }
+  .series-picker:not(.series-results-panel) .series-results-button small,
+  .series-picker:not(.series-results-panel) .series-results-button > b { font-size: 10px; }
+  .leaderboard .board-context > p { font-size: 10px; }
+}
+
+@media (orientation: landscape) and (max-height: 800px) {
+  .home-dashboard .daily-course span,
+  .home-dashboard .daily-course em,
+  .home-dashboard .home-social-stats small,
+  .home-dashboard .series-routes-link small,
+  .home-dashboard .daily-glance .community-progress small { font-size: 10px; }
+  .series-picker:not(.series-results-panel) .series-wordmark small,
+  .series-picker:not(.series-results-panel) .series-route-count,
+  .series-picker:not(.series-results-panel) .series-results-button small,
+  .series-picker:not(.series-results-panel) .series-results-button > b { font-size: 10px; }
+  .series-picker:not(.series-results-panel) .series-week span { font-size: 11px !important; }
+  .series-picker:not(.series-results-panel) .series-week b { font-size: 14px !important; }
+  .series-picker:not(.series-results-panel) .series-week .series-mechanic span { font-size: 10px !important; }
+  .series-picker:not(.series-results-panel) .series-week .series-mechanic b,
+  .series-picker:not(.series-results-panel) .series-week .series-mechanic small { font-size: 11px !important; }
+  .series-picker:not(.series-results-panel) .series-week-dots button { font-size: 10px; }
+  .leaderboard .board-legend,
+  .leaderboard .nearby-rivals b,
+  .leaderboard .nearby-rivals span { font-size: 10px; }
 }

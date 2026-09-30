@@ -205,6 +205,14 @@ test('Message Routes cover weekly series and the standalone Ask Me Anything week
   assert.equal(activeSeriesForDay('2026-12-06')?.series.id, 'behold-2026');
 });
 
+test('an active multi-week Message Route keeps every unlocked weekly run available', () => {
+  const active = activeSeriesForDay('2026-09-29');
+  assert.equal(active?.series.id, 'at-the-movies-2026');
+  assert.equal(active?.weekIndex, 1);
+  assert.equal(active?.series.weeks.length, 2);
+  assert.deepEqual(active?.series.weeks.slice(0, active.weekIndex + 1).map((week) => week.routeName), ['Signal in the Shadows', 'Never Quit Climb']);
+});
+
 test('Suncrest message pages expose the exact weekly content and resource links', () => {
   const summaries = parseSeriesMessages(`<a class="sp-media-item" href="/media/87drmvz/be-consistent"><div class="sp-media-title">Be Consistent</div><div class="sp-media-subtitle">Aug 23, 2026 &nbsp;<span>&bull;</span>&nbsp; Greg Lee</div></a>`);
   assert.deepEqual(summaries, [{ title: 'Be Consistent', date: '2026-08-23', speaker: 'Greg Lee', url: 'https://suncrest.org/media/87drmvz/be-consistent' }]);
@@ -378,7 +386,12 @@ test('menu guidance uses readable in-place views instead of a scrolling document
   assert.match(game, /aria-controls="help-tabpanel"/);
   assert.match(game, /EVERY FINISH COUNTS/);
   assert.match(game, /Daily Twists/);
+  assert.match(game, /series-route-chooser/);
+  assert.match(game, /ROUTES'}\{activeSeries\.weekIndex > 0 \? ' · CHOOSE ONE'/);
+  assert.match(game, /complete \? ' · DONE'/);
+  assert.match(game, /Week \$\{seriesWeekIndex \+ 1\}: \$\{seriesWeek\.routeName\}/);
   assert.match(styles, /Single-viewport menus/);
+  assert.match(styles, /Readability pass/);
   assert.match(styles, /\.how-to\.home-panel \{[\s\S]*?overflow: hidden/);
   assert.match(styles, /\.series-results-panel\.home-panel \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\)/);
   assert.match(styles, /\.win-modal \.result-actions \{ grid-template-columns: 1fr 1fr/);
