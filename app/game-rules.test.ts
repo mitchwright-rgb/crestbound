@@ -224,6 +224,13 @@ test('upcoming Message Routes carry their own supplied artwork and visual identi
   for (const theme of ['soundtrack', 'trust', 'behold']) assert.match(styles, new RegExp(`data-series-theme="${theme}"`));
 });
 
+test('Message Routes keeps the route decision screen focused on gameplay', () => {
+  const gameSource = readFileSync(new URL('./crestbound-game.tsx', import.meta.url), 'utf8');
+  assert.match(gameSource, /series-feature series-feature-compact/);
+  assert.doesNotMatch(gameSource, /className="message-route-artwork"/);
+  assert.doesNotMatch(gameSource, /activeSeries\.series\.description/);
+});
+
 test('an active multi-week Message Route keeps every unlocked weekly run available', () => {
   const active = activeSeriesForDay('2026-09-29');
   assert.equal(active?.series.id, 'at-the-movies-2026');
@@ -383,7 +390,7 @@ test('post-run layouts keep Daily and Message Route results distinct and landsca
   assert.match(game, /NEW PERSONAL BEST/);
   assert.match(game, /POINTS FROM YOUR BEST/);
   assert.match(game, /BADGE EARNED/);
-  assert.match(game, /series-completion-progress/);
+  assert.match(game, /series-route-count/);
   assert.match(game, /mechanicAction/);
   assert.match(game, /series-status/);
   assert.match(game, /Back to Message Routes/);

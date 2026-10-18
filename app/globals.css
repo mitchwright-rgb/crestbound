@@ -2217,3 +2217,79 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .leaderboard .nearby-rivals b,
   .leaderboard .nearby-rivals span { font-size: 10px; }
 }
+
+/* Message Routes decision screen: the route itself is the hero. Series art and
+   promotional copy live with the message content, not between players and Play. */
+.series-picker:not(.series-results-panel) > h2 {
+  margin-bottom: 12px;
+}
+.series-picker:not(.series-results-panel) > .series-feature-compact {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  gap: 10px;
+  padding: 13px;
+}
+.series-picker:not(.series-results-panel) .series-feature-compact > .series-week,
+.series-picker:not(.series-results-panel) .series-feature-compact > .series-route-chooser {
+  grid-column: 1;
+}
+.series-picker:not(.series-results-panel) .series-feature-compact > .series-week {
+  grid-row: 1;
+  gap: 6px;
+  padding: 12px 13px;
+}
+.series-picker:not(.series-results-panel) .series-feature-compact > .series-week > span {
+  color: var(--series-muted) !important;
+  font-size: 10px !important;
+}
+.series-picker:not(.series-results-panel) .series-feature-compact > .series-week > b {
+  color: var(--series-copy) !important;
+  font-size: 18px !important;
+  line-height: 1.25 !important;
+}
+.series-picker:not(.series-results-panel) .series-feature-compact > .series-week > small {
+  color: var(--series-muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+.series-picker:not(.series-results-panel) .series-feature-compact .series-mechanic {
+  margin-top: 5px;
+}
+.series-picker:not(.series-results-panel) .series-feature-compact > .series-route-chooser {
+  grid-row: 2;
+}
+@media (max-width: 700px) and (orientation: portrait) {
+  .series-picker:not(.series-results-panel) > h2 { margin-bottom: 10px; }
+  .series-picker:not(.series-results-panel) > .series-feature-compact { padding: 11px; }
+  .series-picker:not(.series-results-panel) .series-feature-compact > .series-week > b { font-size: 17px !important; }
+}
+
+@media (orientation: landscape) and (max-height: 800px) {
+  .series-picker:not(.series-results-panel) {
+    height: auto;
+    max-height: calc(100dvh - 18px);
+    grid-template-rows: 40px 74px 78px auto;
+  }
+  .series-picker:not(.series-results-panel) > h2 {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    align-self: center;
+    margin: 0;
+  }
+  .series-picker:not(.series-results-panel) > .series-feature-compact {
+    grid-template-rows: auto auto;
+    align-content: start;
+    gap: 7px;
+  }
+  .series-picker:not(.series-results-panel) .series-feature-compact > .series-week {
+    align-content: start;
+    padding: 9px 10px;
+  }
+  .series-picker:not(.series-results-panel) .series-feature-compact > .series-week > b {
+    font-size: 15px !important;
+  }
+  .series-picker:not(.series-results-panel) .series-feature-compact .series-mechanic {
+    margin-top: 3px;
+    padding: 7px 8px;
+  }
+}
