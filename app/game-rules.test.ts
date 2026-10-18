@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { soundSources } from './audio-assets.ts';
-import { challengeMedal, chicagoDayKey, collectLightPower, crestScoreBreakdown, dailyObjectiveForSerial, dashVelocity, formatDailyReset, gravityForModifier, horizontalSpeedLimit, jumpReleaseGravity, jumpVelocityForModifier, lightHuntTargets, millisecondsUntilNextChicagoDay, musicTrackForCourse, musicTrackForSeries, objectiveResultLabel, resetRunTiming, resolveDamage, runStorageKey, seriesBeaconReached, tailwindAcceleration, touchInputFromControls } from './game-rules.ts';
+import { challengeMedal, chicagoDayKey, collectLightPower, crestScoreBreakdown, crossedCommunityGoal, dailyObjectiveForSerial, dashVelocity, formatDailyReset, gravityForModifier, horizontalSpeedLimit, jumpReleaseGravity, jumpVelocityForModifier, lightHuntTargets, millisecondsUntilNextChicagoDay, musicTrackForCourse, musicTrackForSeries, objectiveResultLabel, resetRunTiming, resolveDamage, runStorageKey, seriesBeaconReached, streakReward, tailwindAcceleration, touchInputFromControls } from './game-rules.ts';
 import { buildSeededCourse, checkpointHasClearLanding, checkpointIsSupported, courseSignature, maximumGroundGap } from './course-generator.ts';
 import { buildDeclarationsCourse } from './series-course-generator.ts';
 import { activeSeriesForDay, completedSeriesWeekIds, declarationsSeries, messageRouteSchedule, seriesWeekSeed } from './series-routes.ts';
@@ -142,6 +142,24 @@ test('daily reset countdown targets the next Chicago calendar day', () => {
   const beforeFallMidnight = new Date('2026-12-15T05:15:00.000Z');
   assert.equal(chicagoDayKey(beforeFallMidnight), '2026-12-14');
   assert.equal(formatDailyReset(millisecondsUntilNextChicagoDay(beforeFallMidnight)), '0H 45M');
+});
+
+test('streak milestones and community goal crossings trigger only at meaningful moments', () => {
+  assert.deepEqual(streakReward(2), { milestone: false, message: 'COME BACK TOMORROW TO KEEP IT ALIVE' });
+  assert.deepEqual(streakReward(7), { milestone: true, message: 'ONE FULL WEEK' });
+  assert.deepEqual(streakReward(50), { milestone: true, message: '50-DAY MILESTONE' });
+  assert.equal(crossedCommunityGoal(2490, 2510, 2500), true);
+  assert.equal(crossedCommunityGoal(2500, 2520, 2500), false);
+  assert.equal(crossedCommunityGoal(100, 200, 0), false);
+});
+
+test('launch metadata points at the public Suncrest domain and permits browser zoom', () => {
+  const layout = readFileSync(new URL('./layout.tsx', import.meta.url), 'utf8');
+  const manifest = readFileSync(new URL('../public/manifest.webmanifest', import.meta.url), 'utf8');
+  assert.match(layout, /metadataBase: new URL\('https:\/\/crestbound\.suncrest\.org'\)/);
+  assert.doesNotMatch(layout, /sunny-crestbound\.suncrest-7012\.chatgpt\.site/);
+  assert.doesNotMatch(layout, /userScalable: false|maximumScale: 1/);
+  assert.match(manifest, /complete the challenge/);
 });
 
 test('server and client share one authoritative Chicago day during hydration', () => {

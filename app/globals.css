@@ -40,6 +40,8 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .board-list li { min-height: 34px; display: grid; grid-template-columns: 34px 1fr 70px 34px; align-items: center; gap: 4px; padding: 0 10px; border-bottom: 2px solid #123137; font-size: 11px; }
 .board-list li b { color: var(--gold); }.board-list li span { overflow: hidden; font-weight: 900; text-overflow: ellipsis; white-space: nowrap; }.board-list li time { color: var(--cream); text-align: right; }.board-list li small { color: var(--teal-light); text-align: right; }
 .board-list .board-message { grid-template-columns: 1fr; place-items: center; color: #789b9c; text-align: center; line-height: 1.5; }
+.board-list .board-message:has(button) { align-content: center; gap: 14px; padding: 18px; }
+.board-list .board-message button { min-height: 46px; padding: 9px 16px; border: 3px solid #171b1c; color: #071316; background: var(--gold); box-shadow: 4px 4px 0 #171b1c; font: 10px/1.25 var(--font-pixel), monospace; text-transform: uppercase; cursor: pointer; }
 .board-context { display: grid; }
 .leaderboard .board-context > p { margin: 0; padding: 10px; border-top: 3px solid #171b1c; color: #789b9c; font-size: 8px; font-weight: 900; letter-spacing: .07em; text-align: center; }
 
@@ -846,6 +848,16 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   text-align: left;
 }
 .result-priority b { color: var(--gold-light); }
+.result-priority.goal-cleared { position: relative; overflow: hidden; border: 3px solid var(--gold); background: linear-gradient(135deg, #2b2412, #082329 68%); box-shadow: inset 0 0 0 2px rgb(248 228 92 / 14%), 0 0 20px rgb(242 181 43 / 28%); text-align: center; }
+.result-priority.goal-cleared::after { position: absolute; right: -16px; top: -20px; color: rgb(248 228 92 / 18%); content: '✦'; font-size: 88px; line-height: 1; }
+.result-priority.goal-cleared > strong { position: relative; z-index: 1; color: #fff8e9; font: 14px/1.2 var(--font-pixel), monospace; }
+.streak-result { display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; margin-top: 8px; padding-top: 8px; border-top: 2px solid #31575a; text-align: left; }
+.streak-result > span { color: var(--teal-light); font: 8px/1.2 var(--font-pixel), monospace; }
+.streak-result > b { grid-column: 2; grid-row: 1 / 3; align-self: center; color: var(--gold-light); font: 16px/1 var(--font-pixel), monospace; }
+.streak-result > small { color: #d7e8e5; font-size: 10px; line-height: 1.25; }
+.streak-result.milestone { border-color: var(--gold); }
+.streak-result.milestone > span,
+.streak-result.milestone > small { color: var(--gold-light); }
 .leaderboard .board-context > p { font-size: 10px; line-height: 1.45; }
 .result-grid small, .score-form small, .score-form em { font-size: 10px; line-height: 1.35; }
 .challenge-result { font-size: 11px; }
@@ -1092,6 +1104,8 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   font: 7px/1.15 var(--font-pixel), monospace;
   text-transform: uppercase;
 }
+.home-dashboard .streak-badge.milestone { color: #fff8e9; background: linear-gradient(90deg, #ef6f52, #b98922, #ef6f52); background-size: 200% 100%; box-shadow: 0 0 0 2px #171b1c, 0 0 14px rgb(242 181 43 / 55%); animation: streak-badge-shine 2.4s linear infinite; }
+@keyframes streak-badge-shine { to { background-position: -200% 0; } }
 .home-dashboard .play-button { min-height: 76px; }
 .home-dashboard .daily-glance {
   min-height: 76px;
@@ -1110,6 +1124,11 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .home-dashboard .daily-glance .community-progress { margin: 0; padding-top: 5px; }
 .home-dashboard .daily-glance .community-progress > div { font-size: 9px; }
 .home-dashboard .daily-glance .community-progress progress { height: 7px; margin: 3px 0 0; }
+.home-dashboard .daily-glance.goal-reached { border-color: var(--gold); background: linear-gradient(135deg, #132d30, #2b2412 70%); box-shadow: inset 0 0 0 2px rgb(248 228 92 / 12%), 0 0 18px rgb(242 181 43 / 22%); }
+.community-progress.goal-reached > div span,
+.community-progress.goal-reached > div b { color: var(--gold-light); }
+.community-progress.goal-reached progress { accent-color: var(--gold-light); }
+.community-reward { display: block; margin-top: 4px; color: #fff8e9; font: 8px/1.25 var(--font-pixel), monospace; letter-spacing: .04em; text-align: center; }
 .home-dashboard .home-links { grid-template-columns: 1.45fr 1fr 1fr; gap: 12px; }
 .home-dashboard .home-links button { min-height: 46px; }
 .home-dashboard .home-links .series-routes-link { grid-column: auto; }
@@ -1417,6 +1436,24 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 @media (prefers-reduced-motion: reduce) {
   .score-tally > * { opacity: 1; transform: none; animation: none; }
   .score-tally.new-best { animation: none; }
+  .home-dashboard .streak-badge.milestone { animation: none; }
+}
+
+/* Launch polish: size instructional content to what it actually contains on
+   larger screens, while preserving the compact full-screen phone layouts. */
+@media (min-width: 701px) and (min-height: 561px) {
+  .how-to.home-panel { height: auto; max-height: calc(100dvh - 28px); grid-template-rows: auto 48px auto 46px; }
+  .how-to .help-content { align-items: start; }
+}
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .win-modal .result-priority { align-content: start; }
+  .win-modal .result-priority.goal-cleared > strong { font-size: 11px; }
+  .win-modal .streak-result { gap: 2px 8px; margin-top: 5px; padding-top: 5px; }
+  .win-modal .streak-result > b { font-size: 13px; }
+  .win-modal .streak-result > small { font-size: 8px; }
+  .board-list .board-message:has(button) { gap: 8px; padding: 8px; }
+  .board-list .board-message button { min-height: 38px; padding: 6px 12px; font-size: 9px; }
 }
 
 /* Unified phone-landscape UI: every menu uses the same full-screen rhythm. */
@@ -2292,4 +2329,20 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
     margin-top: 3px;
     padding: 7px 8px;
   }
+}
+
+/* Final launch-state sizing overrides follow every menu-specific rule. */
+@media (min-width: 701px) and (min-height: 561px) {
+  .how-to.home-panel { height: auto; max-height: calc(100dvh - 28px); grid-template-rows: auto 48px auto 46px; }
+  .how-to .help-content { align-items: start; }
+}
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .win-modal .result-priority { align-content: start; }
+  .win-modal .result-priority.goal-cleared > strong { font-size: 11px; }
+  .win-modal .streak-result { gap: 2px 8px; margin-top: 5px; padding-top: 5px; }
+  .win-modal .streak-result > b { font-size: 13px; }
+  .win-modal .streak-result > small { font-size: 8px; }
+  .leaderboard .board-list .board-message:has(button) { gap: 8px; padding: 8px; }
+  .leaderboard .board-list .board-message button { min-height: 38px; padding: 6px 12px; font-size: 9px; }
 }

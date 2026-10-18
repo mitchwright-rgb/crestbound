@@ -171,3 +171,21 @@ export function formatDailyReset(milliseconds: number) {
   const minutes = totalMinutes % 60;
   return `${hours}H ${String(minutes).padStart(2, '0')}M`;
 }
+
+export function streakReward(days: number) {
+  const messages: Record<number, string> = {
+    3: 'THREE DAYS STRONG',
+    7: 'ONE FULL WEEK',
+    14: 'TWO WEEKS STRONG',
+    30: 'THIRTY-DAY RUNNER',
+  };
+  const milestone = Boolean(messages[days]) || (days > 30 && days % 25 === 0);
+  return {
+    milestone,
+    message: messages[days] ?? (milestone ? `${days}-DAY MILESTONE` : 'COME BACK TOMORROW TO KEEP IT ALIVE'),
+  };
+}
+
+export function crossedCommunityGoal(previousLights: number, nextLights: number, goal: number) {
+  return goal > 0 && previousLights < goal && nextLights >= goal;
+}

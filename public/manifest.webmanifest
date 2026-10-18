@@ -1,7 +1,7 @@
 {
   "name": "Crestbound",
   "short_name": "Crestbound",
-  "description": "A daily skyline run starring Sunny. Find the light and beat today's time.",
+  "description": "Run a new Suncrest skyline challenge each day. Finish fast, collect Light, complete the challenge, and climb the leaderboard.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

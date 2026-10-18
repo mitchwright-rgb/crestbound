@@ -21,10 +21,10 @@ const pixelifySans = Pixelify_Sans({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://sunny-crestbound.suncrest-7012.chatgpt.site'),
+  metadataBase: new URL('https://crestbound.suncrest.org'),
   applicationName: 'Crestbound',
   title: 'Crestbound | Suncrest Games',
-  description: 'A daily skyline run starring Sunny. Find the light and beat today’s time.',
+  description: 'Run a new Suncrest skyline challenge each day. Finish fast, collect Light, complete the challenge, and climb the leaderboard.',
   manifest: '/manifest.webmanifest',
   appleWebApp: {
     capable: true,
@@ -37,19 +37,19 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: 'Crestbound',
-    description: 'A daily skyline run starring Sunny. Find the light and beat today’s time.',
-    url: 'https://sunny-crestbound.suncrest-7012.chatgpt.site',
+    description: 'Run a new Suncrest skyline challenge each day. Finish fast, collect Light, complete the challenge, and climb the leaderboard.',
+    url: 'https://crestbound.suncrest.org',
     siteName: 'Suncrest Games',
-    images: [{ url: '/og-pixel.png', width: 1672, height: 941, alt: 'Crestbound daily pixel platformer starring Sunny' }],
+    images: [{ url: '/og-pixel.webp', width: 1672, height: 941, alt: 'Crestbound daily pixel platformer starring Sunny' }],
     type: 'website',
   },
   twitter: {
-    card: 'summary_large_image', title: 'Crestbound', description: 'A daily skyline run starring Sunny. Find the light and beat today’s time.', images: ['/og-pixel.png'],
+    card: 'summary_large_image', title: 'Crestbound', description: 'Run a new Suncrest skyline challenge each day. Finish fast, collect Light, complete the challenge, and climb the leaderboard.', images: ['/og-pixel.webp'],
   },
 };
 
 export const viewport: Viewport = {
-  width: 'device-width', initialScale: 1, maximumScale: 1, userScalable: false, viewportFit: 'cover', themeColor: '#071316',
+  width: 'device-width', initialScale: 1, viewportFit: 'cover', themeColor: '#071316',
 };
 
 export default function RootLayout({

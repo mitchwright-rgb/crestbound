@@ -2,7 +2,7 @@
 
 import { FormEvent, PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SoundKind, soundSources, soundVolumes } from './audio-assets';
-import { challengeMedal, chicagoDayKey, collectLightPower, crestScoreBreakdown, dailyObjectiveSpecs, dashVelocity, formatDailyReset, gravityForModifier, horizontalSpeedLimit, jumpReleaseGravity, jumpVelocityForModifier, millisecondsUntilNextChicagoDay, musicTrackForCourse, musicTrackForSeries, objectiveResultLabel, resetRunTiming, resolveDamage, runStorageKey, seriesBeaconReached, tailwindAcceleration, touchInputFromControls, type CrestScoreBreakdown } from './game-rules';
+import { challengeMedal, chicagoDayKey, collectLightPower, crestScoreBreakdown, crossedCommunityGoal, dailyObjectiveSpecs, dashVelocity, formatDailyReset, gravityForModifier, horizontalSpeedLimit, jumpReleaseGravity, jumpVelocityForModifier, millisecondsUntilNextChicagoDay, musicTrackForCourse, musicTrackForSeries, objectiveResultLabel, resetRunTiming, resolveDamage, runStorageKey, seriesBeaconReached, streakReward, tailwindAcceleration, touchInputFromControls, type CrestScoreBreakdown } from './game-rules';
 import { buildSeededCourse } from './course-generator';
 import { buildSeriesCourse } from './series-course-generator';
 import { completedSeriesWeekIds, seriesWeekSeed } from './series-routes';
@@ -22,6 +22,7 @@ type SeriesMessage = { title: string; date: string; speaker: string; url: string
 type SeriesBoardEntry = { rank: number; name: string; score: number; timeMs: number; lights: number; isPlayer: boolean };
 
 type Community = { players: number; lights: number; goal: number; nearby: BoardEntry[]; playerRank: number | null; recent: string[] };
+type StreakCelebration = { days: number; milestone: boolean; message: string };
 
 const WORLD_W = 15400;
 const FINISH_X = 15135;
@@ -164,7 +165,10 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
   const [showDashCoach, setShowDashCoach] = useState(false);
   const [showModifierCoach, setShowModifierCoach] = useState(false);
   const [community, setCommunity] = useState<Community>({ players: 0, lights: 0, goal: 2500, nearby: [], playerRank: null, recent: [] });
+  const communityRef = useRef(community);
+  const [communityCelebration, setCommunityCelebration] = useState<{ lights: number; goal: number } | null>(null);
   const [streak, setStreak] = useState(0);
+  const [streakCelebration, setStreakCelebration] = useState<StreakCelebration | null>(null);
   const [dailyReset, setDailyReset] = useState('—');
   const [gameNotice, setGameNotice] = useState<GameNotice | null>(null);
   const gameNoticeTimerRef = useRef(0);
@@ -183,6 +187,17 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
     : scoreDelta === 0 ? 'MATCHED YOUR BEST' : `${Math.abs(Math.min(0, scoreDelta ?? 0)).toLocaleString()} POINTS FROM YOUR BEST`;
   const seriesProgressCount = activeSeries ? activeSeries.series.weeks.filter((week) => completedSeriesWeeks.includes(week.id)).length : 0;
   const messageRouteChallenge = activeSeries?.series.kind === 'special' ? 'EXCLUSIVE SPECIAL CHALLENGE' : 'EXCLUSIVE SERIES CHALLENGE';
+  const communityGoalReached = community.goal > 0 && community.lights >= community.goal;
+
+  useEffect(() => { communityRef.current = community; }, [community]);
+
+  const applyCommunityUpdate = useCallback((next: { lights: number; players: number; goal: number }) => {
+    const previous = communityRef.current;
+    const merged = { ...previous, lights: next.lights, players: next.players, goal: next.goal };
+    if (crossedCommunityGoal(previous.lights, next.lights, next.goal)) setCommunityCelebration({ lights: next.lights, goal: next.goal });
+    communityRef.current = merged;
+    setCommunity(merged);
+  }, []);
 
   const showGameNotice = useCallback((text: string, kind: GameNotice['kind']) => {
     window.clearTimeout(gameNoticeTimerRef.current);
@@ -510,6 +525,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
     resetRef.current?.();
     setSubmitState('idle'); setRank(null); setScoreResult(null); runIdRef.current = null;
     setPreviousBestScore(null); setIsNewBestScore(false); setSeriesBadgeNew(false);
+    setStreakCelebration(null); setCommunityCelebration(null);
     runMetricsRef.current = { dashCount: 0 };
     const shouldWaitForLandscape = window.matchMedia('(orientation: portrait) and (pointer: coarse)').matches;
     {
@@ -587,6 +603,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
     window.localStorage.setItem('crestbound-last-day', today);
     window.localStorage.setItem('crestbound-streak', String(next));
     setStreak(next);
+    setStreakCelebration({ days: next, ...streakReward(next) });
   }
 
   async function postDailyRun(runResult: Hud, cleanName: string) {
@@ -600,7 +617,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
       if (!response.ok) throw new Error(data.error);
       setRank(data.rank ?? null);
       setScoreResult({ score: data.score ?? localScore.total, breakdown: data.breakdown ?? localScore, contribution: data.community?.contribution ?? runResult.sparks });
-      if (data.community) setCommunity((current) => ({ ...current, lights: data.community!.lights, players: data.community!.players, goal: data.community!.goal }));
+      if (data.community) applyCommunityUpdate(data.community);
       setSubmitState('saved'); setBoard('daily'); void loadBoard('daily'); void loadDailySummary();
     } catch (error) { setSubmitError(error instanceof Error ? error.message : 'Couldn\'t post this run.'); setSubmitState('error'); }
   }
@@ -1043,7 +1060,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
               if (data?.completions != null) setSeriesCompletions(data.completions);
               if (data?.entries) { setSeriesEntries(data.entries); setSeriesBoardStatus('ready'); }
               if (data?.score && data.breakdown) setScoreResult({ score: data.score, breakdown: data.breakdown, contribution: data.community?.contribution ?? collected });
-              if (data?.community) setCommunity((current) => ({ ...current, lights: data.community!.lights, players: data.community!.players, goal: data.community!.goal }));
+              if (data?.community) applyCommunityUpdate(data.community);
             })
             .catch(() => undefined);
         }
@@ -1491,7 +1508,9 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
             <div className="home-hero">
               <div className="home-cover">
                 <picture className="home-cover-scene">
+                  <source media="(orientation: landscape)" srcSet="/crestbound-landscape-background-v1.webp" type="image/webp" />
                   <source media="(orientation: landscape)" srcSet="/crestbound-landscape-background-v1.png" />
+                  <source srcSet="/crestbound-square-background-v1.webp" type="image/webp" />
                   <img src="/crestbound-square-background-v1.png" width="1254" height="1254" alt="The golden-hour Crestbound skyline beneath the A Daily Skyline Run title" />
                 </picture>
                 <div className="sunny-cover-character" aria-hidden="true">
@@ -1510,18 +1529,19 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
                   <b>{dailyCourse.name}</b>
                   <em>{dailyModifier.name} · {dailyObjectiveSpecs[dailyObjectiveId].name}</em>
                   <small className="route-condition">{dailyCondition.name} · {dailyCondition.description}</small>
-                  {streak > 0 && <small className="streak-badge" title={`New route in ${dailyReset}`}>{streak} day streak</small>}
+                  {streak > 0 && <small className={`streak-badge ${streakReward(streak).milestone ? 'milestone' : ''}`} title={`New route in ${dailyReset}`}><span aria-hidden="true">✦</span> {streak} day streak</small>}
                 </div>
                 <button className="play-button" type="button" disabled={runStartState === 'connecting'} onClick={() => void startGame(true)}>{runStartState === 'connecting' ? 'Connecting Ranked Run…' : 'Run with Sunny'} {runStartState !== 'connecting' && <span aria-hidden="true">▶</span>}</button>
                 {runStartState === 'error' && <p className="run-start-error" role="alert"><b>RUN NOT STARTED</b><span>{runStartError}</span></p>}
-                <div className="daily-glance">
+                <div className={`daily-glance ${communityGoalReached ? 'goal-reached' : ''}`}>
                   <div className="home-social-stats">
                     <span><small>TODAY&apos;S TOP</small><b>{dailyLeader === undefined ? 'CHECKING…' : dailyLeader ? `${dailyLeader.name} · ${dailyLeader.score.toLocaleString()}` : 'CLAIM #1'}</b></span>
                     <span><small>TODAY</small><b>{dailyPlayers === undefined ? 'CHECKING…' : `${dailyPlayers} ${dailyPlayers === 1 ? 'RUNNER' : 'RUNNERS'}`}</b></span>
                   </div>
-                  <div className="community-progress">
-                    <div><span>COMMUNITY LIGHT · WEEK</span><b>{community.lights.toLocaleString()} / {community.goal.toLocaleString()}</b></div>
+                  <div className={`community-progress ${communityGoalReached ? 'goal-reached' : ''}`}>
+                    <div><span>{communityGoalReached ? 'WEEKLY GOAL CLEARED' : 'COMMUNITY LIGHT · WEEK'}</span><b>{communityGoalReached ? 'SKYLINE LIT' : `${community.lights.toLocaleString()} / ${community.goal.toLocaleString()}`}</b></div>
                     <progress aria-label={`${community.lights} of ${community.goal} community lights collected this week`} max={community.goal} value={Math.min(community.lights, community.goal)} />
+                    {communityGoalReached && <small className="community-reward">✦ COMMUNITY CREST UNLOCKED ✦</small>}
                   </div>
                 </div>
                 <div className="home-links">
@@ -1542,7 +1562,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
                 <ol className="board-list" aria-live="polite">
                   {boardStatus === 'loading' && <li className="board-message">LOADING RUNS...</li>}
                   {boardStatus === 'offline' && <li className="board-message">BOARD COMES ONLINE WHEN PUBLISHED.</li>}
-                  {boardStatus === 'ready' && entries.length === 0 && <li className="board-message">NO FINISHERS YET. CLAIM #1.</li>}
+                  {boardStatus === 'ready' && entries.length === 0 && <li className="board-message"><span>{board === 'daily' ? 'NO FINISHERS YET. CLAIM #1.' : 'NO SCORES HERE YET.'}</span><button type="button" onClick={() => { closeHomePanel(); void startGame(true); }}>{board === 'daily' ? 'RUN TODAY · CLAIM #1' : 'RUN TODAY'}</button></li>}
                   {boardStatus === 'ready' && entries.slice(0, 7).map((entry) => <li className="score-board" key={`${entry.rank}-${entry.name}`}><b>#{entry.rank}</b><span>{entry.name}</span><time>{entry.score.toLocaleString()}</time></li>)}
                 </ol>
               </div>
@@ -1625,7 +1645,10 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
               <span><small>{isSeries ? `${activeSeries?.series.shortName ?? 'SERIES'} · ${resultHud.signatureCount}/3` : `${earnedMedal} CHALLENGE`}</small><b>+{(scoreResult?.breakdown.bonus ?? localScore.bonus).toLocaleString()}</b></span>
               <strong><small>{scoreResultLabel}</small><b>{displayedScore.toLocaleString()}</b></strong>
             </div>
-            <div className="result-priority"><b>+{resultHud.sparks} COMMUNITY LIGHT</b><span>Every verified finish counts toward Suncrest&apos;s weekly goal.</span></div>
+            <div className={`result-priority ${communityCelebration ? 'goal-cleared' : ''}`}>
+              {communityCelebration ? <><b>✦ WEEKLY GOAL REACHED ✦</b><strong>THE SKYLINE IS LIT</strong><span>{communityCelebration.lights.toLocaleString()} Light collected together · Community Crest unlocked.</span></> : <><b>+{resultHud.sparks} COMMUNITY LIGHT</b><span>Every verified finish counts toward Suncrest&apos;s weekly goal.</span></>}
+              {!isSeries && streakCelebration && <div className={`streak-result ${streakCelebration.milestone ? 'milestone' : ''}`}><span>DAILY STREAK EXTENDED</span><b>{streakCelebration.days} {streakCelebration.days === 1 ? 'DAY' : 'DAYS'}</b><small>{streakCelebration.message}</small></div>}
+            </div>
             {isSeries
               ? <div className="challenge-result series-signature"><b>{activeSeries?.series.mechanicName ?? 'MESSAGE MARKS'}</b><span>{resultHud.signatureCount}/3 · {resultHud.signatureCount === 3 ? 'FULL +200 MESSAGE ROUTE BONUS' : 'PARTIAL MESSAGE ROUTE BONUS'}</span></div>
               : <div className={`challenge-result ${earnedMedal.toLowerCase()}`}><b>{objective.name}</b><span>{objectiveResult}</span></div>}
