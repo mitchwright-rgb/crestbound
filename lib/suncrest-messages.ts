@@ -16,6 +16,20 @@ function dateKey(value: string) {
   return Number.isNaN(parsed.getTime()) ? '' : parsed.toISOString().slice(0, 10);
 }
 
+function normalizedTitle(value: string) {
+  return decode(value).toLocaleLowerCase('en-US').replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+export function findSeriesUrl(html: string, seriesName: string) {
+  const wanted = normalizedTitle(seriesName);
+  const candidates = [...html.matchAll(/<a class="sp-media-item" href="([^"]*\/media\/series\/[^"]+)">([\s\S]*?)<\/a>/g)];
+  for (const match of candidates) {
+    const title = match[2].match(/class="sp-media-title">([\s\S]*?)<\/div>/)?.[1];
+    if (title && normalizedTitle(title) === wanted) return new URL(match[1], 'https://suncrest.org').toString();
+  }
+  return null;
+}
+
 export function parseSeriesMessages(html: string): MessageSummary[] {
   return [...html.matchAll(/<a class="sp-media-item" href="([^"]+)">([\s\S]*?)<\/a>/g)].flatMap((match) => {
     const title = match[2].match(/class="sp-media-title">([\s\S]*?)<\/div>/)?.[1];

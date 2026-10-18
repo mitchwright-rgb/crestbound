@@ -86,12 +86,13 @@ export const messageRouteSchedule: readonly MessageRoute[] = [
   {
     id: 'soundtrack-2026', kind: 'series', name: 'My Story, My Song', shortName: 'MY STORY, MY SONG', eyebrow: 'NOW AT SUNCREST',
     description: 'Find the rhythm across weekly routes inspired by the stories and songs shaping faith at Suncrest.',
-    startsOn: '2026-10-11', endsOn: '2026-10-31', messageUrl: 'https://suncrest.org/messages', seriesUrl: null,
+    startsOn: '2026-10-11', endsOn: '2026-10-31', messageUrl: 'https://suncrest.org/messages',
+    seriesUrl: 'https://suncrest.org/media/series/b6rpy9b/my-story-my-song',
     artworkUrl: '/series/my-story-my-song.jpg',
     theme: 'soundtrack', wordmarkKicker: 'TURN IT UP', mechanicName: 'BEAT MARKERS',
     mechanicAction: 'HIT 3 BEAT MARKERS', mechanicHelp: 'Stay on beat through the route · all 3 earn +200',
     weeks: [
-      { id: 'soundtrack-2026-w1', sunday: '2026-10-11', title: 'Week One', routeName: 'Opening Track', objective: 'sprint' },
+      { id: 'soundtrack-2026-w1', sunday: '2026-10-11', title: 'Prodigals', routeName: 'Opening Track', objective: 'sprint', messageUrl: 'https://suncrest.org/media/ckrj4gj/prodigals' },
       { id: 'soundtrack-2026-w2', sunday: '2026-10-18', title: 'Week Two', routeName: 'Find the Beat', objective: 'light_hunt' },
       { id: 'soundtrack-2026-w3', sunday: '2026-10-25', title: 'Week Three', routeName: 'Final Chorus', objective: 'skyline_mastery' },
     ],

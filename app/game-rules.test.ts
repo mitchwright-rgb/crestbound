@@ -8,7 +8,7 @@ import { buildDeclarationsCourse } from './series-course-generator.ts';
 import { activeSeriesForDay, completedSeriesWeekIds, declarationsSeries, messageRouteSchedule, seriesWeekSeed } from './series-routes.ts';
 import { checkNickname, publicNickname } from '../lib/nickname.ts';
 import { normalizeEventMetadata } from '../lib/telemetry.ts';
-import { parseMessageDetails, parseSeriesMessages } from '../lib/suncrest-messages.ts';
+import { findSeriesUrl, parseMessageDetails, parseSeriesMessages } from '../lib/suncrest-messages.ts';
 import { defaultDailyRoute } from '../lib/daily-route.ts';
 import { difficultyStatus } from '../lib/difficulty.ts';
 
@@ -233,6 +233,8 @@ test('an active multi-week Message Route keeps every unlocked weekly run availab
 });
 
 test('Suncrest message pages expose the exact weekly content and resource links', () => {
+  const seriesUrl = findSeriesUrl(`<a class="sp-media-item" href="/media/series/b6rpy9b/my-story-my-song"><div class="sp-media-title">My Story, My Song</div><div class="sp-media-subtitle"></div></a>`, 'My Story, My Song');
+  assert.equal(seriesUrl, 'https://suncrest.org/media/series/b6rpy9b/my-story-my-song');
   const summaries = parseSeriesMessages(`<a class="sp-media-item" href="/media/87drmvz/be-consistent"><div class="sp-media-title">Be Consistent</div><div class="sp-media-subtitle">Aug 23, 2026 &nbsp;<span>&bull;</span>&nbsp; Greg Lee</div></a>`);
   assert.deepEqual(summaries, [{ title: 'Be Consistent', date: '2026-08-23', speaker: 'Greg Lee', url: 'https://suncrest.org/media/87drmvz/be-consistent' }]);
   const details = parseMessageDetails(`<meta name="description" content="Everyday faithfulness &amp; courage." /><meta property="og:image" content="https://assets.suncrest.org/messages/be-consistent.jpg" /><link rel="canonical" href="https://suncrest.org/media/87drmvz/be-consistent" /><a href="https://page.church/discuss" data-label="Discussion Guide">Discussion Guide</a><a href="https://page.church/read" data-label="Reading Guide">Reading Guide</a>`, summaries[0]);
@@ -241,6 +243,9 @@ test('Suncrest message pages expose the exact weekly content and resource links'
   assert.equal(details.discussionGuideUrl, 'https://page.church/discuss');
   assert.equal(details.readingGuideUrl, 'https://page.church/read');
   assert.equal(details.artworkUrl, 'https://assets.suncrest.org/messages/be-consistent.jpg');
+  const soundtrack = activeSeriesForDay('2026-10-17');
+  assert.equal(soundtrack?.series.seriesUrl, 'https://suncrest.org/media/series/b6rpy9b/my-story-my-song');
+  assert.equal(soundtrack?.week.messageUrl, 'https://suncrest.org/media/ckrj4gj/prodigals');
 });
 
 test('Series Route completion progress safely reads local storage', () => {
