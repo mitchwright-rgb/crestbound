@@ -40,6 +40,39 @@ const modifierSpecs = [
   { id: 'sparkstorm', name: 'Spark Storm', description: 'Extra teal Storm Lights appear throughout the route. Each recharges Dash and shields one hit for seven seconds.', shortDescription: 'Teal Lights ready Dash and shield one hit.' },
 ] as const;
 
+const seriesVisualThemes = {
+  declarations: {
+    accent: '#ef4638', highlight: '#f8e45c', ink: '#171b1c', window: '#f8e45c',
+    atmosphere: { skyTop: '#f8e45c', skyMid: '#f8e45c', skyLow: '#ffe777', haze: '#f4d64e', far: '#ef4638', near: '#171b1c', rail: '#ef4638', edge: '#171b1c', blockA: '#ef4638', blockB: '#c9362c', support: '#171b1c' },
+    signs: ['BE CONSISTENT', 'OWN IT', 'FORGIVE', 'SEEK WISDOM', 'THE ONE', 'DECLARE'],
+  },
+  movies: {
+    accent: '#ef5144', highlight: '#ffe25f', ink: '#15183a', window: '#fff6c6',
+    atmosphere: { skyTop: '#313a94', skyMid: '#5260c2', skyLow: '#f1d98c', haze: '#fff2be', far: '#ef5144', near: '#15183a', rail: '#ffe25f', edge: '#252b73', blockA: '#2f43b7', blockB: '#253592', support: '#15183a' },
+    signs: ['ROLL CAMERA', 'ACTION', 'SCENE 2', 'KEEP ROLLING', 'FINAL ACT', 'THE END'],
+  },
+  questions: {
+    accent: '#ef6f52', highlight: '#f8e45c', ink: '#17132c', window: '#8de0db',
+    atmosphere: { skyTop: '#17132c', skyMid: '#29254e', skyLow: '#5d547b', haze: '#8de0db', far: '#ef6f52', near: '#17132c', rail: '#8de0db', edge: '#332d5a', blockA: '#29254e', blockB: '#211d40', support: '#17132c' },
+    signs: ['ASK', 'WHY?', 'WONDER', 'HOW?', 'LISTEN', 'KEEP ASKING'],
+  },
+  soundtrack: {
+    accent: '#d66b31', highlight: '#d6ba45', ink: '#211913', window: '#e7dcc2',
+    atmosphere: { skyTop: '#201915', skyMid: '#3a2c22', skyLow: '#6d4930', haze: '#b57b3d', far: '#6e7140', near: '#211913', rail: '#d66b31', edge: '#6e7140', blockA: '#493326', blockB: '#34261e', support: '#17110e' },
+    signs: ['SIDE A', 'DROP THE NEEDLE', 'VERSE', 'TURN IT UP', 'BRIDGE', 'FINAL CHORUS'],
+  },
+  trust: {
+    accent: '#f1f1ed', highlight: '#bdbdb8', ink: '#171717', window: '#f7f7f3',
+    atmosphere: { skyTop: '#dededb', skyMid: '#c8c8c4', skyLow: '#a9a9a6', haze: '#efefec', far: '#777774', near: '#1b1b1b', rail: '#f1f1ed', edge: '#4d4d4b', blockA: '#393938', blockB: '#242424', support: '#111' },
+    signs: ['TAKE THE STEP', 'HOLD FAST', 'TRUST', 'LET GO', 'STAND FIRM', 'SOLID GROUND'],
+  },
+  behold: {
+    accent: '#6e2d24', highlight: '#d8d0a8', ink: '#160907', window: '#e9dfb9',
+    atmosphere: { skyTop: '#180907', skyMid: '#35110d', skyLow: '#6e2d24', haze: '#9c604b', far: '#4a1813', near: '#160907', rail: '#d8d0a8', edge: '#6e2d24', blockA: '#512018', blockB: '#39140f', support: '#160907' },
+    signs: ['LOOK AGAIN', 'PROMISE', 'WONDER', 'THE KING', 'DRAW NEAR', 'BEHOLD'],
+  },
+} as const;
+
 
 function formatTime(seconds: number) {
   const minutes = Math.floor(seconds / 60);
@@ -709,8 +742,8 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
     const context: CanvasRenderingContext2D = canvasContext;
     const touchLandscape = window.matchMedia('(pointer: coarse) and (orientation: landscape)');
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const atmosphere = isSeries ?
-      { skyTop: '#f8e45c', skyMid: '#f8e45c', skyLow: '#ffe777', haze: '#f4d64e', far: '#ef4638', near: '#171b1c', window: '#f8e45c', rail: '#ef4638', edge: '#171b1c', blockA: '#ef4638', blockB: '#c9362c', support: '#171b1c' } : [
+    const seriesVisual = isSeries ? seriesVisualThemes[activeSeries!.series.theme] : null;
+    const atmosphere = seriesVisual?.atmosphere ?? [
       { skyTop: '#0d99a8', skyMid: '#63cec4', skyLow: '#ffd36f', haze: '#ff9662', far: '#668292', near: '#365b6d', window: '#ffd86a', rail: '#2bc8c0', edge: '#087d86', blockA: '#164f5f', blockB: '#0e3e4c', support: '#082d38' },
       { skyTop: '#168fc5', skyMid: '#68cbdc', skyLow: '#d5f1e8', haze: '#fff0b0', far: '#75aeba', near: '#347382', window: '#f5fff5', rail: '#35c9c1', edge: '#087b85', blockA: '#235f70', blockB: '#194e5d', support: '#103b49' },
       { skyTop: '#06111f', skyMid: '#0a2333', skyLow: '#174251', haze: '#245d68', far: '#153746', near: '#092431', window: '#f5c84d', rail: '#24aaa9', edge: '#0b666d', blockA: '#0e3541', blockB: '#092a35', support: '#061c25' },
@@ -744,7 +777,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
         if (index % 3 === 0) { tileContext.fillRect(x + 44, baseY - h - 28, 8, 28); tileContext.fillRect(x + 34, baseY - h - 28, 28, 5); }
         for (let wx = 16; wx < 80; wx += 24) for (let wy = baseY - h + 16; wy < baseY - 12; wy += 28) {
           const lit = (index + wx + wy + layer) % 4 !== 0;
-          tileContext.fillStyle = lit ? (isSeries ? '#f8e45c' : activeCourseIndex === 2 ? atmosphere.window : activeCourseIndex === 0 ? '#e78c52' : '#bde4e8') : building;
+          tileContext.fillStyle = lit ? (seriesVisual?.window ?? (activeCourseIndex === 2 ? '#f5c84d' : activeCourseIndex === 0 ? '#e78c52' : '#bde4e8')) : building;
           tileContext.fillRect(x + wx, wy, 8, 12);
         }
       }
@@ -932,7 +965,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
         activeSpikes = activeSpikes.filter((spike) => spike.x < rally.x || spike.x > clearUntil);
         enemies.forEach((enemy) => { if (enemy.x >= rally.x && enemy.x <= clearUntil) enemy.alive = false; });
         screenShake = .18;
-        showGameNotice(`${activeSeries?.series.theme === 'questions' ? 'QUESTION' : 'MARK'} ${signatureCount}/3 · HAZARDS CLEARED`, 'power');
+        showGameNotice(`${activeSeries?.series.mechanicName.split(' ')[0] ?? 'MARK'} ${signatureCount}/3 · HAZARDS CLEARED`, 'power');
         tone('checkpoint');
         track('series_signature', { signatureCount, progress: player.x, elapsedMs: elapsed * 1000 });
       });
@@ -1079,9 +1112,51 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
             ctx.fillRect(x, 350 + (card % 2) * 34, 220, 52);
             ctx.fillStyle = '#171b1c'; ctx.fillRect(x + 20, 366 + (card % 2) * 34, 130, 7); ctx.fillRect(x + 20, 382 + (card % 2) * 34, 78, 7); ctx.fillStyle = '#ef6f52';
           }
+        } else if (activeSeries?.series.theme === 'soundtrack') {
+          // My Story, My Song: spinning records, poster blocks, and a pulsing
+          // equalizer translate the supplied vintage record-shop artwork.
+          ctx.fillStyle = 'rgba(25, 18, 14, .34)'; ctx.fillRect(0, 0, VIEW_W, 430);
+          const posterColors = ['#d66b31', '#d6ba45', '#6e7140', '#60789b'];
+          for (let index = 0; index < 8; index += 1) {
+            const x = ((index * 214 - cameraX * .045) % 1740 + 1740) % 1740 - 220;
+            const y = 72 + (index % 3) * 102;
+            ctx.fillStyle = posterColors[index % posterColors.length]; ctx.fillRect(x, y, 148, 82);
+            ctx.fillStyle = '#211913'; ctx.fillRect(x + 12, y + 12, 94, 8); ctx.fillRect(x + 12, y + 28, 66, 6);
+            ctx.beginPath(); ctx.arc(x + 116, y + 52, 20, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#d6ba45'; ctx.fillRect(x + 112, y + 48, 8, 8);
+          }
+          for (let bar = 0; bar < 24; bar += 1) {
+            const height = 10 + ((bar * 29 + Math.floor(elapsed * 8) * 7) % 64);
+            ctx.fillStyle = posterColors[bar % posterColors.length]; ctx.fillRect(40 + bar * 52, 422 - height, 22, height);
+          }
+        } else if (activeSeries?.series.theme === 'trust') {
+          // Trust Issues: high-contrast paper seams and ripped openings echo
+          // the monochrome collage without sacrificing platform readability.
+          ctx.fillStyle = 'rgba(238, 238, 234, .28)'; ctx.fillRect(0, 0, VIEW_W, 430);
+          for (let strip = 0; strip < 7; strip += 1) {
+            const x = ((strip * 252 - cameraX * .035) % 1840 + 1840) % 1840 - 260;
+            const y = 82 + (strip % 4) * 76;
+            ctx.fillStyle = strip % 2 ? '#f1f1ed' : '#bdbdb8'; ctx.fillRect(x, y, 210, 52);
+            ctx.fillStyle = '#171717'; ctx.fillRect(x + 18, y + 15, 130, 9); ctx.fillRect(x + 18, y + 32, 84, 7);
+            for (let tear = 0; tear < 6; tear += 1) ctx.fillRect(x + 204 + tear * 4, y + tear * 8, 10, 10);
+          }
+          const splitX = Math.floor((900 - cameraX * .02) / 8) * 8;
+          ctx.fillStyle = '#171717';
+          for (let step = 0; step < 9; step += 1) ctx.fillRect(splitX + (step % 2 ? -12 : 8), 34 + step * 48, 34, 54);
+        } else if (activeSeries?.series.theme === 'behold') {
+          // Behold: parchment-gold arches, a centered crown, and restrained
+          // rays carry the supplied regal, ancient-texture direction.
+          ctx.fillStyle = 'rgba(22, 9, 7, .32)'; ctx.fillRect(0, 0, VIEW_W, 430);
+          const center = Math.floor((640 - cameraX * .012) / 8) * 8;
+          ctx.strokeStyle = '#d8d0a8'; ctx.lineWidth = 12;
+          for (let arch = 0; arch < 3; arch += 1) {
+            ctx.beginPath(); ctx.arc(center, 352, 150 + arch * 74, Math.PI, 0); ctx.stroke();
+          }
+          ctx.fillStyle = '#d8d0a8';
+          for (let ray = 0; ray < 11; ray += 1) ctx.fillRect(center - 330 + ray * 66, 62 + (ray % 2) * 18, 22, 5);
+          ctx.fillRect(center - 54, 194, 108, 30); ctx.fillRect(center - 42, 168, 22, 30); ctx.fillRect(center - 10, 154, 22, 44); ctx.fillRect(center + 22, 168, 22, 30);
         } else {
-          // Declarations and future generic routes retain the bold poster
-          // grammar until their own series artwork becomes active.
+          // Declarations retains its bold protest-poster grammar.
           ctx.fillStyle = '#ef4638';
           for (let index = 0; index < 7; index += 1) {
             const x = ((index * 286 - cameraX * .07) % 1880 + 1880) % 1880 - 260;
@@ -1163,12 +1238,12 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
         ctx.drawImage(skylineTiles[layer], 0, 0, skylineTiles[layer].width, skylineTiles[layer].height, offset, 0, skylineTileWidth, VIEW_H);
         ctx.drawImage(skylineTiles[layer], 0, 0, skylineTiles[layer].width, skylineTiles[layer].height, offset + skylineTileWidth, 0, skylineTileWidth, VIEW_H);
       }
-      ctx.fillStyle = isSeries ? '#ef4638' : activeCourseIndex === 0 ? '#ffd77a' : activeCourseIndex === 1 ? '#dff7f2' : '#78d7d2';
+      ctx.fillStyle = seriesVisual?.accent ?? (activeCourseIndex === 0 ? '#ffd77a' : activeCourseIndex === 1 ? '#dff7f2' : '#78d7d2');
       for (let index = 0; index < 16; index += 1) { const x = ((index * 101 - cameraX * .52) % 1440 + 1440) % 1440 - 80; ctx.fillRect(x, 520 + (index % 3) * 10, 10, 4); }
-      ctx.fillStyle = isSeries ? '#171b1c' : activeCourseIndex === 0 ? '#2c2834' : activeCourseIndex === 1 ? '#1c5664' : '#061720'; ctx.fillRect(-8, 574, VIEW_W + 16, 10);
+      ctx.fillStyle = seriesVisual?.ink ?? (activeCourseIndex === 0 ? '#2c2834' : activeCourseIndex === 1 ? '#1c5664' : '#061720'); ctx.fillRect(-8, 574, VIEW_W + 16, 10);
       ctx.fillStyle = atmosphere.near;
       for (let x = -80 - ((cameraX * .64) % 96); x < VIEW_W + 96; x += 96) { ctx.fillRect(x, 548, 8, 36); ctx.fillRect(x + 8, 552, 64, 4); }
-      ctx.fillStyle = isSeries ? '#ef4638' : activeCourseIndex === 0 ? '#f5d263' : activeCourseIndex === 1 ? '#fff8e9' : '#18a7a2';
+      ctx.fillStyle = seriesVisual?.accent ?? (activeCourseIndex === 0 ? '#f5d263' : activeCourseIndex === 1 ? '#fff8e9' : '#18a7a2');
       for (let index = 0; index < 8; index += 1) { const x = ((index * 227 - cameraX * .38) % 1700 + 1700) % 1700 - 100; ctx.fillRect(x, 535 + (index % 2) * 12, 20, 4); }
       ctx.restore();
 
@@ -1214,7 +1289,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
         ctx.fillStyle = '#061a20'; ctx.fillRect(px - 4, py - 4, platform.w + 8, platform.h + 4);
         ctx.fillStyle = atmosphere.edge; ctx.fillRect(px, py, platform.w, 20);
         ctx.fillStyle = atmosphere.rail; ctx.fillRect(px, py, platform.w, 8);
-        ctx.fillStyle = isSeries ? '#f8e45c' : activeCourseIndex === 2 ? '#78d7d2' : '#d9fff0'; ctx.fillRect(px + 8, py + 2, Math.max(0, platform.w - 16), 2);
+        ctx.fillStyle = seriesVisual?.highlight ?? (activeCourseIndex === 2 ? '#78d7d2' : '#d9fff0'); ctx.fillRect(px + 8, py + 2, Math.max(0, platform.w - 16), 2);
         ctx.fillStyle = '#071316'; for (let x = px + 18; x < px + platform.w - 8; x += 48) ctx.fillRect(x, py + 12, 5, 5);
         ctx.fillStyle = atmosphere.edge; ctx.fillRect(px, py + 20, platform.w, 4);
         for (let x = px; x < px + platform.w; x += 32) for (let y = py + 24; y < py + platform.h; y += 24) {
@@ -1237,22 +1312,9 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
         ctx.fillStyle = accent; ctx.font = 'bold 18px monospace'; ctx.fillText(text, x + 12, y + 24);
         ctx.fillStyle = '#fff8e9'; ctx.fillRect(x + 4, y + 4, 3, 3); ctx.fillRect(x + width - 19, y + 29, 3, 3);
       };
-      if (isSeries) {
-        if (activeSeries?.series.theme === 'questions') {
-          drawSign(760, 535, 'ASK', '#8de0db');
-          drawSign(3720, 545, 'WHY?', '#f8e45c');
-          drawSign(7060, 540, 'WONDER', '#ef6f52');
-          drawSign(8960, 535, 'HOW?', '#8de0db');
-          drawSign(11280, 545, 'LISTEN', '#f8e45c');
-          drawSign(14290, 540, 'KEEP ASKING', '#ef6f52', 210);
-        } else {
-          drawSign(760, 535, 'BE CONSISTENT', '#f8e45c', 205);
-          drawSign(3720, 545, 'OWN IT', '#ef4638');
-          drawSign(7060, 540, 'FORGIVE', '#f8e45c');
-          drawSign(8960, 535, 'SEEK WISDOM', '#ef4638', 190);
-          drawSign(11280, 545, 'THE ONE', '#f8e45c');
-          drawSign(14290, 540, 'DECLARE', '#ef4638');
-        }
+      if (isSeries && seriesVisual) {
+        const signPositions = [760, 3720, 7060, 8960, 11280, 14290];
+        seriesVisual.signs.forEach((label, index) => drawSign(signPositions[index], 535 + index % 3 * 5, label, index % 2 ? seriesVisual.accent : seriesVisual.highlight, label.length > 11 ? 210 : 150));
       } else {
         drawSign(760, 535, 'KEEP GOING', '#78d7d2');
         drawSign(3720, 545, 'HALFWAY', '#f5d263');
@@ -1270,17 +1332,17 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
       rallyPoints.forEach((rally, index) => {
         if (rally.triggered || !visible(rally.x - 32, 64)) return;
         const pulse = 1 + (Math.floor(elapsed * 5 + index) % 2) * 4;
-        ctx.globalAlpha = .22; ctx.fillStyle = '#f8e45c'; ctx.fillRect(rally.x - 5, 110, 10, Math.max(0, rally.y - 142)); ctx.globalAlpha = 1;
+        ctx.globalAlpha = .22; ctx.fillStyle = seriesVisual?.highlight ?? '#f8e45c'; ctx.fillRect(rally.x - 5, 110, 10, Math.max(0, rally.y - 142)); ctx.globalAlpha = 1;
         ctx.fillStyle = '#071316'; ctx.fillRect(rally.x - 26, rally.y - 32, 52, 56);
-        ctx.fillStyle = '#f8e45c'; ctx.fillRect(rally.x - 20, rally.y - 26, 40, 44);
-        ctx.fillStyle = activeSeries?.series.theme === 'questions' ? '#8de0db' : '#ef4638'; ctx.fillRect(rally.x - 14, rally.y - 18, 28, 22);
+        ctx.fillStyle = seriesVisual?.highlight ?? '#f8e45c'; ctx.fillRect(rally.x - 20, rally.y - 26, 40, 44);
+        ctx.fillStyle = seriesVisual?.accent ?? '#ef4638'; ctx.fillRect(rally.x - 14, rally.y - 18, 28, 22);
         ctx.fillStyle = '#071316';
         if (activeSeries?.series.theme === 'questions') {
           ctx.fillRect(rally.x - 6, rally.y - 14, 16, 5); ctx.fillRect(rally.x + 5, rally.y - 10, 5, 9); ctx.fillRect(rally.x - 1, rally.y - 3, 8, 5); ctx.fillRect(rally.x - 3, rally.y + 2, 5, 6); ctx.fillRect(rally.x - 3, rally.y + 12, 5, 5);
         } else {
           ctx.fillRect(rally.x - 5, rally.y - 13, 10, 12); ctx.fillRect(rally.x - 2, rally.y + 7, 4, 16);
         }
-        ctx.strokeStyle = '#f8e45c'; ctx.lineWidth = 4; ctx.strokeRect(rally.x - 32 - pulse, rally.y - 38 - pulse, 64 + pulse * 2, 68 + pulse * 2);
+        ctx.strokeStyle = seriesVisual?.highlight ?? '#f8e45c'; ctx.lineWidth = 4; ctx.strokeRect(rally.x - 32 - pulse, rally.y - 38 - pulse, 64 + pulse * 2, 68 + pulse * 2);
       });
       checkpoints.slice(1).forEach((x, index) => {
         if (!visible(x, 42)) return;
@@ -1404,7 +1466,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
 
   return (
     <main className="shell">
-      <section className="game-frame" aria-label="Crestbound platform game starring Sunny">
+      <section className="game-frame" data-series-theme={isSeries ? activeSeries?.series.theme : undefined} aria-label="Crestbound platform game starring Sunny">
         <canvas ref={canvasRef} className="game-canvas" width={320} height={180} tabIndex={0} aria-label="Platform game. Use arrows or A and D to move, Space to jump, and Shift to dash." />
 
         {screen !== 'title' && (
@@ -1413,7 +1475,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
             <div className={gameNotice ? `hud-stats notice-mode ${gameNotice.kind}` : 'hud-stats'}>
               {gameNotice ? <span className="hud-notice" role="status"><b>{gameNotice.text}</b></span> : <><span><b>{'◆'.repeat(hud.lives)}</b><small>LIVES</small></span>
                 <span><b>{hud.sparks}/{hud.total}</b><small>LIGHT</small></span>
-                {isSeries && <span className="series-status"><b>{hud.signatureCount}/3</b><small>MARKS</small></span>}
+                {isSeries && <span className="series-status"><b>{hud.signatureCount}/3</b><small>{activeSeries?.series.mechanicName.split(' ')[0] ?? 'MARKS'}</small></span>}
                 <span><b>{formatTime(hud.time)}</b><small>TIME</small></span>
                 {hud.shield > 0 && <span className="shield-status"><b>{hud.shield.toFixed(1)}</b><small>SHIELD</small></span>}</>}
             </div>
@@ -1505,10 +1567,10 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
               </div>
               <button className="panel-close" type="button" onClick={closeHomePanel}>Got It</button>
             </aside>}
-            {homePanel === 'series' && <aside ref={homePanelRef} className="course-picker series-picker home-panel" role="dialog" aria-modal="true" aria-labelledby="series-title" tabIndex={-1}>
+            {homePanel === 'series' && <aside ref={homePanelRef} className="course-picker series-picker home-panel" data-series-theme={activeSeries?.series.theme} role="dialog" aria-modal="true" aria-labelledby="series-title" tabIndex={-1}>
               <button className="panel-dismiss" type="button" aria-label="Close Message Routes" onClick={closeHomePanel}>X</button>
               <p className="kicker">NOW AT SUNCREST</p><h2 id="series-title">Message Routes</h2>
-              {activeSeries && seriesWeek ? <><section className="series-feature" data-series-theme={activeSeries.series.theme}>{seriesMessage?.artworkUrl && <div className="message-route-artwork" role="img" aria-label={`${seriesMessage.title} message artwork`} style={{ backgroundImage: `url("${seriesMessage.artworkUrl}")` }} />}<div className="series-wordmark"><small>{activeSeries.series.wordmarkKicker}</small><b>{activeSeries.series.shortName}</b><em>{messageRouteType}</em></div><p>{activeSeries.series.description}</p><div className="series-week"><span>{activeSeries.series.kind === 'special' ? 'THIS WEEKEND' : seriesWeekIndex === activeSeries.weekIndex ? 'THIS WEEK' : `WEEK ${seriesWeekIndex + 1} ARCHIVE`} · {seriesMessage?.title || seriesWeek.title}</span><b>{seriesWeek.routeName}</b>{seriesMessage?.speaker && <small>{seriesMessage.speaker}</small>}<div className="series-mechanic"><span>{messageRouteChallenge}</span><b>{activeSeries.series.mechanicAction}</b><small>{activeSeries.series.mechanicHelp}</small></div></div><div className="series-route-chooser"><span className="series-route-count">{activeSeries.weekIndex + 1} {activeSeries.weekIndex === 0 ? 'ROUTE' : 'ROUTES'}{activeSeries.weekIndex > 0 ? ' · CHOOSE ONE' : ''} · {seriesProgressCount} COMPLETE</span><div className="series-week-dots" style={{ gridTemplateColumns: `repeat(${activeSeries.series.weeks.length}, minmax(0, 1fr))` }} aria-label={`${seriesProgressCount} of ${activeSeries.series.weeks.length} routes completed`}>{activeSeries.series.weeks.map((week, index) => { const locked = index > activeSeries.weekIndex; const complete = completedSeriesWeeks.includes(week.id); const state = [complete ? 'complete' : '', index === activeSeries.weekIndex ? 'current' : '', index === seriesWeekIndex ? 'selected' : ''].filter(Boolean).join(' '); return <button type="button" className={state} disabled={locked} aria-label={locked ? `Week ${index + 1} unlocks ${week.sunday}` : `Select week ${index + 1}: ${week.title}`} aria-pressed={index === seriesWeekIndex} onClick={() => setSeriesWeekIndex(index)} key={week.id}>{locked ? `W${index + 1} · SOON` : `W${index + 1}${complete ? ' · DONE' : index === activeSeries.weekIndex ? ' · NOW' : ' · OPEN'}`}</button>; })}</div></div><div className="series-completion-progress"><span><b>{seriesProgressCount}/{activeSeries.series.weeks.length}</b> ROUTES COMPLETE</span><i style={{ width: `${seriesProgressCount / activeSeries.series.weeks.length * 100}%` }} /></div></section><button className="series-play" type="button" onClick={() => { pendingSeriesStartRef.current = true; setSeriesMode(true); closeHomePanel(); }}>Play {activeSeries.series.kind === 'special' ? 'Special Route' : `Week ${seriesWeekIndex + 1}: ${seriesWeek.routeName}`} ▶</button><button className="series-results-button" type="button" onClick={() => openHomePanel('series-results')}><span><small>SELECTED MESSAGE ROUTE</small><strong>Results &amp; Leaderboard</strong></span><b>{seriesCompletions} {seriesCompletions === 1 ? 'FINISHER' : 'FINISHERS'} →</b></button><div className="series-resources"><button className="message-link" type="button" onClick={() => { track('message_open'); openSeriesResource(seriesMessage?.title || 'This Week\'s Message', seriesMessage?.appUrl || seriesMessage?.url || activeSeries.series.messageUrl); }}><span className="message-icon" aria-hidden="true">▶</span><span><strong>{seriesMessage ? "Watch This Week's Message" : 'Message Details'}</strong><small>{seriesMessage?.title || 'Connect this route to Suncrest'}</small></span></button>{seriesMessage?.discussionGuideUrl && <button type="button" onClick={() => openSeriesResource('Discussion Guide', seriesMessage.discussionGuideUrl!)}>Discussion Guide</button>}{seriesMessage?.readingGuideUrl && <button type="button" onClick={() => openSeriesResource('Reading Guide', seriesMessage.readingGuideUrl!)}>Reading Guide</button>}</div></> : <p>No Message Route is active today. The Daily Run is still ready to play.</p>}
+              {activeSeries && seriesWeek ? <><section className="series-feature" data-series-theme={activeSeries.series.theme}>{(seriesMessage?.artworkUrl || activeSeries.series.artworkUrl) && <div className="message-route-artwork" role="img" aria-label={`${activeSeries.series.name} artwork`} style={{ backgroundImage: `url("${seriesMessage?.artworkUrl || activeSeries.series.artworkUrl}")` }} />}<div className="series-wordmark"><small>{activeSeries.series.wordmarkKicker}</small><b>{activeSeries.series.shortName}</b><em>{messageRouteType}</em></div><p>{activeSeries.series.description}</p><div className="series-week"><span>{activeSeries.series.kind === 'special' ? 'THIS WEEKEND' : seriesWeekIndex === activeSeries.weekIndex ? 'THIS WEEK' : `WEEK ${seriesWeekIndex + 1} ARCHIVE`} · {seriesMessage?.title || seriesWeek.title}</span><b>{seriesWeek.routeName}</b>{seriesMessage?.speaker && <small>{seriesMessage.speaker}</small>}<div className="series-mechanic"><span>{messageRouteChallenge}</span><b>{activeSeries.series.mechanicAction}</b><small>{activeSeries.series.mechanicHelp}</small></div></div><div className="series-route-chooser"><span className="series-route-count">{activeSeries.weekIndex + 1} {activeSeries.weekIndex === 0 ? 'ROUTE' : 'ROUTES'}{activeSeries.weekIndex > 0 ? ' · CHOOSE ONE' : ''} · {seriesProgressCount} COMPLETE</span><div className="series-week-dots" style={{ gridTemplateColumns: `repeat(${activeSeries.series.weeks.length}, minmax(0, 1fr))` }} aria-label={`${seriesProgressCount} of ${activeSeries.series.weeks.length} routes completed`}>{activeSeries.series.weeks.map((week, index) => { const locked = index > activeSeries.weekIndex; const complete = completedSeriesWeeks.includes(week.id); const state = [complete ? 'complete' : '', index === activeSeries.weekIndex ? 'current' : '', index === seriesWeekIndex ? 'selected' : ''].filter(Boolean).join(' '); return <button type="button" className={state} disabled={locked} aria-label={locked ? `Week ${index + 1} unlocks ${week.sunday}` : `Select week ${index + 1}: ${week.title}`} aria-pressed={index === seriesWeekIndex} onClick={() => setSeriesWeekIndex(index)} key={week.id}>{locked ? `W${index + 1} · SOON` : `W${index + 1}${complete ? ' · DONE' : index === activeSeries.weekIndex ? ' · NOW' : ' · OPEN'}`}</button>; })}</div></div><div className="series-completion-progress"><span><b>{seriesProgressCount}/{activeSeries.series.weeks.length}</b> ROUTES COMPLETE</span><i style={{ width: `${seriesProgressCount / activeSeries.series.weeks.length * 100}%` }} /></div></section><button className="series-play" type="button" onClick={() => { pendingSeriesStartRef.current = true; setSeriesMode(true); closeHomePanel(); }}>Play {activeSeries.series.kind === 'special' ? 'Special Route' : `Week ${seriesWeekIndex + 1}: ${seriesWeek.routeName}`} ▶</button><button className="series-results-button" type="button" onClick={() => openHomePanel('series-results')}><span><small>SELECTED MESSAGE ROUTE</small><strong>Results &amp; Leaderboard</strong></span><b>{seriesCompletions} {seriesCompletions === 1 ? 'FINISHER' : 'FINISHERS'} →</b></button><div className="series-resources"><button className="message-link" type="button" onClick={() => { track('message_open'); openSeriesResource(seriesMessage?.title || 'This Week\'s Message', seriesMessage?.appUrl || seriesMessage?.url || activeSeries.series.messageUrl); }}><span className="message-icon" aria-hidden="true">▶</span><span><strong>{seriesMessage ? "Watch This Week's Message" : 'Message Details'}</strong><small>{seriesMessage?.title || 'Connect this route to Suncrest'}</small></span></button>{seriesMessage?.discussionGuideUrl && <button type="button" onClick={() => openSeriesResource('Discussion Guide', seriesMessage.discussionGuideUrl!)}>Discussion Guide</button>}{seriesMessage?.readingGuideUrl && <button type="button" onClick={() => openSeriesResource('Reading Guide', seriesMessage.readingGuideUrl!)}>Reading Guide</button>}</div></> : <p>No Message Route is active today. The Daily Run is still ready to play.</p>}
               <button className="panel-close" type="button" onClick={closeHomePanel}>Close</button>
             </aside>}
             {homePanel === 'series-results' && <aside ref={homePanelRef} className="course-picker series-picker series-results-panel home-panel" role="dialog" aria-modal="true" aria-labelledby="series-results-panel-title" tabIndex={-1}>

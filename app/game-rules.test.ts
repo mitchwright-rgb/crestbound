@@ -205,6 +205,25 @@ test('Message Routes cover weekly series and the standalone Ask Me Anything week
   assert.equal(activeSeriesForDay('2026-12-06')?.series.id, 'behold-2026');
 });
 
+test('upcoming Message Routes carry their own supplied artwork and visual identity', () => {
+  const expected = [
+    ['2026-10-17', 'My Story, My Song', 'soundtrack', '/series/my-story-my-song.jpg'],
+    ['2026-11-01', 'Trust Issues', 'trust', '/series/trust-issues.jpg'],
+    ['2026-12-06', 'Behold', 'behold', '/series/behold-the-coming-king.jpg'],
+  ] as const;
+  for (const [day, name, theme, artworkUrl] of expected) {
+    const route = activeSeriesForDay(day)?.series;
+    assert.equal(route?.name, name);
+    assert.equal(route?.theme, theme);
+    assert.equal(route?.artworkUrl, artworkUrl);
+    const artwork = readFileSync(new URL(`../public${artworkUrl}`, import.meta.url));
+    assert.equal(artwork.subarray(0, 2).toString('hex'), 'ffd8');
+    assert.ok(artwork.length > 100_000);
+  }
+  const styles = readFileSync(new URL('./globals.css', import.meta.url), 'utf8');
+  for (const theme of ['soundtrack', 'trust', 'behold']) assert.match(styles, new RegExp(`data-series-theme="${theme}"`));
+});
+
 test('an active multi-week Message Route keeps every unlocked weekly run available', () => {
   const active = activeSeriesForDay('2026-09-29');
   assert.equal(active?.series.id, 'at-the-movies-2026');

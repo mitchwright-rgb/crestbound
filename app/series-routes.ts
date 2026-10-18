@@ -20,6 +20,7 @@ export type MessageRoute = {
   endsOn: string;
   messageUrl: string;
   seriesUrl: string | null;
+  artworkUrl?: string;
   theme: 'declarations' | 'movies' | 'questions' | 'soundtrack' | 'trust' | 'behold';
   wordmarkKicker: string;
   mechanicName: string;
@@ -83,9 +84,10 @@ export const messageRouteSchedule: readonly MessageRoute[] = [
     ],
   },
   {
-    id: 'soundtrack-2026', kind: 'series', name: 'Soundtrack', shortName: 'SOUNDTRACK', eyebrow: 'COMING TO SUNCREST',
-    description: 'Find the rhythm across weekly routes inspired by Suncrest’s Soundtrack series.',
+    id: 'soundtrack-2026', kind: 'series', name: 'My Story, My Song', shortName: 'MY STORY, MY SONG', eyebrow: 'NOW AT SUNCREST',
+    description: 'Find the rhythm across weekly routes inspired by the stories and songs shaping faith at Suncrest.',
     startsOn: '2026-10-11', endsOn: '2026-10-31', messageUrl: 'https://suncrest.org/messages', seriesUrl: null,
+    artworkUrl: '/series/my-story-my-song.jpg',
     theme: 'soundtrack', wordmarkKicker: 'TURN IT UP', mechanicName: 'BEAT MARKERS',
     mechanicAction: 'HIT 3 BEAT MARKERS', mechanicHelp: 'Stay on beat through the route · all 3 earn +200',
     weeks: [
@@ -98,6 +100,7 @@ export const messageRouteSchedule: readonly MessageRoute[] = [
     id: 'trust-issues-2026', kind: 'series', name: 'Trust Issues', shortName: 'TRUST ISSUES', eyebrow: 'COMING TO SUNCREST',
     description: 'Test your footing across weekly routes inspired by Suncrest’s Trust Issues series.',
     startsOn: '2026-11-01', endsOn: '2026-11-28', messageUrl: 'https://suncrest.org/messages', seriesUrl: null,
+    artworkUrl: '/series/trust-issues.jpg',
     theme: 'trust', wordmarkKicker: 'WATCH YOUR STEP', mechanicName: 'TRUST POINTS',
     mechanicAction: 'REACH 3 TRUST POINTS', mechanicHelp: 'Commit to the path ahead · all 3 earn +200',
     weeks: [
@@ -109,8 +112,9 @@ export const messageRouteSchedule: readonly MessageRoute[] = [
   },
   {
     id: 'behold-2026', kind: 'series', name: 'Behold', shortName: 'BEHOLD', eyebrow: 'COMING TO SUNCREST',
-    description: 'Look again across weekly routes inspired by Suncrest’s Behold series.',
+    description: 'Look again across weekly routes inspired by Suncrest’s Behold: The Coming King series.',
     startsOn: '2026-12-06', endsOn: '2026-12-26', messageUrl: 'https://suncrest.org/messages', seriesUrl: null,
+    artworkUrl: '/series/behold-the-coming-king.jpg',
     theme: 'behold', wordmarkKicker: 'LOOK AGAIN', mechanicName: 'WONDER POINTS',
     mechanicAction: 'DISCOVER 3 WONDER POINTS', mechanicHelp: 'Find what others overlook · all 3 earn +200',
     weeks: [
