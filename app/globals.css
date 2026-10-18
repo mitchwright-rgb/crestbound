@@ -2090,6 +2090,46 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .series-picker:not(.series-results-panel) > .panel-close { display: none; }
 }
 
+/* Message-route wordmarks vary dramatically in length. Give the decision
+   screen enough vertical room on tablet/desktop landscape, and use a truly
+   compact composition in short phone landscape so a three-line title can
+   never collide with its description or progress controls. */
+@media (orientation: landscape) and (min-height: 561px) and (max-height: 800px) {
+  .series-picker:not(.series-results-panel) {
+    height: min(520px, calc(100dvh - 24px));
+    grid-template-rows: 40px 92px 104px minmax(92px, 1fr);
+  }
+  .series-picker:not(.series-results-panel) > .series-feature {
+    grid-template-rows: auto minmax(58px, 1fr) 62px 30px;
+  }
+  .series-picker:not(.series-results-panel) .series-wordmark b {
+    font-size: clamp(28px, 3.5vw, 40px) !important;
+    line-height: .84 !important;
+  }
+  .series-picker:not(.series-results-panel) .series-feature > p {
+    align-self: start;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 560px) {
+  .series-picker:not(.series-results-panel) > .series-feature {
+    grid-template-rows: auto minmax(0, 1fr) 50px;
+  }
+  .series-picker:not(.series-results-panel) .series-wordmark b {
+    font-size: clamp(24px, 3.4vw, 32px) !important;
+    line-height: .82 !important;
+  }
+  .series-picker:not(.series-results-panel) .series-feature > p {
+    align-self: start;
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .series-picker:not(.series-results-panel) .series-route-chooser { grid-row: 3; }
+  .series-picker:not(.series-results-panel) .series-completion-progress { display: none; }
+}
+
 /* Readability pass: supporting copy should remain genuinely readable in the
    phone webview instead of shrinking into decorative micro-type. */
 .home-dashboard .daily-course span,
