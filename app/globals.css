@@ -247,6 +247,10 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   inset: calc(var(--console-header) + var(--console-screen-height) + 8px) 0 0;
   overflow: hidden;
   background:
+    radial-gradient(circle at 7% 20%, rgb(73 91 94 / 28%) 0 3px, rgb(255 255 255 / 44%) 4px 7px, transparent 8px),
+    radial-gradient(circle at 93% 20%, rgb(73 91 94 / 28%) 0 3px, rgb(255 255 255 / 44%) 4px 7px, transparent 8px),
+    radial-gradient(circle at 8% 88%, rgb(73 91 94 / 24%) 0 3px, rgb(255 255 255 / 40%) 4px 7px, transparent 8px),
+    radial-gradient(circle at 92% 88%, rgb(73 91 94 / 24%) 0 3px, rgb(255 255 255 / 40%) 4px 7px, transparent 8px),
     linear-gradient(115deg, rgb(255 255 255 / 46%), transparent 30%),
     linear-gradient(180deg, rgb(228 239 237 / 82%), rgb(187 201 203 / 86%));
   box-shadow: inset 0 5px 0 rgb(255 255 255 / 56%), inset 0 0 38px rgb(42 57 59 / 8%);
@@ -270,7 +274,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   inset: 48px 34px 40px;
   content: '';
   background: url('/internal-phone-hardware.svg') center / contain no-repeat;
-  opacity: .19;
+  opacity: .23;
   filter: contrast(.9);
   pointer-events: none;
 }
@@ -472,6 +476,9 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   grid-template: repeat(3, 44px) / repeat(3, 44px);
   gap: 0;
   padding: 0;
+  border-radius: 50%;
+  background: rgb(102 122 124 / 12%);
+  box-shadow: inset 0 0 0 2px rgb(67 84 87 / 18%), inset 0 5px 9px rgb(52 67 69 / 12%), 0 1px 0 rgb(255 255 255 / 58%);
 }
 .handheld-control-bay .direction-pad::before,
 .menu-direction-pad::before {
@@ -548,6 +555,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   gap: 3px;
   border-radius: 50%;
   transform: rotate(9deg);
+  box-shadow: 0 0 0 7px rgb(96 115 117 / 18%), 0 0 0 9px rgb(255 255 255 / 34%), 4px 5px 0 rgb(18 28 30 / 54%), inset 0 4px 0 rgb(255 255 255 / 24%);
 }
 .handheld-control-bay .touch-controls .dash-control,
 .menu-action-pad button:first-child { color: #fff8e9; background: #b94357; outline-color: #e48a98; }
@@ -558,6 +566,36 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .handheld-control-bay .touch-controls .jump-control,
 .menu-action-pad button:last-child { color: #fff8e9; background: #d95162; outline-color: #f08b97; }
 .handheld-control-bay .touch-controls .dash-control.ready { color: #071316; background: var(--teal-light); }
+.console-start-control {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  bottom: 54px;
+  width: 62px;
+  height: 25px;
+  display: grid;
+  grid-template-columns: 30px 1fr;
+  align-items: center;
+  gap: 5px;
+  transform: translateX(-50%);
+  border: 0;
+  color: #35474a;
+  background: transparent;
+  font: 6px/1 var(--font-pixel), monospace;
+  letter-spacing: .06em;
+  touch-action: manipulation;
+}
+.console-start-control i {
+  width: 30px;
+  height: 10px;
+  display: block;
+  transform: rotate(-8deg);
+  border: 2px solid #101719;
+  border-radius: 999px;
+  background: #263639;
+  box-shadow: 2px 3px 0 rgb(20 29 31 / 42%), inset 0 2px 0 rgb(255 255 255 / 14%), 0 0 0 4px rgb(102 122 124 / 12%);
+}
+.console-start-control:active i { transform: translate(1px, 2px) rotate(-8deg); box-shadow: 1px 1px 0 rgb(20 29 31 / 42%), inset 0 2px 0 rgb(255 255 255 / 8%); }
 .menu-direction-pad > span { display: none; }
 .menu-direction-pad i { font-style: normal; }
 .handheld-menu-controls button:disabled { opacity: .86; }

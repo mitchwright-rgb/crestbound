@@ -27,9 +27,10 @@ type StreakCelebration = { days: number; milestone: boolean; message: string };
 
 const WORLD_W = 15400;
 const FINISH_X = 15135;
-const VIEW_W = 540;
-const VIEW_H = 720;
-const RENDER_SCALE = 1 / 3;
+const VIEW_W = 600;
+const VIEW_H = 800;
+const RENDER_SCALE = 0.3;
+const WORLD_Y_OFFSET = 70;
 
 const courseSpecs = [
   { id: 'goldline', name: 'Goldline Rooftops', short: 'GOLDLINE', accent: '#f5d263', description: 'Balanced rooftops, branching high paths, and precision shortcuts.' },
@@ -735,7 +736,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
       { skyTop: '#06111f', skyMid: '#0a2333', skyLow: '#174251', haze: '#245d68', far: '#153746', near: '#092431', window: '#f5c84d', rail: '#24aaa9', edge: '#0b666d', blockA: '#0e3541', blockB: '#092a35', support: '#061c25' },
     ][activeCourseIndex];
     const skyLayer = document.createElement('canvas');
-    skyLayer.width = VIEW_W / 3; skyLayer.height = VIEW_H / 3;
+    skyLayer.width = VIEW_W * RENDER_SCALE; skyLayer.height = VIEW_H * RENDER_SCALE;
     const skyContext = skyLayer.getContext('2d');
     if (skyContext) {
       skyContext.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0);
@@ -749,7 +750,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
     const skylineTileWidth = 1440;
     const skylineTiles = [0, 1].map((layer) => {
       const tile = document.createElement('canvas');
-      tile.width = skylineTileWidth / 3; tile.height = VIEW_H / 3;
+      tile.width = skylineTileWidth * RENDER_SCALE; tile.height = VIEW_H * RENDER_SCALE;
       const tileContext = tile.getContext('2d');
       if (!tileContext) return tile;
       tileContext.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0);
@@ -1065,6 +1066,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(skyLayer, 0, 0, skyLayer.width, skyLayer.height, -8, 0, VIEW_W + 16, VIEW_H);
       ctx.save();
+      ctx.translate(0, WORLD_Y_OFFSET);
 
       if (isSeries) {
         if (activeSeries?.series.theme === 'movies') {
@@ -1265,7 +1267,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
         ctx.globalAlpha = 1;
       }
 
-      ctx.save(); ctx.translate(-renderCameraX, -touchWorldLift);
+      ctx.save(); ctx.translate(-renderCameraX, WORLD_Y_OFFSET - touchWorldLift);
       const viewLeft = renderCameraX - 180;
       const viewRight = renderCameraX + VIEW_W + 180;
       const visible = (x: number, width = 0) => x + width >= viewLeft && x <= viewRight;
@@ -1452,11 +1454,14 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
   }, [seriesMode, seriesWeekIndex, routeSeed]);
 
   const homeMenuOptions = ['DAILY RUN', 'MESSAGE ROUTES', 'LEADERBOARD', 'HOW TO PLAY'];
-  const handheldControls = screen === 'playing' ? (
-    <div ref={touchControlsRef} className="touch-controls" aria-label="Handheld game controls">
+  const handheldControls = screen === 'playing' || screen === 'paused' ? (
+    <>
+      <div ref={touchControlsRef} className="touch-controls" aria-label="Handheld game controls">
       <div className="direction-pad"><small aria-hidden="true">MOVE</small><button className="pad-up" type="button" data-control="jump" aria-label="Move up: Jump" onPointerDown={(event) => beginPress('jump', event)} onPointerUp={(event) => endPress('jump', event)} onPointerCancel={(event) => endPress('jump', event)} onLostPointerCapture={(event) => endPress('jump', event)}>↑</button><button className="pad-left" type="button" data-control="left" aria-label="Move left" onPointerDown={(event) => beginPress('left', event)} onPointerUp={(event) => endPress('left', event)} onPointerCancel={(event) => endPress('left', event)} onLostPointerCapture={(event) => endPress('left', event)}>←</button><button className="pad-right" type="button" data-control="right" aria-label="Move right" onPointerDown={(event) => beginPress('right', event)} onPointerUp={(event) => endPress('right', event)} onPointerCancel={(event) => endPress('right', event)} onLostPointerCapture={(event) => endPress('right', event)}>→</button><button className="pad-down" type="button" data-control="dash" aria-label="Move down: Dash" onPointerDown={(event) => beginPress('dash', event)} onPointerUp={(event) => endPress('dash', event)} onPointerCancel={(event) => endPress('dash', event)} onLostPointerCapture={(event) => endPress('dash', event)}>↓</button></div>
       <div className="action-pad"><button className={hud.dashReady ? 'dash-control ready' : 'dash-control'} type="button" data-control="dash" aria-label={hud.dashReady ? 'B button: Dash ready' : 'B button: Dash charging'} onPointerDown={(event) => beginPress('dash', event)} onPointerUp={(event) => endPress('dash', event)} onPointerCancel={(event) => endPress('dash', event)} onLostPointerCapture={(event) => endPress('dash', event)}><b aria-hidden="true">B</b><small>DASH</small></button><button className="jump-control" type="button" data-control="jump" aria-label="A button: Jump — tap twice for double jump" onPointerDown={(event) => beginPress('jump', event)} onPointerUp={(event) => endPress('jump', event)} onPointerCancel={(event) => endPress('jump', event)} onLostPointerCapture={(event) => endPress('jump', event)}><b aria-hidden="true">A</b><small>JUMP 2X</small></button></div>
-    </div>
+      </div>
+      <button className="console-start-control" type="button" onClick={togglePause} aria-label={screen === 'paused' ? 'Resume game with Start button' : 'Pause game with Start button'}><i aria-hidden="true" />START</button>
+    </>
   ) : (
     <div className="handheld-menu-controls" aria-label="Handheld menu controls">
       <div className="menu-direction-pad"><small>CHOOSE</small><button className="pad-up" type="button" aria-label="Previous menu option" disabled={homePanel !== 'none'} onClick={() => setHomeSelection((value) => (value + homeMenuOptions.length - 1) % homeMenuOptions.length)}>↑</button><button className="pad-left" type="button" aria-label="Previous menu option" disabled={homePanel !== 'none'} onClick={() => setHomeSelection((value) => (value + homeMenuOptions.length - 1) % homeMenuOptions.length)}>←</button><button className="pad-right" type="button" aria-label="Next menu option" disabled={homePanel !== 'none'} onClick={() => setHomeSelection((value) => (value + 1) % homeMenuOptions.length)}>→</button><button className="pad-down" type="button" aria-label="Next menu option" disabled={homePanel !== 'none'} onClick={() => setHomeSelection((value) => (value + 1) % homeMenuOptions.length)}>↓</button><span><i>PREV</i><i>NEXT</i></span></div>
@@ -1480,7 +1485,6 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
             </div>
             <div className="hud-actions">
               <button type="button" onClick={toggleSound} aria-label={muted ? 'Turn sound on' : 'Mute sound'}>{muted ? '♪ OFF' : '♪ ON'}</button>
-              <button type="button" onClick={togglePause} aria-label={screen === 'paused' ? 'Resume game' : 'Pause game'}>{screen === 'paused' ? '▶' : 'Ⅱ'}</button>
             </div>
             <div className="route-meter" aria-label={`${Math.round(hud.progress / (WORLD_W - 265) * 100)} percent through the course`}><span style={{ width: `${Math.min(100, hud.progress / (WORLD_W - 265) * 100)}%` }} /></div>
           </header>
