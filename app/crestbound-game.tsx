@@ -27,7 +27,9 @@ type StreakCelebration = { days: number; milestone: boolean; message: string };
 
 const WORLD_W = 15400;
 const FINISH_X = 15135;
-const VIEW_W = 600;
+// A wider portrait camera keeps Sunny readable while giving runners enough
+// look-ahead to react to platforms, lights, and enemies on a phone screen.
+const VIEW_W = 760;
 const VIEW_H = 800;
 const RENDER_SCALE = 0.3;
 const WORLD_Y_OFFSET = 70;
@@ -1471,7 +1473,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
 
   return (
     <PortraitGameShell controls={handheldControls} theme={isSeries ? activeSeries?.series.theme : undefined} label="Crestbound platform game starring Sunny">
-        <canvas ref={canvasRef} className="game-canvas" width={180} height={240} tabIndex={0} aria-label="Platform game. Use arrows or A and D to move, Space to jump, and Shift to dash." />
+        <canvas ref={canvasRef} className="game-canvas" width={VIEW_W * RENDER_SCALE} height={VIEW_H * RENDER_SCALE} tabIndex={0} aria-label="Platform game. Use arrows or A and D to move, Space to jump, and Shift to dash." />
 
         {screen !== 'title' && (
           <header className="hud" aria-live="polite" aria-atomic="false">

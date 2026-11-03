@@ -489,7 +489,8 @@ test('Subsplash uses one permanent portrait handheld without an orientation gate
   assert.match(styles, /\.portrait-game-frame:has\(\.hud\) \.game-canvas/);
   assert.match(styles, /aspect-ratio: 3 \/ 4/);
   assert.doesNotMatch(styles, /inset: 42% 15px auto/);
-  assert.match(source, /width=\{180\} height=\{240\}/);
+  assert.match(source, /const VIEW_W = 760/);
+  assert.match(source, /width=\{VIEW_W \* RENDER_SCALE\} height=\{VIEW_H \* RENDER_SCALE\}/);
   assert.match(shell, /handheld-screen/);
   assert.match(shell, /handheld-control-bay/);
   assert.doesNotMatch(shell, /handheld-easter-egg/);

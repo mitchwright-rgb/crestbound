@@ -2826,9 +2826,13 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .portrait-game-frame.game-frame {
   --console-header: 0px;
   --console-screen-height: 53.3228%;
-  width: min(100dvw, calc(100svh * .512658), 430px);
+  /* The source SVG includes a small transparent export margin. A 4% overscan
+     lets the physical shell, rather than that margin, fill the phone. */
+  width: max(104dvw, calc(104svh * .512658));
   height: auto;
-  max-width: 430px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: none;
   max-height: none;
   aspect-ratio: 648 / 1264;
   overflow: visible;
@@ -2871,8 +2875,8 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .handheld-control-bay .direction-pad,
 .menu-direction-pad {
   position: absolute;
-  left: 9.4%;
-  top: 13.5%;
+  left: 10.2%;
+  top: 19%;
   width: 132px;
   height: 132px;
   background: transparent;
@@ -2886,8 +2890,8 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .menu-action-pad {
   position: absolute;
   left: 55%;
-  top: 14%;
-  width: 146px;
+  top: 24%;
+  width: 204px;
   height: 112px;
 }
 .handheld-control-bay .touch-controls button,
@@ -2895,12 +2899,54 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .handheld-control-bay .touch-controls .dash-control,
 .handheld-control-bay .touch-controls .jump-control,
 .menu-action-pad button {
-  border: 0 !important;
-  outline: 0 !important;
-  color: transparent !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  opacity: 0 !important;
+  width: 72px;
+  height: 72px;
+  opacity: 1;
+}
+.handheld-control-bay .action-pad button:first-child,
+.menu-action-pad button:first-child { left: 0; top: 27px; }
+.handheld-control-bay .action-pad button:last-child,
+.menu-action-pad button:last-child { left: 77px; right: auto; top: 13px; }
+.handheld-control-bay .direction-pad,
+.menu-direction-pad {
+  border-radius: 50%;
+  background: rgb(207 222 211 / 14%);
+  box-shadow: inset 0 0 0 1px rgb(246 255 248 / 32%);
+}
+.handheld-control-bay .direction-pad::before,
+.menu-direction-pad::before {
+  display: block;
+  border-radius: 7px;
+  background:
+    linear-gradient(#222927 0 0) 44px 0 / 44px 132px no-repeat,
+    linear-gradient(#222927 0 0) 0 44px / 132px 44px no-repeat;
+  filter: drop-shadow(2px 3px 1px rgb(0 0 0 / 62%));
+}
+.handheld-control-bay .direction-pad button,
+.menu-direction-pad button {
+  width: 44px;
+  height: 44px;
+  color: #e7eee9;
+  opacity: 1;
+}
+.handheld-control-bay .touch-controls .dash-control,
+.handheld-control-bay .touch-controls .jump-control,
+.menu-action-pad button {
+  border: 2px solid #222927 !important;
+  outline: 1px solid rgb(238 250 241 / 58%) !important;
+  color: #fffaf1 !important;
+  box-shadow:
+    0 0 0 7px rgb(226 238 229 / 16%),
+    0 4px 3px rgb(0 0 0 / 58%),
+    inset 0 3px 0 rgb(255 255 255 / 28%) !important;
+}
+.handheld-control-bay .touch-controls .dash-control,
+.menu-action-pad button:first-child { background: linear-gradient(145deg, #e56c7d, #b73f54) !important; }
+.handheld-control-bay .touch-controls .jump-control,
+.menu-action-pad button:last-child { background: linear-gradient(145deg, #f0808d, #c7475a) !important; }
+.handheld-control-bay .touch-controls .dash-control.ready {
+  color: #071316 !important;
+  background: linear-gradient(145deg, #9ce9e4, #52bbb7) !important;
 }
 .console-start-control {
   left: 50%;
@@ -3025,7 +3071,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 
 @media (max-height: 700px) {
   .portrait-game-frame.game-frame {
-    width: min(100dvw, calc(100svh * .512658), 430px);
+    width: max(104dvw, calc(104svh * .512658));
     height: auto;
     border-radius: 0;
   }
