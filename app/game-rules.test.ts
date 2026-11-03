@@ -477,3 +477,23 @@ test('home summary stays pinned to today while leaderboard filters change', () =
   assert.match(game, /if \(requestId !== boardRequestRef\.current\) return/);
   assert.match(game, /if \(requestId !== dailySummaryRequestRef\.current\) return/);
 });
+
+test('Subsplash uses one permanent portrait handheld without an orientation gate', () => {
+  const source = readFileSync(new URL('./crestbound-game.tsx', import.meta.url), 'utf8');
+  const styles = readFileSync(new URL('./globals.css', import.meta.url), 'utf8');
+  const shell = readFileSync(new URL('./portrait-game-shell.tsx', import.meta.url), 'utf8');
+  assert.doesNotMatch(source, /waitingForLandscape|Turn Sideways to Start|orientation_wait/);
+  assert.match(source, /designed for portrait play inside its handheld console/);
+  assert.match(source, /SUNCREST APP/);
+  assert.match(styles, /Permanent Suncrest handheld shell/);
+  assert.match(styles, /\.portrait-game-frame:has\(\.hud\) \.game-canvas/);
+  assert.match(styles, /aspect-ratio: 16 \/ 9/);
+  assert.match(shell, /handheld-screen/);
+  assert.match(shell, /handheld-control-bay/);
+  assert.match(source, /handheld-menu-controls/);
+  assert.doesNotMatch(source, /crestbound-landscape-background/);
+  assert.match(source, /className="direction-pad"/);
+  assert.match(source, /className="action-pad"/);
+  assert.match(source, />B<\/b><small>DASH<\/small>/);
+  assert.match(source, />A<\/b><small>JUMP 2X<\/small>/);
+});

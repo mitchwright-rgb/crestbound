@@ -1,6 +1,7 @@
 'use client';
 
 import { FormEvent, PointerEvent as ReactPointerEvent, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import PortraitGameShell from './portrait-game-shell';
 import { SoundKind, soundSources, soundVolumes } from './audio-assets';
 import { challengeMedal, chicagoDayKey, collectLightPower, crestScoreBreakdown, crossedCommunityGoal, dailyObjectiveSpecs, dashVelocity, formatDailyReset, gravityForModifier, horizontalSpeedLimit, jumpReleaseGravity, jumpVelocityForModifier, millisecondsUntilNextChicagoDay, musicTrackForCourse, musicTrackForSeries, objectiveResultLabel, resetRunTiming, resolveDamage, runStorageKey, seriesBeaconReached, streakReward, tailwindAcceleration, touchInputFromControls, type CrestScoreBreakdown } from './game-rules';
 import { buildSeededCourse } from './course-generator';
@@ -111,13 +112,11 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const touchControlsRef = useRef<HTMLDivElement>(null);
   const screenRef = useRef<Screen>('title');
-  const waitingForLandscapeRef = useRef(false);
   const coachPauseRef = useRef(false);
   const inputRef = useRef({ left: false, right: false, jump: false, dash: false });
   const activeTouchPointersRef = useRef<Map<number, keyof typeof inputRef.current>>(new Map());
   const resetRef = useRef<(() => void) | null>(null);
   const [screen, setScreen] = useState<Screen>('title');
-  const [waitingForLandscape, setWaitingForLandscape] = useState(false);
   const [muted, setMuted] = useState(false);
   const mutedRef = useRef(false);
   const [hud, setHud] = useState<Hud>({ sparks: 0, total: sparkSeed.length, lives: 3, hits: 0, time: 0, best: null, checkpoint: 0, progress: 0, dashReady: true, shield: 0, signatureCount: 0 });
@@ -527,7 +526,6 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
     setPreviousBestScore(null); setIsNewBestScore(false); setSeriesBadgeNew(false);
     setStreakCelebration(null); setCommunityCelebration(null);
     runMetricsRef.current = { dashCount: 0 };
-    const shouldWaitForLandscape = window.matchMedia('(orientation: portrait) and (pointer: coarse)').matches;
     {
       setRunStartState('connecting');
       setRunStartError('');
@@ -557,9 +555,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
     }
     setRunStartState('idle');
     setRunStartError('');
-    startMusic(!shouldWaitForLandscape);
-    waitingForLandscapeRef.current = shouldWaitForLandscape;
-    setWaitingForLandscape(shouldWaitForLandscape);
+    startMusic();
     setGameScreen('playing');
     const needsCoach = !window.localStorage.getItem('crestbound-dash-learned');
     const needsModifierCoach = isSeries
@@ -568,7 +564,6 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
     coachPauseRef.current = needsCoach || needsModifierCoach;
     dashCoachRef.current = needsCoach; setShowDashCoach(needsCoach); track(isSeries ? 'series_start' : 'run_start');
     setShowModifierCoach(needsModifierCoach);
-    if (shouldWaitForLandscape) track('orientation_wait');
     if (replaying) track('replay');
     requestAnimationFrame(() => canvasRef.current?.focus());
   }
@@ -576,11 +571,8 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
   function togglePause() {
     if (screenRef.current === 'playing') { track('pause'); flushTelemetry(); setGameScreen('paused'); }
     else if (screenRef.current === 'paused') {
-      const shouldWaitForLandscape = window.matchMedia('(orientation: portrait) and (pointer: coarse)').matches;
-      waitingForLandscapeRef.current = shouldWaitForLandscape;
-      setWaitingForLandscape(shouldWaitForLandscape);
       setGameScreen('playing');
-      if (!shouldWaitForLandscape) startMusic();
+      startMusic();
     }
   }
 
@@ -588,7 +580,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
     setMuted((value) => {
       const next = !value;
       mutedRef.current = next;
-      if (next) stopMusic(); else if (screenRef.current === 'playing' && !waitingForLandscapeRef.current) startMusic();
+      if (next) stopMusic(); else if (screenRef.current === 'playing') startMusic();
       return next;
     });
   }
@@ -716,39 +708,6 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
       document.removeEventListener('touchcancel', endTouches, true);
     };
   }, [screen]);
-
-  useEffect(() => {
-    const portraitPhone = window.matchMedia('(orientation: portrait) and (pointer: coarse)');
-    let orientationTimer = 0;
-    const syncOrientation = () => {
-      window.clearTimeout(orientationTimer);
-      orientationTimer = window.setTimeout(() => {
-        if (screenRef.current === 'title') {
-          const titleScreen = document.querySelector<HTMLElement>('.title-screen');
-          if (titleScreen) titleScreen.scrollTop = 0;
-          return;
-        }
-        if (screenRef.current !== 'playing') return;
-        const shouldWait = portraitPhone.matches;
-        if (waitingForLandscapeRef.current === shouldWait) return;
-        waitingForLandscapeRef.current = shouldWait;
-        setWaitingForLandscape(shouldWait);
-        if (shouldWait) {
-          activeTouchPointersRef.current.clear();
-          inputRef.current = { left: false, right: false, jump: false, dash: false };
-          if (musicRef.current) musicRef.current.volume = 0;
-        }
-        else { startMusic(); requestAnimationFrame(() => canvasRef.current?.focus()); }
-      }, 160);
-    };
-    portraitPhone.addEventListener('change', syncOrientation);
-    window.addEventListener('orientationchange', syncOrientation);
-    return () => {
-      window.clearTimeout(orientationTimer);
-      portraitPhone.removeEventListener('change', syncOrientation);
-      window.removeEventListener('orientationchange', syncOrientation);
-    };
-  }, [startMusic, stopMusic]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -1449,7 +1408,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
     function loop(now: number) {
       const frameTime = Math.min(.05, (now - last) / 1000);
       last = now;
-      if (screenRef.current === 'playing' && !waitingForLandscapeRef.current && !coachPauseRef.current) {
+      if (screenRef.current === 'playing' && !coachPauseRef.current) {
         accumulator += frameTime;
         let steps = 0;
         while (accumulator >= 1 / 60 && steps < 3) {
@@ -1480,9 +1439,20 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seriesMode, seriesWeekIndex, routeSeed]);
 
+  const handheldControls = screen === 'playing' ? (
+    <div ref={touchControlsRef} className="touch-controls" aria-label="Touch controls">
+      <div className="direction-pad"><small aria-hidden="true">MOVE</small><button type="button" data-control="left" aria-label="Move left" onPointerDown={(event) => beginPress('left', event)} onPointerUp={(event) => endPress('left', event)} onPointerCancel={(event) => endPress('left', event)} onLostPointerCapture={(event) => endPress('left', event)}>←</button><button type="button" data-control="right" aria-label="Move right" onPointerDown={(event) => beginPress('right', event)} onPointerUp={(event) => endPress('right', event)} onPointerCancel={(event) => endPress('right', event)} onLostPointerCapture={(event) => endPress('right', event)}>→</button></div>
+      <div className="action-pad"><button className={hud.dashReady ? 'dash-control ready' : 'dash-control'} type="button" data-control="dash" aria-label={hud.dashReady ? 'B button: Dash ready' : 'B button: Dash charging'} onPointerDown={(event) => beginPress('dash', event)} onPointerUp={(event) => endPress('dash', event)} onPointerCancel={(event) => endPress('dash', event)} onLostPointerCapture={(event) => endPress('dash', event)}><b aria-hidden="true">B</b><small>DASH</small></button><button className="jump-control" type="button" data-control="jump" aria-label="A button: Jump — tap twice for double jump" onPointerDown={(event) => beginPress('jump', event)} onPointerUp={(event) => endPress('jump', event)} onPointerCancel={(event) => endPress('jump', event)} onLostPointerCapture={(event) => endPress('jump', event)}><b aria-hidden="true">A</b><small>JUMP 2X</small></button></div>
+    </div>
+  ) : (
+    <div className="handheld-menu-controls" aria-label="Handheld menu controls">
+      <div className="menu-direction-pad"><small>MENU</small><button type="button" aria-label="Open leaderboard" onClick={() => { openHomePanel('leaderboard'); track('leaderboard_open'); }}>←</button><button type="button" aria-label="Open how to play" onClick={() => { setHelpTab('play'); openHomePanel('help'); }}>→</button><span><i>BOARD</i><i>HELP</i></span></div>
+      <div className="menu-action-pad"><button type="button" aria-label={homePanel !== 'none' ? 'B button: Back' : 'B button: Open Message Routes'} onClick={() => homePanel !== 'none' ? closeHomePanel() : openHomePanel('series')}><b>B</b><small>{homePanel !== 'none' ? 'BACK' : 'ROUTES'}</small></button><button type="button" aria-label="A button: Run with Sunny" disabled={runStartState === 'connecting'} onClick={() => void startGame(true)}><b>A</b><small>RUN</small></button></div>
+    </div>
+  );
+
   return (
-    <main className="shell">
-      <section className="game-frame" data-series-theme={isSeries ? activeSeries?.series.theme : undefined} aria-label="Crestbound platform game starring Sunny">
+    <PortraitGameShell controls={handheldControls} theme={isSeries ? activeSeries?.series.theme : undefined} label="Crestbound platform game starring Sunny">
         <canvas ref={canvasRef} className="game-canvas" width={320} height={180} tabIndex={0} aria-label="Platform game. Use arrows or A and D to move, Space to jump, and Shift to dash." />
 
         {screen !== 'title' && (
@@ -1508,8 +1478,6 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
             <div className="home-hero">
               <div className="home-cover">
                 <picture className="home-cover-scene">
-                  <source media="(orientation: landscape)" srcSet="/crestbound-landscape-background-v1.webp" type="image/webp" />
-                  <source media="(orientation: landscape)" srcSet="/crestbound-landscape-background-v1.png" />
                   <source srcSet="/crestbound-square-background-v1.webp" type="image/webp" />
                   <img src="/crestbound-square-background-v1.png" width="1254" height="1254" alt="The golden-hour Crestbound skyline beneath the A Daily Skyline Run title" />
                 </picture>
@@ -1518,7 +1486,6 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
                   <span className="sunny-cover-name">SUNNY</span>
                 </div>
                 <picture className="home-cover-title-foreground">
-                  <source media="(orientation: landscape)" srcSet="/crestbound-landscape-title-foreground-v1.png" />
                   <img src="/crestbound-square-title-foreground-v1.png" width="1254" height="1254" alt="" />
                 </picture>
                 <span className="sr-only">Sunny jumps out from behind the Crestbound title, lands on it, and waves.</span>
@@ -1580,7 +1547,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
                 {(['play', 'score', 'world'] as HelpTab[]).map((tab) => <button id={`help-tab-${tab}`} className={helpTab === tab ? 'active' : ''} type="button" role="tab" aria-selected={helpTab === tab} aria-controls="help-tabpanel" onClick={() => setHelpTab(tab)} key={tab}>{tab === 'play' ? 'Play' : tab === 'score' ? 'Score' : 'World'}</button>)}
               </div>
               <div id="help-tabpanel" className="help-content" role="tabpanel" aria-labelledby={`help-tab-${helpTab}`}>
-                {helpTab === 'play' && <section className="help-play"><div className="control-directory"><article><b>RUN</b><span>Arrows · A/D · touch</span></article><article><b>JUMP 2X</b><span>Space or JUMP · tap twice</span></article><article><b>DASH</b><span>Shift · X · DASH</span></article></div><div className="today-guide"><small>TODAY&apos;S ROUTE</small><b>{modifier.name} · {objective.name}</b><span>{modifier.description}</span>{!isSeries && <span><b>{dailyCondition.name}:</b> {dailyCondition.description}</span>}<span>{objective.description}. Finish for Bronze; reach the target for Silver or Gold.</span></div><p>Touch controls appear automatically. Turn your phone sideways before the timer starts.</p><p className="app-tip"><b>FULL SCREEN</b> On iPhone, tap Share → Add to Home Screen.</p></section>}
+                {helpTab === 'play' && <section className="help-play"><div className="control-directory"><article><b>RUN</b><span>Arrows · A/D · touch</span></article><article><b>JUMP 2X</b><span>Space or JUMP · tap twice</span></article><article><b>DASH</b><span>Shift · X · DASH</span></article></div><div className="today-guide"><small>TODAY&apos;S ROUTE</small><b>{modifier.name} · {objective.name}</b><span>{modifier.description}</span>{!isSeries && <span><b>{dailyCondition.name}:</b> {dailyCondition.description}</span>}<span>{objective.description}. Finish for Bronze; reach the target for Silver or Gold.</span></div><p>Crestbound is designed for portrait play inside its handheld console.</p><p className="app-tip"><b>SUNCREST APP</b> Keep your phone upright and use the A, B, and D-pad controls.</p></section>}
                 {helpTab === 'score' && <section className="scoring-directory help-card-grid"><article><b>+500 · FINISH</b><span>Clear the route to bank a score.</span></article><article><b>UP TO +1,200 · PACE</b><span>Finish faster for more points.</span></article><article><b>UP TO +800 · LIGHT</b><span>Collect a larger share of the route&apos;s Light.</span></article><article><b>UP TO +200 · CHALLENGE</b><span>Earn Silver or Gold—or complete the Series objective.</span></article><p><b>EVERY FINISH COUNTS</b> All collected Light also goes to Suncrest&apos;s weekly community goal. Highest score wins; time breaks an exact tie.</p></section>}
                 {helpTab === 'world' && <section className="help-world"><div className="world-rules help-card-grid"><article><b>GOLD LIGHT</b><span>Shortens Dash recharge.</span></article><article><b>STORM LIGHT</b><span>Readies Dash and shields one hit.</span></article><article><b>CHECKPOINT</b><span>Saves progress and restores one life.</span></article><article><b>ENEMY</b><span>Dash through or land from above.</span></article></div><div className="twist-directory"><h3>Daily Twists</h3>{modifierSpecs.map((item) => <article className={item.id === modifier.id && !isPractice ? 'today' : ''} key={item.id}><b>{item.name}{item.id === modifier.id && !isPractice ? ' · TODAY' : ''}</b><span>{item.shortDescription}</span></article>)}</div></section>}
               </div>
@@ -1670,13 +1637,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
           </div>
         )}
 
-        {screen === 'playing' && (
-          <>{waitingForLandscape && <div className="rotate-prompt"><span aria-hidden="true">↻</span><strong>Turn Sideways to Start</strong><small>Your run and timer are paused until the phone is in landscape.</small></div>}{showModifierCoach && !waitingForLandscape ? <div className="dash-coach modifier-coach"><b>{isSeries ? `EXCLUSIVE CHALLENGE · ${activeSeries?.series.mechanicName ?? 'MESSAGE MARKS'}` : `${modifier.name} + ${dailyCondition.name}`}</b><span>{isSeries ? activeSeries?.series.mechanicHelp : `${modifier.description} ${dailyCondition.description}`}</span><button type="button" onClick={dismissModifierCoach}>LET&apos;S RUN</button></div> : showDashCoach && !waitingForLandscape && <div className="dash-coach"><b>DASH IS YOUR EDGE</b><span>Press SHIFT or X — or tap DASH — to burst through hazards and enemies. The HUD tells you when it recharges.</span><button type="button" onClick={() => dismissDashCoach()}>GOT IT</button></div>}<div ref={touchControlsRef} className="touch-controls" aria-label="Touch controls">
-            <div><button type="button" data-control="left" aria-label="Move left" onPointerDown={(event) => beginPress('left', event)} onPointerUp={(event) => endPress('left', event)} onPointerCancel={(event) => endPress('left', event)} onLostPointerCapture={(event) => endPress('left', event)}>←</button><button type="button" data-control="right" aria-label="Move right" onPointerDown={(event) => beginPress('right', event)} onPointerUp={(event) => endPress('right', event)} onPointerCancel={(event) => endPress('right', event)} onLostPointerCapture={(event) => endPress('right', event)}>→</button></div>
-            <div><button className={hud.dashReady ? 'dash-control ready' : 'dash-control'} type="button" data-control="dash" aria-label={hud.dashReady ? 'Dash ready' : 'Dash charging'} onPointerDown={(event) => beginPress('dash', event)} onPointerUp={(event) => endPress('dash', event)} onPointerCancel={(event) => endPress('dash', event)} onLostPointerCapture={(event) => endPress('dash', event)}>DASH</button><button className="jump-control" type="button" data-control="jump" aria-label="Jump — tap twice for double jump" onPointerDown={(event) => beginPress('jump', event)} onPointerUp={(event) => endPress('jump', event)} onPointerCancel={(event) => endPress('jump', event)} onLostPointerCapture={(event) => endPress('jump', event)}>JUMP 2X</button></div>
-          </div></>
-        )}
-      </section>
-    </main>
+        {screen === 'playing' && (showModifierCoach ? <div className="dash-coach modifier-coach"><b>{isSeries ? `EXCLUSIVE CHALLENGE · ${activeSeries?.series.mechanicName ?? 'MESSAGE MARKS'}` : `${modifier.name} + ${dailyCondition.name}`}</b><span>{isSeries ? activeSeries?.series.mechanicHelp : `${modifier.description} ${dailyCondition.description}`}</span><button type="button" onClick={dismissModifierCoach}>LET&apos;S RUN</button></div> : showDashCoach && <div className="dash-coach"><b>DASH IS YOUR EDGE</b><span>Press SHIFT or X — or tap DASH — to burst through hazards and enemies. The HUD tells you when it recharges.</span><button type="button" onClick={() => dismissDashCoach()}>GOT IT</button></div>)}
+    </PortraitGameShell>
   );
 }
