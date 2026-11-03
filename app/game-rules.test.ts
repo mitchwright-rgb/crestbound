@@ -244,7 +244,7 @@ test('upcoming Message Routes carry their own supplied artwork and visual identi
 
 test('Message Routes keeps the route decision screen focused on gameplay', () => {
   const gameSource = readFileSync(new URL('./crestbound-game.tsx', import.meta.url), 'utf8');
-  assert.match(gameSource, /series-feature series-feature-compact/);
+  assert.match(gameSource, /className="bonus-stage-summary"/);
   assert.doesNotMatch(gameSource, /className="message-route-artwork"/);
   assert.doesNotMatch(gameSource, /activeSeries\.series\.description/);
 });
@@ -444,14 +444,16 @@ test('menu guidance uses readable in-place views instead of a scrolling document
   assert.match(game, /Daily Twists/);
   assert.match(game, /series-route-chooser/);
   assert.match(styles, /-webkit-text-size-adjust: 100%/);
-  assert.match(styles, /> \.series-route-chooser \{\s*grid-row: 3/);
+  assert.match(styles, /> \.bonus-stage-summary \{ grid-row: 1; \}/);
+  assert.match(styles, /> \.series-route-chooser \{ grid-row: 2; \}/);
+  assert.match(styles, /> \.bonus-stage-menu \{ grid-row: 3; \}/);
   assert.match(game, /Bonus Stages/);
   assert.match(game, /PLAY BONUS STAGE/);
-  assert.match(game, /STAGE \{seriesWeekIndex \+ 1\} OF \{activeSeries\.series\.weeks\.length\}/);
+  assert.match(game, /BONUS STAGES · MESSAGE ROUTE \{seriesWeekIndex \+ 1\}/);
   assert.match(game, /series-progress-track/);
-  assert.match(styles, /Bonus Stages is the Home dashboard in bonus mode/);
+  assert.doesNotMatch(styles, /Bonus Stages is the Home dashboard in bonus mode/);
   assert.match(styles, /One focal route card, one quiet progress line, one console menu/);
-  assert.match(styles, /grid-template-rows: 32px 96px 38px minmax\(0, 1fr\)/);
+  assert.match(styles, /grid-template-rows: 94px 46px minmax\(0, 1fr\)/);
   assert.match(styles, /grid-template-rows: auto auto 1fr/);
   assert.match(game, /bonus-stage-menu/);
   assert.doesNotMatch(game, /activePanelSelection === 3/);
@@ -470,7 +472,8 @@ test('menu guidance uses readable in-place views instead of a scrolling document
   assert.match(styles, /\.leaderboard \.board-list \{ min-height: 0; display: flex; flex-direction: column/);
   assert.match(styles, /\.board-table \{ min-height: 0; display: grid; grid-template-rows: auto auto minmax\(0, 1fr\)/);
   assert.match(game, /<div className="board-table">[\s\S]*?<ol className="board-list"/);
-  assert.match(game, /<div className="board-context">[\s\S]*?<div className="panel-close[^\"]*"/);
+  assert.doesNotMatch(game, /A · Done|A · Got It|A · Back to Bonus Stages/);
+  assert.match(styles, /One screen system\. Home and every submenu use the same sequence/);
   assert.match(styles, /Bonus Stage results use the same single-column console grammar as Home/);
   assert.match(styles, /\.portrait-game-frame \.series-results-panel\.home-panel \{[\s\S]*?grid-template-columns: minmax\(0, 1fr\);[\s\S]*?grid-template-rows: 32px 34px minmax\(0, 1fr\) 30px/);
   assert.match(styles, /\.series-results-panel \.series-results ol \{[\s\S]*?display: flex; flex-direction: column/);

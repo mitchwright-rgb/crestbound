@@ -1667,7 +1667,6 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
                 {board === 'daily' && community.recent.length > 0 && <p className="recent-finishers">JUST RAN: {community.recent.join(' · ')}</p>}
                 <p>{board === 'weekly' ? 'YOUR BEST CREST SCORE FROM EACH DAY BUILDS YOUR WEEKLY TOTAL.' : 'HIGH SCORE WINS: FINISH, MOVE FAST, COLLECT LIGHT, AND COMPLETE THE CHALLENGE.'}</p>
               </div>
-              <div className="panel-close" aria-hidden="true">A · Done</div>
             </aside>}
             {homePanel === 'help' && <aside ref={homePanelRef} className="how-to home-panel" role="dialog" aria-modal="true" aria-labelledby="help-title" tabIndex={-1}>
               <div className="help-heading"><p className="kicker">← D-PAD CHANGES PAGE →</p><h2 id="help-title">How to Play</h2></div>
@@ -1679,23 +1678,17 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
                 {helpTab === 'score' && <section className="scoring-directory help-card-grid"><article><b>+500 · FINISH</b><span>Clear the route to bank a score.</span></article><article><b>UP TO +1,200 · PACE</b><span>Finish faster for more points.</span></article><article><b>UP TO +800 · LIGHT</b><span>Collect a larger share of the route&apos;s Light.</span></article><article><b>UP TO +200 · CHALLENGE</b><span>Earn Silver or Gold—or complete the Series objective.</span></article><p><b>EVERY FINISH COUNTS</b> All collected Light also goes to Suncrest&apos;s weekly community goal. Highest score wins; time breaks an exact tie.</p></section>}
                 {helpTab === 'world' && <section className="help-world"><div className="world-rules help-card-grid"><article><b>GOLD LIGHT</b><span>Shortens Dash recharge.</span></article><article><b>STORM LIGHT</b><span>Readies Dash and shields one hit.</span></article><article><b>CHECKPOINT</b><span>Saves progress and restores one life.</span></article><article><b>ENEMY</b><span>Dash through or land from above.</span></article></div><div className="twist-directory"><h3>Daily Twists</h3>{modifierSpecs.map((item) => <article className={item.id === modifier.id && !isPractice ? 'today' : ''} key={item.id}><b>{item.name}{item.id === modifier.id && !isPractice ? ' · TODAY' : ''}</b><span>{item.shortDescription}</span></article>)}</div></section>}
               </div>
-              <div className="panel-close" aria-hidden="true">A · Got It</div>
             </aside>}
             {homePanel === 'series' && <aside ref={homePanelRef} className="course-picker series-picker home-panel" data-series-theme={activeSeries?.series.theme} role="dialog" aria-modal="true" aria-labelledby="series-title" tabIndex={-1}>
-              <h2 id="series-title" className="bonus-stage-title"><span>Bonus Stages</span><small>Message Routes</small></h2>
               {activeSeries && seriesWeek ? <>
-                <section className="series-feature series-feature-compact" data-series-theme={activeSeries.series.theme}>
-                  <div className="series-week">
-                    <span className="bonus-availability">{completedSeriesWeeks.includes(seriesWeek.id) ? '✓ BONUS STAGE CLEARED' : seriesWeekIndex === activeSeries.weekIndex ? '✦ BONUS STAGE UNLOCKED' : 'BONUS STAGE OPEN'}</span>
-                    <b>{seriesWeek.routeName}</b>
-                    <div className="series-mechanic">
-                      <span>STAGE GOAL · {activeSeries.series.shortName}</span>
-                      <b>{activeSeries.series.mechanicAction}</b>
-                    </div>
-                  </div>
+                <section className="bonus-stage-summary">
+                  <span>BONUS STAGES · MESSAGE ROUTE {seriesWeekIndex + 1}</span>
+                  <h2 id="series-title">{seriesWeek.routeName}</h2>
+                  <em>{activeSeries.series.shortName} · {activeSeries.series.mechanicAction}</em>
+                  <small>{completedSeriesWeeks.includes(seriesWeek.id) ? '✓ STAGE CLEARED' : seriesWeekIndex === activeSeries.weekIndex ? '✦ NOW AVAILABLE' : 'STAGE OPEN'}</small>
                 </section>
                 <div className="series-route-chooser">
-                  <div className="series-progress-heading"><span>STAGE {seriesWeekIndex + 1} OF {activeSeries.series.weeks.length}</span><b>{seriesProgressCount} CLEARED</b></div>
+                  <div className="series-progress-heading"><span>MESSAGE ROUTE PROGRESS</span><b>{seriesProgressCount} / {activeSeries.series.weeks.length} CLEARED</b></div>
                   <div className="series-progress-track" role="progressbar" aria-label={`${seriesProgressCount} of ${activeSeries.series.weeks.length} Bonus Stages cleared`} aria-valuemin={0} aria-valuemax={activeSeries.series.weeks.length} aria-valuenow={seriesProgressCount}><i style={{ width: `${Math.round((seriesProgressCount / activeSeries.series.weeks.length) * 100)}%` }} /></div>
                   {activeSeries.weekIndex > 0 && <small>← D-PAD → CHANGES STAGE</small>}
                 </div>
@@ -1710,7 +1703,6 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
               <div className="series-results-back" aria-hidden="true">B · Bonus Stages</div>
               <p className="kicker">{seriesWeek?.routeName || 'MESSAGE ROUTE'}</p><h2 id="series-results-panel-title">Results &amp; Leaderboard</h2>
               <section className="series-results" aria-label="Selected Message Route results"><header><h3>Top Scores</h3><b>{seriesCompletions} {seriesCompletions === 1 ? 'FINISHER' : 'FINISHERS'}</b></header><div className="series-result-legend score-board" aria-hidden="true"><span>RANK</span><span>RUNNER</span><span>SCORE</span></div><ol>{seriesBoardStatus === 'loading' && <li className="series-result-message">LOADING RESULTS…</li>}{seriesBoardStatus === 'offline' && <li className="series-result-message">RESULTS ARE TEMPORARILY OFFLINE.</li>}{seriesBoardStatus === 'ready' && seriesEntries.length === 0 && <li className="series-result-message">BE THE FIRST TO FINISH THIS ROUTE.</li>}{seriesBoardStatus === 'ready' && seriesEntries.slice(0, 7).map((entry) => <li className={`${entry.isPlayer ? 'you ' : ''}score-board`} key={`${entry.rank}-${entry.name}`}><b>#{entry.rank}</b><span>{entry.name}</span><time>{entry.score.toLocaleString()}</time></li>)}</ol><p>{activeSeries ? `${activeSeries.series.mechanicAction} for the full +200 Message Route bonus.` : 'Complete the Message Route challenge for the full +200 bonus.'}</p></section>
-              <div className="panel-close" aria-hidden="true">A · Back to Bonus Stages</div>
             </aside>}
             {homePanel === 'resource' && seriesResource && <aside ref={homePanelRef} className="message-viewer home-panel" role="dialog" aria-modal="true" aria-labelledby="resource-title" tabIndex={-1}>
               <header><span aria-hidden="true">B · BACK</span><div><small>FROM BONUS STAGES · MESSAGE ROUTES</small><strong id="resource-title">{seriesResource.title}</strong></div></header>
