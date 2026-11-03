@@ -1465,10 +1465,13 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
       <button className="console-start-control" type="button" onClick={togglePause} aria-label={screen === 'paused' ? 'Resume game with Start button' : 'Pause game with Start button'}><i aria-hidden="true" />START</button>
     </>
   ) : (
-    <div className="handheld-menu-controls" aria-label="Handheld menu controls">
-      <div className="menu-direction-pad"><small>CHOOSE</small><button className="pad-up" type="button" aria-label="Previous menu option" disabled={homePanel !== 'none'} onClick={() => setHomeSelection((value) => (value + homeMenuOptions.length - 1) % homeMenuOptions.length)}>↑</button><button className="pad-left" type="button" aria-label="Previous menu option" disabled={homePanel !== 'none'} onClick={() => setHomeSelection((value) => (value + homeMenuOptions.length - 1) % homeMenuOptions.length)}>←</button><button className="pad-right" type="button" aria-label="Next menu option" disabled={homePanel !== 'none'} onClick={() => setHomeSelection((value) => (value + 1) % homeMenuOptions.length)}>→</button><button className="pad-down" type="button" aria-label="Next menu option" disabled={homePanel !== 'none'} onClick={() => setHomeSelection((value) => (value + 1) % homeMenuOptions.length)}>↓</button><span><i>PREV</i><i>NEXT</i></span></div>
-      <div className="menu-action-pad"><button type="button" aria-label="B button: Back" disabled={homePanel === 'none'} onClick={closeHomePanel}><b>B</b><small>BACK</small></button><button className="menu-primary-control" type="button" aria-label={`A button: Select ${homeMenuOptions[homeSelection]}`} disabled={homePanel !== 'none' || runStartState === 'connecting'} onClick={activateHomeSelection}><b>A</b><small>SELECT</small></button></div>
-    </div>
+    <>
+      <div className="handheld-menu-controls" aria-label="Handheld menu controls">
+        <div className="menu-direction-pad"><small>CHOOSE</small><button className="pad-up" type="button" aria-label="Previous menu option" disabled={homePanel !== 'none'} onClick={() => setHomeSelection((value) => (value + homeMenuOptions.length - 1) % homeMenuOptions.length)}>↑</button><button className="pad-left" type="button" aria-label="Previous menu option" disabled={homePanel !== 'none'} onClick={() => setHomeSelection((value) => (value + homeMenuOptions.length - 1) % homeMenuOptions.length)}>←</button><button className="pad-right" type="button" aria-label="Next menu option" disabled={homePanel !== 'none'} onClick={() => setHomeSelection((value) => (value + 1) % homeMenuOptions.length)}>→</button><button className="pad-down" type="button" aria-label="Next menu option" disabled={homePanel !== 'none'} onClick={() => setHomeSelection((value) => (value + 1) % homeMenuOptions.length)}>↓</button><span><i>PREV</i><i>NEXT</i></span></div>
+        <div className="menu-action-pad"><button type="button" aria-label="B button: Back" disabled={homePanel === 'none'} onClick={closeHomePanel}><b>B</b><small>BACK</small></button><button className="menu-primary-control" type="button" aria-label={`A button: Select ${homeMenuOptions[homeSelection]}`} disabled={homePanel !== 'none' || runStartState === 'connecting'} onClick={activateHomeSelection}><b>A</b><small>SELECT</small></button></div>
+      </div>
+      <button className="console-start-control menu-start-control" type="button" aria-label={`Start button: Select ${homeMenuOptions[homeSelection]}`} disabled={homePanel !== 'none' || runStartState === 'connecting'} onClick={activateHomeSelection}><i aria-hidden="true" />START</button>
+    </>
   );
 
   return (
@@ -1515,7 +1518,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
                   <b>{dailyCourse.name}</b>
                   <em>{dailyModifier.name} · {dailyObjectiveSpecs[dailyObjectiveId].name}</em>
                   <small className="route-condition">{dailyCondition.name} · {dailyCondition.description}</small>
-                  {streak > 0 && <small className={`streak-badge ${streakReward(streak).milestone ? 'milestone' : ''}`} title={`New route in ${dailyReset}`}><span aria-hidden="true">✦</span> {streak} day streak</small>}
+                  {streak > 0 && <small className={`streak-badge ${streakReward(streak).milestone ? 'milestone' : ''}`} title={`New route in ${dailyReset}`}>{streak} DAY STREAK</small>}
                 </div>
                 {runStartState === 'error' && <p className="run-start-error" role="alert"><b>RUN NOT STARTED</b><span>{runStartError}</span></p>}
                 <div className={`daily-glance ${communityGoalReached ? 'goal-reached' : ''}`}>

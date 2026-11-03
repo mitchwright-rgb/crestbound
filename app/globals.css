@@ -645,6 +645,177 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .portrait-game-frame .home-dashboard .home-links button { min-height: 32px; }
 }
 
+/* Flat handheld reset. The console is intentionally quiet so the game screen
+   and physical controls carry the hierarchy without competing decoration. */
+.portrait-game-shell {
+  min-height: 100svh;
+  background: #061619;
+}
+.portrait-game-frame.game-frame {
+  width: 100dvw;
+  height: 100svh;
+  max-width: 430px;
+  max-height: none;
+  left: auto;
+  aspect-ratio: auto;
+  transform: none;
+  overflow: hidden;
+  border: 1px solid #d8e0d7;
+  border-radius: 28px 28px 42px 28px;
+  background: #a8b5a7;
+  box-shadow:
+    inset 3px 3px 0 rgb(255 255 255 / 28%),
+    inset -4px -5px 0 rgb(31 48 40 / 18%);
+}
+.handheld-screen {
+  left: 12px;
+  right: 12px;
+  top: 12px;
+  height: calc(60% - 18px);
+  overflow: hidden;
+  border: 6px solid #16211d;
+  border-radius: 18px 18px 24px 18px;
+  outline: 1px solid rgb(239 246 239 / 55%);
+  background: #061b20;
+  box-shadow: 0 5px 0 rgb(29 43 36 / 26%);
+}
+.handheld-control-bay {
+  inset: 60% 0 0;
+  overflow: hidden;
+  background: #a8b5a7;
+}
+.handheld-control-bay::before {
+  position: absolute;
+  left: 24px;
+  top: 18px;
+  width: auto;
+  height: auto;
+  display: block;
+  content: 'CRESTBOUND  //  POCKET 01';
+  border: 0;
+  color: #35483e;
+  background: transparent;
+  box-shadow: none;
+  font: 7px/1 var(--font-pixel), monospace;
+  letter-spacing: .12em;
+}
+.handheld-control-bay::after,
+.handheld-speaker { display: none; }
+.handheld-control-bay .touch-controls,
+.handheld-menu-controls { inset: 0; }
+.handheld-control-bay .direction-pad,
+.menu-direction-pad {
+  left: 8%;
+  top: 22%;
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  background: rgb(238 246 239 / 24%);
+  box-shadow: inset 0 0 0 2px rgb(51 72 62 / 22%);
+}
+.handheld-control-bay .direction-pad::before,
+.menu-direction-pad::before {
+  display: block;
+  border-radius: 7px;
+  background:
+    linear-gradient(#202927 0 0) 44px 0 / 44px 132px no-repeat,
+    linear-gradient(#202927 0 0) 0 44px / 132px 44px no-repeat;
+  filter: drop-shadow(2px 3px 1px rgb(0 0 0 / 50%));
+}
+.handheld-control-bay .direction-pad button,
+.menu-direction-pad button {
+  width: 44px;
+  height: 44px;
+  color: #f1f5f0;
+  background: transparent !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+}
+.handheld-control-bay .action-pad,
+.menu-action-pad {
+  left: auto;
+  right: 6%;
+  top: 21%;
+  width: 146px;
+  height: 112px;
+}
+.handheld-control-bay .touch-controls .dash-control,
+.handheld-control-bay .touch-controls .jump-control,
+.menu-action-pad button {
+  width: 68px;
+  height: 68px;
+  border: 3px solid #202927 !important;
+  outline: 1px solid rgb(244 249 244 / 64%) !important;
+  color: #fffaf2 !important;
+  box-shadow:
+    0 0 0 7px rgb(239 246 239 / 28%),
+    0 4px 3px rgb(28 40 35 / 46%),
+    inset 0 3px 0 rgb(255 255 255 / 26%) !important;
+}
+.handheld-control-bay .action-pad button:first-child,
+.menu-action-pad button:first-child {
+  left: 0;
+  top: 38px;
+  background: #bd4658 !important;
+}
+.handheld-control-bay .action-pad button:last-child,
+.menu-action-pad button:last-child {
+  left: auto;
+  right: 0;
+  top: 0;
+  background: #d85a69 !important;
+}
+.handheld-control-bay .touch-controls .dash-control.ready {
+  color: #071316 !important;
+  background: #78d7d2 !important;
+}
+.console-start-control {
+  left: 50%;
+  top: auto;
+  bottom: 36px;
+  width: 78px;
+  height: 30px;
+  grid-template-columns: 34px 1fr;
+  color: #35483e;
+  opacity: 1;
+}
+.console-start-control i { width: 34px; height: 11px; }
+
+/* Compact streak status: readable, but subordinate to today's route. */
+.portrait-game-frame .home-dashboard .daily-course span { padding-right: 86px; }
+.portrait-game-frame .home-dashboard .streak-badge {
+  top: 8px;
+  right: 8px;
+  min-width: 0;
+  max-width: 82px;
+  height: 21px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 6px;
+  overflow: hidden;
+  border: 1px solid #9c7017;
+  border-radius: 2px;
+  color: #071316;
+  background: #f2b52b;
+  box-shadow: none;
+  font-size: 7px;
+  line-height: 1;
+  letter-spacing: .03em;
+  white-space: nowrap;
+}
+.portrait-game-frame .home-dashboard .streak-badge.milestone {
+  color: #fff8e9;
+  border-color: #8e352f;
+  background: #c94f42;
+  box-shadow: none;
+}
+
+@media (max-height: 700px) {
+  .portrait-game-frame.game-frame { width: 100dvw; height: 100svh; }
+}
+
 @media (min-width: 431px) {
   .portrait-game-frame.game-frame { height: min(100svh, 900px); }
 }
@@ -3075,4 +3246,140 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
     height: auto;
     border-radius: 0;
   }
+}
+
+/* Final flat-shell layer. Keep this last: it deliberately replaces the
+   illustrated hardware skin with a quiet, single-material console. */
+.portrait-game-shell { min-height: 100svh; background: #061619; }
+.portrait-game-frame.game-frame {
+  width: 100dvw;
+  height: 100svh;
+  max-width: 430px;
+  max-height: none;
+  left: auto;
+  aspect-ratio: auto;
+  transform: none;
+  overflow: hidden;
+  border: 1px solid #d8e0d7;
+  border-radius: 28px 28px 42px 28px;
+  background: #a8b5a7;
+  box-shadow: inset 3px 3px 0 rgb(255 255 255 / 28%), inset -4px -5px 0 rgb(31 48 40 / 18%);
+}
+.handheld-screen {
+  left: 12px;
+  right: 12px;
+  top: 12px;
+  height: calc(60% - 18px);
+  overflow: hidden;
+  border: 6px solid #16211d;
+  border-radius: 18px 18px 24px 18px;
+  outline: 1px solid rgb(239 246 239 / 55%);
+  background: #061b20;
+  box-shadow: 0 5px 0 rgb(29 43 36 / 26%);
+}
+.handheld-control-bay { inset: 60% 0 0; overflow: hidden; background: #a8b5a7; }
+.handheld-control-bay::before {
+  display: none;
+}
+.handheld-control-bay::after, .handheld-speaker { display: none; }
+.handheld-control-bay .touch-controls, .handheld-menu-controls { inset: 0; }
+.handheld-control-bay .direction-pad, .menu-direction-pad {
+  left: 8%;
+  top: 22%;
+  width: 132px;
+  height: 132px;
+  border-radius: 50%;
+  background: rgb(238 246 239 / 24%);
+  box-shadow: inset 0 0 0 2px rgb(51 72 62 / 22%);
+}
+.handheld-control-bay .direction-pad::before, .menu-direction-pad::before {
+  display: block;
+  border-radius: 7px;
+  background: linear-gradient(#202927 0 0) 44px 0 / 44px 132px no-repeat, linear-gradient(#202927 0 0) 0 44px / 132px 44px no-repeat;
+  filter: drop-shadow(2px 3px 1px rgb(0 0 0 / 50%));
+}
+.handheld-control-bay .direction-pad button, .menu-direction-pad button {
+  width: 44px;
+  height: 44px;
+  color: #f1f5f0;
+  background: transparent !important;
+  border: 0 !important;
+  outline: 0 !important;
+  box-shadow: none !important;
+}
+.handheld-control-bay .action-pad, .menu-action-pad {
+  left: auto;
+  right: 6%;
+  top: 21%;
+  width: 146px;
+  height: 112px;
+}
+.handheld-control-bay .touch-controls .dash-control,
+.handheld-control-bay .touch-controls .jump-control,
+.menu-action-pad button {
+  width: 68px;
+  height: 68px;
+  border: 3px solid #202927 !important;
+  outline: 1px solid rgb(244 249 244 / 64%) !important;
+  color: #fffaf2 !important;
+  box-shadow: 0 0 0 7px rgb(239 246 239 / 28%), 0 4px 3px rgb(28 40 35 / 46%), inset 0 3px 0 rgb(255 255 255 / 26%) !important;
+}
+.handheld-control-bay .action-pad button:first-child, .menu-action-pad button:first-child {
+  left: 0;
+  top: 38px;
+  background: #bd4658 !important;
+}
+.handheld-control-bay .action-pad button:last-child, .menu-action-pad button:last-child {
+  left: auto;
+  right: 0;
+  top: 0;
+  background: #d85a69 !important;
+}
+.handheld-control-bay .touch-controls .dash-control.ready { color: #071316 !important; background: #78d7d2 !important; }
+.handheld-control-bay .action-pad button b,
+.menu-action-pad button b { font-size: 22px; }
+.handheld-control-bay .action-pad button small,
+.menu-action-pad button small { font-size: 7px; letter-spacing: .04em; }
+.console-start-control {
+  left: 50%;
+  top: auto;
+  bottom: 36px;
+  width: 78px;
+  height: 30px;
+  grid-template-columns: 34px 1fr;
+  color: #35483e;
+  opacity: 1;
+}
+.console-start-control i { width: 34px; height: 11px; }
+.console-start-control:disabled { opacity: .42; }
+.portrait-game-frame .home-dashboard .daily-course span { padding-right: 86px; }
+.portrait-game-frame .home-dashboard .streak-badge {
+  top: 8px;
+  right: 8px;
+  min-width: 0;
+  max-width: 82px;
+  height: 21px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 6px;
+  overflow: hidden;
+  border: 1px solid #9c7017;
+  border-radius: 2px;
+  color: #071316;
+  background: #f2b52b;
+  box-shadow: none;
+  font-size: 7px;
+  line-height: 1;
+  letter-spacing: .03em;
+  white-space: nowrap;
+}
+.portrait-game-frame .home-dashboard .streak-badge.milestone {
+  color: #fff8e9;
+  border-color: #8e352f;
+  background: #c94f42;
+  box-shadow: none;
+}
+@media (max-height: 700px) {
+  .portrait-game-frame.game-frame { width: 100dvw; height: 100svh; border-radius: 20px 20px 30px 20px; }
 }

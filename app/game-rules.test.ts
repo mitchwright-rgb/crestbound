@@ -483,8 +483,8 @@ test('Subsplash uses one permanent portrait handheld without an orientation gate
   assert.match(source, /designed for portrait play inside its handheld console/);
   assert.match(source, /SUNCREST APP/);
   assert.match(styles, /Permanent Suncrest handheld shell/);
-  assert.match(styles, /background: url\('\/handheld-shell\.svg'\) center \/ 100% 100% no-repeat/);
-  assert.match(styles, /aspect-ratio: 648 \/ 1264/);
+  assert.match(styles, /Final flat-shell layer/);
+  assert.match(styles, /background: #a8b5a7/);
   assert.match(styles, /\.portrait-game-frame \.leaderboard\.home-panel,[\s\S]*?height: calc\(100% - 12px\)/);
   assert.match(styles, /\.portrait-game-frame:has\(\.hud\) \.game-canvas/);
   assert.match(styles, /aspect-ratio: 3 \/ 4/);
