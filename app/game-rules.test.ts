@@ -488,9 +488,13 @@ test('Subsplash uses one permanent portrait handheld without an orientation gate
   assert.match(source, /width=\{180\} height=\{240\}/);
   assert.match(shell, /handheld-screen/);
   assert.match(shell, /handheld-control-bay/);
+  assert.match(shell, /handheld-internals/);
+  assert.match(shell, /HAMSTER CORE/);
   assert.match(source, /handheld-menu-controls/);
   assert.doesNotMatch(source, /crestbound-landscape-background/);
   assert.match(source, /className="direction-pad"/);
+  assert.match(source, /className="pad-up"/);
+  assert.match(source, /className="pad-down"/);
   assert.match(source, /className="action-pad"/);
   assert.match(source, />B<\/b><small>DASH<\/small>/);
   assert.match(source, />A<\/b><small>JUMP 2X<\/small>/);

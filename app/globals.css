@@ -194,9 +194,10 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   border: 4px solid #020708;
   border-radius: 18px 18px 30px 18px;
   background:
-    linear-gradient(120deg, rgb(255 255 255 / 7%), transparent 24%),
-    repeating-linear-gradient(0deg, #0d353b 0 7px, #0b3036 7px 8px);
-  box-shadow: 0 0 0 3px #1a5a62, 12px 18px 0 rgb(0 0 0 / 42%);
+    linear-gradient(120deg, rgb(255 255 255 / 18%), transparent 24% 76%, rgb(255 255 255 / 7%)),
+    linear-gradient(145deg, rgb(31 117 119 / 78%), rgb(52 34 76 / 82%));
+  box-shadow: inset 0 0 0 2px rgb(167 245 238 / 20%), 0 0 0 3px #2e7f83, 12px 18px 0 rgb(0 0 0 / 42%);
+  backdrop-filter: saturate(1.25) blur(3px);
 }
 .portrait-game-frame::before {
   z-index: 5;
@@ -246,9 +247,9 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   inset: calc(var(--console-header) + var(--console-screen-height) + 8px) 0 0;
   overflow: hidden;
   background:
-    radial-gradient(circle at 17% 32%, rgb(120 215 210 / 10%), transparent 20%),
-    linear-gradient(180deg, #0d353b, #08252b);
-  box-shadow: inset 0 5px 0 #1a5961;
+    linear-gradient(115deg, rgb(255 255 255 / 9%), transparent 30%),
+    linear-gradient(180deg, rgb(25 107 111 / 66%), rgb(47 31 69 / 76%));
+  box-shadow: inset 0 5px 0 rgb(123 229 220 / 28%), inset 0 0 38px rgb(2 7 8 / 18%);
 }
 .handheld-control-bay::before {
   position: absolute;
@@ -264,6 +265,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   box-shadow: inset 0 2px 0 #174b52;
 }
 .handheld-speaker {
+  z-index: 1;
   position: absolute;
   left: 50%;
   bottom: 14px;
@@ -274,6 +276,23 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   background: repeating-linear-gradient(90deg, #06171b 0 4px, transparent 4px 10px);
   pointer-events: none;
 }
+.handheld-internals {
+  position: absolute;
+  z-index: 0;
+  inset: 8px 0 0;
+  overflow: hidden;
+  opacity: .42;
+  pointer-events: none;
+}
+.handheld-internals svg { width: 100%; height: 100%; display: block; }
+.handheld-internals .circuit-trace { fill: none; stroke: #8cf4e8; stroke-width: 5; stroke-linecap: square; stroke-linejoin: round; opacity: .62; }
+.handheld-internals .phone-board rect, .handheld-internals .phone-board circle, .handheld-internals .phone-board path { fill: #0a3338; stroke: #6fd0c9; stroke-width: 3; }
+.handheld-internals .hamster-wheel { fill: none; stroke: #f5d263; stroke-width: 7; stroke-dasharray: 10 7; }
+.handheld-internals .hamster-body, .handheld-internals .hamster-face, .handheld-internals .hamster-ear { fill: #e2aa2f; stroke: #2b1b19; stroke-width: 3; }
+.handheld-internals .hamster-eye { fill: #071316; }
+.handheld-internals .hamster-smile, .handheld-internals .hamster-feet { fill: none; stroke: #071316; stroke-width: 3; stroke-linecap: round; }
+.handheld-internals .battery-pack rect, .handheld-internals .tiny-chip rect { fill: #482b5f; stroke: #91ece4; stroke-width: 3; }
+.handheld-internals text { fill: #f5d263; font: 8px var(--font-pixel), monospace; letter-spacing: .06em; }
 
 /* The title/menu is the portrait version in every host orientation. */
 .portrait-game-frame .title-screen {
@@ -299,7 +318,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 }
 .portrait-game-frame .home-cover {
   width: 100%;
-  height: 49%;
+  height: 44%;
   display: block;
   flex: 0 0 auto;
 }
@@ -359,14 +378,14 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .portrait-game-frame .handheld-screen-menu {
   min-height: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   gap: 4px;
   margin-top: 1px;
   font: 8px/1 var(--font-pixel), monospace;
 }
 .portrait-game-frame .handheld-screen-menu > div {
   min-width: 0;
-  min-height: 31px;
+  min-height: 26px;
   display: grid;
   grid-template-columns: 12px minmax(0, 1fr) auto;
   align-items: center;
@@ -453,28 +472,27 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .menu-direction-pad {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(2, 54px);
+  grid-template: repeat(3, 42px) / repeat(3, 42px);
   gap: 0;
-  padding: 28px 0 18px;
+  padding: 0;
 }
 .handheld-control-bay .direction-pad::before,
 .menu-direction-pad::before {
   position: absolute;
-  left: 50%;
-  top: 21px;
-  width: 34px;
-  height: 74px;
-  transform: translateX(-50%);
+  left: 0;
+  top: 0;
+  width: 126px;
+  height: 126px;
+  transform: none;
   content: '';
-  border: 3px solid #020707;
-  background: #132f34;
-  box-shadow: inset 0 0 0 3px #294b4e;
+  background: linear-gradient(#132f34 0 0) 42px 0 / 42px 126px no-repeat, linear-gradient(#132f34 0 0) 0 42px / 126px 42px no-repeat;
+  filter: drop-shadow(3px 3px 0 #020707);
 }
 .handheld-control-bay .direction-pad > small,
 .menu-direction-pad > small {
   position: absolute;
   left: 50%;
-  top: 0;
+  top: -18px;
   transform: translateX(-50%);
   color: #78aaa9;
   font: 7px/1 var(--font-pixel), monospace;
@@ -496,10 +514,12 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   pointer-events: auto;
   touch-action: none;
 }
-.handheld-control-bay .direction-pad button:first-of-type,
-.menu-direction-pad button:first-of-type { border-radius: 8px 0 0 8px; }
-.handheld-control-bay .direction-pad button:last-of-type,
-.menu-direction-pad button:last-of-type { border-radius: 0 8px 8px 0; }
+.handheld-control-bay .direction-pad button,
+.menu-direction-pad button { width: 42px; height: 42px; border-radius: 6px; box-shadow: inset 0 2px 0 rgb(120 215 210 / 12%); }
+.direction-pad .pad-up, .menu-direction-pad .pad-up { grid-area: 1 / 2; }
+.direction-pad .pad-left, .menu-direction-pad .pad-left { grid-area: 2 / 1; }
+.direction-pad .pad-right, .menu-direction-pad .pad-right { grid-area: 2 / 3; }
+.direction-pad .pad-down, .menu-direction-pad .pad-down { grid-area: 3 / 2; }
 .handheld-control-bay .action-pad,
 .menu-action-pad {
   display: grid;
@@ -526,7 +546,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .handheld-control-bay .touch-controls .jump-control,
 .menu-action-pad button:last-child { color: #172327; background: var(--gold); outline-color: #d8931d; }
 .handheld-control-bay .touch-controls .dash-control.ready { color: #071316; background: var(--teal-light); }
-.menu-direction-pad > span { position: absolute; inset: auto 0 0; display: flex; justify-content: space-between; color: #5c8585; font: 5px/1 var(--font-pixel), monospace; }
+.menu-direction-pad > span { position: absolute; inset: auto 0 -16px; display: flex; justify-content: space-between; color: #7cb8b5; font: 5px/1 var(--font-pixel), monospace; }
 .menu-direction-pad i { font-style: normal; }
 .handheld-menu-controls button:disabled { opacity: .55; }
 
