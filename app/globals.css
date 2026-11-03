@@ -3383,3 +3383,228 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 @media (max-height: 700px) {
   .portrait-game-frame.game-frame { width: 100dvw; height: 100svh; border-radius: 20px 20px 30px 20px; }
 }
+
+/* Final console UX system: Suncrest gold shell, safe-area fit, and
+   controller-native result screens that never depend on page scrolling. */
+.portrait-game-shell {
+  box-sizing: border-box;
+  min-height: 100svh;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  background: #071316;
+}
+.portrait-game-frame.game-frame {
+  height: calc(100svh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  min-height: 620px;
+  border-color: #ffe09a;
+  background: #f2b52b;
+  box-shadow:
+    inset 3px 3px 0 rgb(255 239 190 / 52%),
+    inset -4px -5px 0 rgb(142 82 0 / 28%);
+}
+.handheld-control-bay {
+  background: #f2b52b;
+  box-shadow: inset 0 1px 0 rgb(255 229 150 / 64%);
+}
+.handheld-control-bay .direction-pad,
+.menu-direction-pad {
+  background: rgb(255 235 179 / 38%);
+  box-shadow: inset 0 0 0 2px rgb(130 75 0 / 26%);
+}
+.handheld-control-bay .touch-controls .dash-control,
+.handheld-control-bay .touch-controls .jump-control,
+.menu-action-pad button {
+  border-color: #172221 !important;
+  outline-color: rgb(255 241 201 / 76%) !important;
+  background: #16484d !important;
+  box-shadow:
+    0 0 0 7px rgb(255 238 188 / 34%),
+    0 4px 3px rgb(104 60 0 / 42%),
+    inset 0 3px 0 rgb(255 255 255 / 20%) !important;
+}
+.handheld-control-bay .action-pad button:first-child,
+.menu-action-pad button:first-child { background: #203f43 !important; }
+.handheld-control-bay .action-pad button:last-child,
+.menu-action-pad button:last-child { background: #0d6469 !important; }
+.handheld-control-bay .touch-controls .dash-control.ready { background: #78d7d2 !important; }
+.console-start-control { color: #553a08; font-size: 7px; }
+.console-start-control i { border-color: #172221; background: #263634; }
+
+.portrait-game-frame .game-modal button.controller-selected,
+.portrait-game-frame .result-actions button.controller-selected {
+  position: relative;
+  z-index: 1;
+  border-color: #f2b52b !important;
+  outline: 2px solid #fff0bc;
+  outline-offset: -5px;
+  color: #071316 !important;
+  background: #f2b52b !important;
+  box-shadow: inset 0 -4px 0 #d77c0c, 0 0 0 2px #071316 !important;
+}
+.portrait-game-frame .game-modal button:focus-visible,
+.portrait-game-frame .home-panel button:focus-visible,
+.handheld-control-bay button:focus-visible {
+  outline: 3px solid #fff0bc !important;
+  outline-offset: 2px;
+}
+
+.portrait-game-frame .win-modal {
+  left: 6px;
+  right: 6px;
+  top: 6px;
+  bottom: 6px;
+  width: auto;
+  height: auto;
+  max-width: none;
+  max-height: none;
+  transform: none;
+  display: grid;
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
+  gap: 5px;
+  align-content: stretch;
+  padding: 8px;
+  overflow: hidden;
+  text-align: left;
+}
+.portrait-game-frame .win-modal .result-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 30px;
+}
+.portrait-game-frame .win-modal .result-header p {
+  margin: 0 0 2px;
+  color: var(--teal-light);
+  font: 7px/1.2 var(--font-pixel), monospace;
+  letter-spacing: .08em;
+}
+.portrait-game-frame .win-modal .result-header h2 {
+  margin: 0;
+  color: var(--gold-light);
+  font-size: 18px;
+  line-height: 1;
+  white-space: nowrap;
+}
+.portrait-game-frame .win-modal .score-tally {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px 8px;
+  margin: 0;
+  padding: 6px 8px;
+}
+.portrait-game-frame .win-modal .score-tally > span {
+  min-height: 29px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 5px;
+  padding: 0 2px;
+  font-size: 7px;
+}
+.portrait-game-frame .win-modal .score-tally > span small {
+  overflow: hidden;
+  font-size: 7px;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+}
+.portrait-game-frame .win-modal .score-tally > span b { font-size: 10px; }
+.portrait-game-frame .win-modal .score-tally > strong {
+  grid-column: 1 / -1;
+  min-height: 31px;
+  padding: 2px;
+}
+.portrait-game-frame .win-modal .score-tally > strong small { font-size: 8px; }
+.portrait-game-frame .win-modal .score-tally > strong b { font-size: 19px; }
+.portrait-game-frame .win-modal .result-highlights {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+  min-height: 54px;
+}
+.portrait-game-frame .win-modal .result-priority,
+.portrait-game-frame .win-modal .challenge-result {
+  min-height: 54px;
+  margin: 0;
+  padding: 6px 7px;
+  align-content: center;
+}
+.portrait-game-frame .win-modal .result-priority b,
+.portrait-game-frame .win-modal .challenge-result b { font-size: 8px; line-height: 1.2; }
+.portrait-game-frame .win-modal .result-priority > span,
+.portrait-game-frame .win-modal .challenge-result > span { font-size: 8px; line-height: 1.25; }
+.portrait-game-frame .win-modal .streak-result {
+  gap: 2px 5px;
+  margin-top: 4px;
+  padding-top: 4px;
+}
+.portrait-game-frame .win-modal .streak-result > span,
+.portrait-game-frame .win-modal .streak-result > small { font-size: 6px; }
+.portrait-game-frame .win-modal .streak-result > b { font-size: 10px; }
+.portrait-game-frame .win-modal .score-form,
+.portrait-game-frame .win-modal .rank-callout {
+  min-height: 61px;
+  margin: 0;
+  padding: 6px 7px;
+}
+.portrait-game-frame .win-modal .score-form label { margin-bottom: 4px; font-size: 7px; }
+.portrait-game-frame .win-modal .score-form > div { grid-template-columns: minmax(0, 1fr) 88px; }
+.portrait-game-frame .win-modal .score-form input { min-width: 0; height: 32px; padding: 5px 7px; font-size: 12px; }
+.portrait-game-frame .win-modal .score-form button { min-height: 32px; padding: 4px 6px; font-size: 8px; }
+.portrait-game-frame .win-modal .score-form small,
+.portrait-game-frame .win-modal .score-form em { margin-top: 3px; font-size: 7px; line-height: 1.15; }
+.portrait-game-frame .win-modal .rank-callout { display: grid; place-items: center; font-size: 9px; text-align: center; }
+.portrait-game-frame .win-modal .result-actions {
+  grid-template-columns: 1fr 1fr;
+  align-content: end;
+  gap: 5px;
+  min-height: 0;
+  margin: 0;
+  overflow: hidden;
+}
+.portrait-game-frame .win-modal .result-actions > button,
+.portrait-game-frame .win-modal .result-actions .secondary {
+  min-height: 34px;
+  padding: 5px 6px;
+  font-size: 8px;
+  line-height: 1.15;
+}
+
+/* Keep all three help tabs fully legible inside the console screen. */
+.portrait-game-frame .how-to .help-content { align-items: start; }
+.portrait-game-frame .how-to .help-play { gap: 5px; }
+.portrait-game-frame .how-to .control-directory { gap: 4px; }
+.portrait-game-frame .how-to .control-directory article {
+  gap: 3px;
+  min-height: 46px;
+  padding: 6px;
+}
+.portrait-game-frame .how-to .control-directory article b { font-size: 9px; }
+.portrait-game-frame .how-to .control-directory article span { font-size: 10px; line-height: 1.2; }
+.portrait-game-frame .how-to .today-guide { gap: 4px; padding: 8px; }
+.portrait-game-frame .how-to .today-guide span { font-size: 11px; line-height: 1.28; }
+.portrait-game-frame .how-to .help-play > p:not(.app-tip) { display: none; }
+.portrait-game-frame .how-to .help-play .app-tip {
+  padding: 6px 8px;
+  font-size: 10px;
+  line-height: 1.25;
+}
+
+@media (max-height: 700px) {
+  .portrait-game-frame.game-frame {
+    height: calc(100svh - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    min-height: 0;
+    border-radius: 20px 20px 30px 20px;
+  }
+  .handheld-screen { height: calc(64% - 18px); }
+  .handheld-control-bay { inset: 64% 0 0; }
+  .portrait-game-frame .win-modal { gap: 3px; padding: 6px; }
+  .portrait-game-frame .win-modal .score-tally > span { min-height: 24px; }
+  .portrait-game-frame .win-modal .result-highlights,
+  .portrait-game-frame .win-modal .result-priority,
+  .portrait-game-frame .win-modal .challenge-result { min-height: 46px; }
+  .portrait-game-frame .win-modal .score-form,
+  .portrait-game-frame .win-modal .rank-callout { min-height: 52px; }
+  .portrait-game-frame .win-modal .result-actions > button,
+  .portrait-game-frame .win-modal .result-actions .secondary { min-height: 30px; }
+}

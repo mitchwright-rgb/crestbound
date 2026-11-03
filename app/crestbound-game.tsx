@@ -160,6 +160,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
   const [showScoreIntro, setShowScoreIntro] = useState(false);
   const [homePanel, setHomePanel] = useState<HomePanel>('none');
   const [homeSelection, setHomeSelection] = useState(0);
+  const [consoleSelection, setConsoleSelection] = useState(0);
   const [helpTab, setHelpTab] = useState<HelpTab>('play');
   const homePanelRef = useRef<HTMLElement>(null);
   const homePanelTriggerRef = useRef<HTMLElement | null>(null);
@@ -433,6 +434,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
     }
     screenRef.current = next;
     setScreen(next);
+    if (next === 'paused' || next === 'over' || next === 'won') setConsoleSelection(0);
     if (next === 'title') setSeriesMode(false);
   }
 
@@ -1456,13 +1458,59 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
   }, [seriesMode, seriesWeekIndex, routeSeed]);
 
   const homeMenuOptions = ['DAILY RUN', 'MESSAGE ROUTES', 'LEADERBOARD', 'HOW TO PLAY'];
-  const handheldControls = screen === 'playing' || screen === 'paused' ? (
+  const quitPausedRun = () => {
+    track('quit', { hits: hud.hits, checkpoint: hud.checkpoint, progress: hud.progress, elapsedMs: hud.time * 1000, lights: hud.sparks, lightTotal: hud.total, lightPercent: hud.total ? hud.sparks / hud.total * 100 : 0, dashCount: runMetricsRef.current.dashCount, signatureCount: hud.signatureCount });
+    flushTelemetry();
+    setGameScreen('title');
+  };
+  const backToHome = () => { setSeriesMode(false); closeHomePanel(); setGameScreen('title'); };
+  const resultActionItems: Array<{ label: string; className?: string; action: () => void }> = screen === 'over'
+    ? [
+      { label: 'Run It Back', action: () => void startGame() },
+      { label: isSeries ? 'Back to Message Routes' : 'Back to Home', className: 'secondary back-home-action', action: () => { setGameScreen('title'); if (isSeries) openHomePanel('series'); } },
+    ]
+    : screen === 'won'
+      ? [
+        { label: 'Run It Again', action: () => void startGame() },
+        ...(activeSeries && !isSeries ? [{ label: activeSeries.series.kind === 'special' ? `Try ${activeSeries.series.name}` : `Try ${activeSeries.series.weeks.length} Message Routes`, className: 'series-result-cta', action: () => { setGameScreen('title'); setSeriesWeekIndex(activeSeries.weekIndex); openHomePanel('series'); } }] : []),
+        ...(isSeries ? [{ label: 'Run Today\'s Route', className: 'series-result-cta', action: () => { setSeriesMode(false); setGameScreen('title'); } }] : []),
+        ...(isSeries && seriesMessage ? [{ label: 'Watch This Week\'s Message', className: 'message-result-cta', action: () => { setGameScreen('title'); setSeriesWeekIndex(seriesWeekIndex); openSeriesResource(seriesMessage.title, seriesMessage.appUrl || seriesMessage.url); } }] : []),
+        ...(isSeries ? [{ label: 'Back to Message Routes', className: 'secondary series-back-action', action: () => { setGameScreen('title'); setSeriesWeekIndex(seriesWeekIndex); openHomePanel('series'); } }] : []),
+        ...(!isSeries ? [{ label: 'View Leaderboard', className: 'secondary', action: () => { setGameScreen('title'); openHomePanel('leaderboard'); void loadBoard('daily'); } }] : []),
+        { label: 'Back to Home', className: 'secondary back-home-action', action: backToHome },
+      ]
+      : [];
+  const modalActionItems: Array<{ label: string; action: () => void }> = showScoreIntro
+    ? [{ label: 'Got It · Start Run', action: dismissScoreIntro }]
+    : screen === 'paused'
+      ? [{ label: 'Resume Run', action: togglePause }, { label: 'Quit to Home', action: quitPausedRun }]
+      : resultActionItems;
+  const activeConsoleSelection = modalActionItems.length ? Math.min(consoleSelection, modalActionItems.length - 1) : 0;
+  const moveConsoleSelection = (direction: number) => {
+    if (!modalActionItems.length) return;
+    setConsoleSelection((current) => (current + direction + modalActionItems.length) % modalActionItems.length);
+  };
+  const activateConsoleSelection = () => modalActionItems[activeConsoleSelection]?.action();
+  const activateConsoleBack = () => {
+    if (showScoreIntro) return;
+    const backAction = modalActionItems.at(-1);
+    backAction?.action();
+  };
+  const handheldControls = screen === 'playing' ? (
     <>
       <div ref={touchControlsRef} className="touch-controls" aria-label="Handheld game controls">
       <div className="direction-pad"><small aria-hidden="true">MOVE</small><button className="pad-up" type="button" data-control="jump" aria-label="Move up: Jump" onPointerDown={(event) => beginPress('jump', event)} onPointerUp={(event) => endPress('jump', event)} onPointerCancel={(event) => endPress('jump', event)} onLostPointerCapture={(event) => endPress('jump', event)}>↑</button><button className="pad-left" type="button" data-control="left" aria-label="Move left" onPointerDown={(event) => beginPress('left', event)} onPointerUp={(event) => endPress('left', event)} onPointerCancel={(event) => endPress('left', event)} onLostPointerCapture={(event) => endPress('left', event)}>←</button><button className="pad-right" type="button" data-control="right" aria-label="Move right" onPointerDown={(event) => beginPress('right', event)} onPointerUp={(event) => endPress('right', event)} onPointerCancel={(event) => endPress('right', event)} onLostPointerCapture={(event) => endPress('right', event)}>→</button><button className="pad-down" type="button" data-control="dash" aria-label="Move down: Dash" onPointerDown={(event) => beginPress('dash', event)} onPointerUp={(event) => endPress('dash', event)} onPointerCancel={(event) => endPress('dash', event)} onLostPointerCapture={(event) => endPress('dash', event)}>↓</button></div>
       <div className="action-pad"><button className={hud.dashReady ? 'dash-control ready' : 'dash-control'} type="button" data-control="dash" aria-label={hud.dashReady ? 'B button: Dash ready' : 'B button: Dash charging'} onPointerDown={(event) => beginPress('dash', event)} onPointerUp={(event) => endPress('dash', event)} onPointerCancel={(event) => endPress('dash', event)} onLostPointerCapture={(event) => endPress('dash', event)}><b aria-hidden="true">B</b><small>DASH</small></button><button className="jump-control" type="button" data-control="jump" aria-label="A button: Jump — tap twice for double jump" onPointerDown={(event) => beginPress('jump', event)} onPointerUp={(event) => endPress('jump', event)} onPointerCancel={(event) => endPress('jump', event)} onLostPointerCapture={(event) => endPress('jump', event)}><b aria-hidden="true">A</b><small>JUMP 2X</small></button></div>
       </div>
-      <button className="console-start-control" type="button" onClick={togglePause} aria-label={screen === 'paused' ? 'Resume game with Start button' : 'Pause game with Start button'}><i aria-hidden="true" />START</button>
+      <button className="console-start-control" type="button" onClick={togglePause} aria-label="Pause game with Start button"><i aria-hidden="true" />START</button>
+    </>
+  ) : modalActionItems.length ? (
+    <>
+      <div className="handheld-menu-controls result-console-controls" aria-label="Result screen controls">
+        <div className="menu-direction-pad"><small>CHOOSE</small><button className="pad-up" type="button" aria-label="Previous action" onClick={() => moveConsoleSelection(-1)}>↑</button><button className="pad-left" type="button" aria-label="Previous action" onClick={() => moveConsoleSelection(-1)}>←</button><button className="pad-right" type="button" aria-label="Next action" onClick={() => moveConsoleSelection(1)}>→</button><button className="pad-down" type="button" aria-label="Next action" onClick={() => moveConsoleSelection(1)}>↓</button><span><i>PREV</i><i>NEXT</i></span></div>
+        <div className="menu-action-pad"><button type="button" aria-label="B button: Back" disabled={showScoreIntro} onClick={activateConsoleBack}><b>B</b><small>BACK</small></button><button className="menu-primary-control" type="button" aria-label={`A button: ${modalActionItems[activeConsoleSelection]?.label ?? 'Select'}`} onClick={activateConsoleSelection}><b>A</b><small>SELECT</small></button></div>
+      </div>
+      <button className="console-start-control" type="button" aria-label={`Start button: ${modalActionItems[activeConsoleSelection]?.label ?? 'Select'}`} onClick={activateConsoleSelection}><i aria-hidden="true" />START</button>
     </>
   ) : (
     <>
@@ -1612,12 +1660,12 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
           </div>
         )}
 
-        {showScoreIntro && <div ref={gameModalRef} className="game-modal score-intro" role="dialog" aria-modal="true" aria-labelledby="score-intro-title" tabIndex={-1}><p>BEFORE YOUR FIRST RUN</p><h2 id="score-intro-title">Highest score wins.</h2><div className="score-intro-grid"><span><b>+500</b> Finish</span><span><b>+1,200</b> Move fast</span><span><b>+800</b> Collect Light</span><span><b>+200</b> Complete the challenge</span></div><p>Faster runs earn more Pace points; time breaks an exact score tie. Every finish adds your Light to Suncrest&apos;s weekly goal.</p><button type="button" onClick={dismissScoreIntro}>Got It · Start Run</button></div>}
-        {screen === 'paused' && <div ref={gameModalRef} className="game-modal pause-modal" role="dialog" aria-modal="true" aria-labelledby="pause-title" tabIndex={-1}><p>RUN PAUSED</p><h2 id="pause-title">Catch your breath.</h2><p>Press START again or choose Resume.</p><button type="button" onClick={togglePause}>Resume Run</button><button className="secondary" type="button" onClick={() => { track('quit', { hits: hud.hits, checkpoint: hud.checkpoint, progress: hud.progress, elapsedMs: hud.time * 1000, lights: hud.sparks, lightTotal: hud.total, lightPercent: hud.total ? hud.sparks / hud.total * 100 : 0, dashCount: runMetricsRef.current.dashCount, signatureCount: hud.signatureCount }); flushTelemetry(); setGameScreen('title'); }}>Quit to Home</button></div>}
-        {screen === 'over' && <div ref={gameModalRef} className="game-modal" role="dialog" aria-modal="true" aria-labelledby="over-title" tabIndex={-1}><p>LIGHT LOST</p><h2 id="over-title">That route got you.</h2><p>Use the high paths, save your dash, and hit enemies from above.</p><button type="button" onClick={() => void startGame()}>Run It Back</button><button className="secondary" type="button" onClick={() => { setGameScreen('title'); if (isSeries) openHomePanel('series'); }}>{isSeries ? 'Back to Message Routes' : 'Back to Home'}</button></div>}
+        {showScoreIntro && <div ref={gameModalRef} className="game-modal score-intro" role="dialog" aria-modal="true" aria-labelledby="score-intro-title" tabIndex={-1}><p>BEFORE YOUR FIRST RUN</p><h2 id="score-intro-title">Highest score wins.</h2><div className="score-intro-grid"><span><b>+500</b> Finish</span><span><b>+1,200</b> Move fast</span><span><b>+800</b> Collect Light</span><span><b>+200</b> Complete the challenge</span></div><p>Faster runs earn more Pace points; time breaks an exact score tie. Every finish adds your Light to Suncrest&apos;s weekly goal.</p><button className={activeConsoleSelection === 0 ? 'controller-selected' : ''} type="button" onClick={dismissScoreIntro}>Got It · Start Run</button></div>}
+        {screen === 'paused' && <div ref={gameModalRef} className="game-modal pause-modal" role="dialog" aria-modal="true" aria-labelledby="pause-title" tabIndex={-1}><p>RUN PAUSED</p><h2 id="pause-title">Catch your breath.</h2><p>Press START again or choose Resume. Use the D-pad and A to choose an action.</p><button className={activeConsoleSelection === 0 ? 'controller-selected' : ''} type="button" onClick={togglePause}>Resume Run</button><button className={`secondary ${activeConsoleSelection === 1 ? 'controller-selected' : ''}`} type="button" onClick={quitPausedRun}>Quit to Home</button></div>}
+        {screen === 'over' && <div ref={gameModalRef} className="game-modal" role="dialog" aria-modal="true" aria-labelledby="over-title" tabIndex={-1}><p>LIGHT LOST</p><h2 id="over-title">That route got you.</h2><p>Use the high paths, save your dash, and hit enemies from above.</p>{resultActionItems.map((item, index) => <button className={`${item.className ?? ''} ${activeConsoleSelection === index ? 'controller-selected' : ''}`.trim()} type="button" key={item.label} onClick={item.action}>{item.label}</button>)}</div>}
         {screen === 'won' && (
           <div ref={gameModalRef} className={`game-modal win-modal ${isSeries ? 'series-win' : 'daily-win'}`} role="dialog" aria-modal="true" aria-labelledby="win-title" tabIndex={-1}>
-            <p>{isSeries ? `${activeSeries?.series.mechanicName ?? 'SERIES MARKS'} ${resultHud.signatureCount}/3` : `LIGHT RESTORED // ${earnedMedal} MEDAL`}</p><h2 id="win-title">Route cleared.</h2>
+            <header className="result-header"><p>{isSeries ? `${activeSeries?.series.mechanicName ?? 'SERIES MARKS'} ${resultHud.signatureCount}/3` : `LIGHT RESTORED // ${earnedMedal} MEDAL`}</p><h2 id="win-title">Route cleared.</h2></header>
             <div className={`score-tally ${isNewBestScore ? 'new-best' : ''}`} aria-label={`Crest Score ${displayedScore.toLocaleString()}. ${scoreResultLabel}`}>
               <span><small>ROUTE COMPLETE</small><b>+{(scoreResult?.breakdown.finish ?? localScore.finish).toLocaleString()}</b></span>
               <span><small>PACE BONUS · {formatTime(resultHud.time)}</small><b>+{(scoreResult?.breakdown.pace ?? localScore.pace).toLocaleString()}</b></span>
@@ -1625,28 +1673,19 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
               <span><small>{isSeries ? `${activeSeries?.series.shortName ?? 'SERIES'} · ${resultHud.signatureCount}/3` : `${earnedMedal} CHALLENGE`}</small><b>+{(scoreResult?.breakdown.bonus ?? localScore.bonus).toLocaleString()}</b></span>
               <strong><small>{scoreResultLabel}</small><b>{displayedScore.toLocaleString()}</b></strong>
             </div>
-            <div className={`result-priority ${communityCelebration ? 'goal-cleared' : ''}`}>
-              {communityCelebration ? <><b>✦ WEEKLY GOAL REACHED ✦</b><strong>THE SKYLINE IS LIT</strong><span>{communityCelebration.lights.toLocaleString()} Light collected together · Community Crest unlocked.</span></> : <><b>+{resultHud.sparks} COMMUNITY LIGHT</b><span>Every verified finish counts toward Suncrest&apos;s weekly goal.</span></>}
-              {!isSeries && streakCelebration && <div className={`streak-result ${streakCelebration.milestone ? 'milestone' : ''}`}><span>DAILY STREAK EXTENDED</span><b>{streakCelebration.days} {streakCelebration.days === 1 ? 'DAY' : 'DAYS'}</b><small>{streakCelebration.message}</small></div>}
-            </div>
-            {isSeries
-              ? <div className="challenge-result series-signature"><b>{activeSeries?.series.mechanicName ?? 'MESSAGE MARKS'}</b><span>{resultHud.signatureCount}/3 · {resultHud.signatureCount === 3 ? 'FULL +200 MESSAGE ROUTE BONUS' : 'PARTIAL MESSAGE ROUTE BONUS'}</span></div>
-              : <div className={`challenge-result ${earnedMedal.toLowerCase()}`}><b>{objective.name}</b><span>{objectiveResult}</span></div>}
+            <div className="result-highlights"><div className={`result-priority ${communityCelebration ? 'goal-cleared' : ''}`}>
+                {communityCelebration ? <><b>✦ WEEKLY GOAL REACHED ✦</b><strong>THE SKYLINE IS LIT</strong><span>{communityCelebration.lights.toLocaleString()} Light collected together · Community Crest unlocked.</span></> : <><b>+{resultHud.sparks} COMMUNITY LIGHT</b><span>Every finish helps Suncrest reach the weekly goal.</span></>}
+                {!isSeries && streakCelebration && <div className={`streak-result ${streakCelebration.milestone ? 'milestone' : ''}`}><span>STREAK</span><b>{streakCelebration.days} {streakCelebration.days === 1 ? 'DAY' : 'DAYS'}</b><small>{streakCelebration.message}</small></div>}
+              </div>{isSeries
+                ? <div className="challenge-result series-signature"><b>{activeSeries?.series.mechanicName ?? 'MESSAGE MARKS'}</b><span>{resultHud.signatureCount}/3 · {resultHud.signatureCount === 3 ? 'FULL +200 BONUS' : 'PARTIAL BONUS'}</span></div>
+                : <div className={`challenge-result ${earnedMedal.toLowerCase()}`}><b>{objective.name}</b><span>{objectiveResult}</span></div>}</div>
             {isSeries ? <div className={`rank-callout ${seriesBadgeNew ? 'badge-earned' : ''}`}>{seriesBadgeNew ? activeSeries?.series.kind === 'special' ? 'SPECIAL ROUTE CLEARED' : `BADGE EARNED · WEEK ${seriesWeekIndex + 1}` : 'MESSAGE ROUTE RECORDED'} · {seriesProgressCount}/{activeSeries?.series.weeks.length ?? 0} ROUTES</div> : submitState !== 'saved' ? <form className="score-form" onSubmit={submitRun} noValidate>
               <label htmlFor="nickname">POST TO TODAY&apos;S BOARD</label>
               <div><input id="nickname" value={nickname} onChange={(event) => setNickname(event.target.value)} minLength={2} maxLength={12} placeholder="NICKNAME" autoComplete="nickname" autoCapitalize="characters" spellCheck={false} /><button type="submit" disabled={submitState === 'saving' || !runIdRef.current}>{submitState === 'saving' ? 'SAVING...' : 'POST RUN'}</button></div>
               <small>Family-friendly nicknames only. Don&apos;t use your real name.{!runIdRef.current ? ' Online posting is unavailable for this run.' : ''}</small>
               {submitState === 'error' && <em role="alert">{submitError || 'COULDN\'T POST. TRY AGAIN.'}</em>}
             </form> : <div className="rank-callout">RUN POSTED {rank ? `// TODAY #${rank}` : '// TO TODAY'}</div>}
-            <div className="result-actions">
-              <button type="button" onClick={() => void startGame()}>Run It Again</button>
-              {activeSeries && !isSeries && <button className="series-result-cta" type="button" onClick={() => { setGameScreen('title'); setSeriesWeekIndex(activeSeries.weekIndex); openHomePanel('series'); }}>Try {activeSeries.series.kind === 'special' ? activeSeries.series.name : `${activeSeries.series.weeks.length} Message Routes`}</button>}
-              {isSeries && <button className="series-result-cta" type="button" onClick={() => { setSeriesMode(false); setGameScreen('title'); }}>Run Today&apos;s Route</button>}
-              {isSeries && seriesMessage && <button className="message-result-cta" type="button" onClick={() => { setGameScreen('title'); setSeriesWeekIndex(seriesWeekIndex); openSeriesResource(seriesMessage.title, seriesMessage.appUrl || seriesMessage.url); }}>Watch This Week&apos;s Message</button>}
-              {isSeries && <button className="secondary series-back-action" type="button" onClick={() => { setGameScreen('title'); setSeriesWeekIndex(seriesWeekIndex); openHomePanel('series'); }}>Back to Message Routes</button>}
-              {!isSeries && <button className="secondary" type="button" onClick={() => { setGameScreen('title'); openHomePanel('leaderboard'); void loadBoard('daily'); }}>View Leaderboard</button>}
-              <button className="secondary back-home-action" type="button" onClick={() => { setSeriesMode(false); closeHomePanel(); setGameScreen('title'); }}>Back to Home</button>
-            </div>
+            <div className="result-actions">{resultActionItems.map((item, index) => <button className={`${item.className ?? ''} ${activeConsoleSelection === index ? 'controller-selected' : ''}`.trim()} type="button" key={item.label} onClick={item.action}>{item.label}</button>)}</div>
           </div>
         )}
 

@@ -412,19 +412,26 @@ test('post-run layouts keep Daily and Message Route results distinct and landsca
   assert.match(game, /mechanicAction/);
   assert.match(game, /series-status/);
   assert.match(game, /Back to Message Routes/);
-  assert.match(game, /Watch This Week&apos;s Message/);
+  assert.match(game, /Watch This Week\\'s Message/);
   assert.match(game, /crestbound-series-mechanic-seen-\$\{seriesWeek\?\.id/);
   assert.match(game, /Highest score wins\./);
   assert.match(game, /track\('scoring_learned'/);
   assert.match(game, /track\('personal_best'/);
   assert.match(game, /back-home-action[\s\S]*?Back to Home/);
-  assert.match(game, /!isSeries && <button className="secondary"[\s\S]*?View Leaderboard/);
+  assert.match(game, /label: 'View Leaderboard', className: 'secondary'/);
+  assert.match(game, /resultActionItems\.map/);
+  assert.match(game, /const \[consoleSelection, setConsoleSelection\]/);
+  assert.match(game, /const moveConsoleSelection/);
+  assert.match(game, /const activateConsoleSelection/);
+  assert.match(game, /className=\{activeConsoleSelection === 0 \? 'controller-selected'/);
   assert.match(styles, /grid-template-columns: minmax\(0, 1\.08fr\) minmax\(300px, \.92fr\)/);
   assert.match(styles, /\.win-modal \.result-actions \{[\s\S]*?grid-column: 1 \/ -1/);
   assert.match(styles, /\.score-tally\.new-best/);
   assert.match(styles, /\.series-completion-progress/);
   assert.match(styles, /\.series-mechanic/);
   assert.match(styles, /\.message-result-cta/);
+  assert.match(styles, /Final console UX system/);
+  assert.match(styles, /\.portrait-game-frame \.win-modal \{[\s\S]*?overflow: hidden/);
 });
 
 test('menu guidance uses readable in-place views instead of a scrolling document', () => {
@@ -484,7 +491,7 @@ test('Subsplash uses one permanent portrait handheld without an orientation gate
   assert.match(source, /SUNCREST APP/);
   assert.match(styles, /Permanent Suncrest handheld shell/);
   assert.match(styles, /Final flat-shell layer/);
-  assert.match(styles, /background: #a8b5a7/);
+  assert.match(styles, /background: #f2b52b/);
   assert.match(styles, /\.portrait-game-frame \.leaderboard\.home-panel,[\s\S]*?height: calc\(100% - 12px\)/);
   assert.match(styles, /\.portrait-game-frame:has\(\.hud\) \.game-canvas/);
   assert.match(styles, /aspect-ratio: 3 \/ 4/);
