@@ -497,6 +497,8 @@ test('Subsplash uses one permanent portrait handheld without an orientation gate
   assert.match(source, /className="pad-down"/);
   assert.match(source, /className="action-pad"/);
   assert.match(source, /className="console-start-control"/);
+  assert.match(source, /className="game-modal pause-modal"/);
+  assert.match(source, /Press START again or choose Resume/);
   assert.doesNotMatch(source, /'Pause game'\}\>\{screen === 'paused' \? '▶' : 'Ⅱ'/);
   assert.match(source, />B<\/b><small>DASH<\/small>/);
   assert.match(source, />A<\/b><small>JUMP 2X<\/small>/);
