@@ -2820,3 +2820,213 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .leaderboard .board-list .board-message:has(button) { gap: 8px; padding: 8px; }
   .leaderboard .board-list .board-message button { min-height: 38px; padding: 6px 12px; font-size: 9px; }
 }
+
+/* Handheld source fidelity. The supplied Figma SVG is the console artwork;
+   the app only supplies the live screen and invisible interaction targets. */
+.portrait-game-frame.game-frame {
+  --console-header: 0px;
+  --console-screen-height: 53.3228%;
+  width: min(100dvw, calc(100svh * .512658), 430px);
+  height: auto;
+  max-width: 430px;
+  max-height: none;
+  aspect-ratio: 648 / 1264;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: url('/handheld-shell.svg') center / 100% 100% no-repeat;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.portrait-game-frame::before,
+.portrait-game-frame::after,
+.handheld-brand { display: none; }
+.handheld-screen {
+  z-index: 2;
+  left: 7.0988%;
+  right: 10.1852%;
+  top: 5.1424%;
+  height: 53.3228%;
+  border: 0;
+  border-radius: 0;
+  outline: 0;
+  background: #061b20;
+  box-shadow: none;
+}
+.handheld-control-bay {
+  z-index: 3;
+  inset: 60.68% 0 0;
+  overflow: visible;
+  background: transparent;
+  box-shadow: none;
+}
+.handheld-control-bay::before,
+.handheld-control-bay::after,
+.handheld-speaker { display: none; }
+.handheld-control-bay .touch-controls,
+.handheld-menu-controls {
+  inset: 0;
+  transform: none;
+}
+.handheld-control-bay .direction-pad,
+.menu-direction-pad {
+  position: absolute;
+  left: 9.4%;
+  top: 13.5%;
+  width: 132px;
+  height: 132px;
+  background: transparent;
+  box-shadow: none;
+}
+.handheld-control-bay .direction-pad::before,
+.menu-direction-pad::before,
+.handheld-control-bay .direction-pad > small,
+.menu-direction-pad > small { display: none; }
+.handheld-control-bay .action-pad,
+.menu-action-pad {
+  position: absolute;
+  left: 55%;
+  top: 14%;
+  width: 146px;
+  height: 112px;
+}
+.handheld-control-bay .touch-controls button,
+.handheld-menu-controls button,
+.handheld-control-bay .touch-controls .dash-control,
+.handheld-control-bay .touch-controls .jump-control,
+.menu-action-pad button {
+  border: 0 !important;
+  outline: 0 !important;
+  color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  opacity: 0 !important;
+}
+.console-start-control {
+  left: 50%;
+  top: 60%;
+  bottom: auto;
+  width: 76px;
+  height: 34px;
+  transform: translateX(-50%);
+  opacity: 0;
+}
+
+/* Readability pass: one consistent step up across the handheld menus. */
+.portrait-game-frame .home-dashboard .daily-course span,
+.portrait-game-frame .home-dashboard .daily-course em { font-size: 9px; }
+.portrait-game-frame .home-dashboard .daily-course b { font-size: 14px; }
+.portrait-game-frame .home-dashboard .streak-badge { font-size: 8px; }
+.portrait-game-frame .home-dashboard .home-social-stats small,
+.portrait-game-frame .home-dashboard .daily-glance .community-progress > div { font-size: 9px; }
+.portrait-game-frame .home-dashboard .home-social-stats b { font-size: 10px; }
+.portrait-game-frame .handheld-screen-menu { font-size: 10px; }
+.portrait-game-frame .handheld-screen-menu > div {
+  grid-template-columns: 14px minmax(0, 1fr) auto;
+  padding: 6px 7px;
+}
+.portrait-game-frame .handheld-screen-menu small { font-size: 7px; }
+.portrait-game-frame .board-heading { font-size: 19px; }
+.portrait-game-frame .board-heading small,
+.portrait-game-frame .board-tabs button { font-size: 11px; }
+.portrait-game-frame .board-legend { font-size: 10px; }
+.portrait-game-frame .board-list li { font-size: 12px; }
+.portrait-game-frame .leaderboard .board-context > p,
+.portrait-game-frame .leaderboard .nearby-rivals b,
+.portrait-game-frame .leaderboard .nearby-rivals span { font-size: 11px; }
+.portrait-game-frame .how-to .help-tabs button { font-size: 11px; }
+.portrait-game-frame .control-directory article b,
+.portrait-game-frame .help-card-grid article b { font-size: 10px; }
+.portrait-game-frame .control-directory article span,
+.portrait-game-frame .help-card-grid article span { font-size: 13px; }
+.portrait-game-frame .today-guide small { font-size: 9px; }
+.portrait-game-frame .today-guide b { font-size: 12px; }
+.portrait-game-frame .today-guide span { font-size: 13px; }
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-feature-compact > .series-week > span,
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-route-count { font-size: 11px !important; }
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-feature-compact > .series-week > small,
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-week .series-mechanic small { font-size: 12px; }
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-week .series-mechanic span { font-size: 9px !important; }
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-week .series-mechanic b { font-size: 11px !important; }
+.portrait-game-frame .series-results-button small,
+.portrait-game-frame .series-results-button > b,
+.portrait-game-frame .series-results header small,
+.portrait-game-frame .series-results header > b,
+.portrait-game-frame .series-result-legend,
+.portrait-game-frame .series-results li { font-size: 11px; }
+.portrait-game-frame .message-link strong { font-size: 11px; }
+.portrait-game-frame .message-link small { font-size: 11px; }
+.portrait-game-frame .panel-close,
+.portrait-game-frame .panel-dismiss,
+.portrait-game-frame .series-results-back { font-size: 11px; }
+
+/* Overlay screens are measured against the console display, never the phone
+   viewport. This keeps headings, tabs, actions, and close controls visible. */
+.portrait-game-frame .home-panel,
+.portrait-game-frame .leaderboard.home-panel,
+.portrait-game-frame .series-picker.home-panel,
+.portrait-game-frame .series-results-panel.home-panel,
+.portrait-game-frame .how-to.home-panel {
+  left: 50%;
+  top: 50%;
+  width: calc(100% - 12px);
+  height: calc(100% - 12px);
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  transform: translate(-50%, -50%);
+}
+.portrait-game-frame .leaderboard .board-heading {
+  flex-basis: 52px;
+  padding: 11px 60px 9px 14px;
+}
+.portrait-game-frame .leaderboard .board-table {
+  min-height: 0;
+  grid-template-rows: 44px 30px minmax(0, 1fr);
+}
+.portrait-game-frame .leaderboard .board-tabs { height: 44px; }
+.portrait-game-frame .leaderboard .board-tabs button { min-height: 40px; }
+.portrait-game-frame .leaderboard .board-list li { flex-basis: 40px; min-height: 40px; }
+.portrait-game-frame .leaderboard .panel-close {
+  display: block;
+  flex: 0 0 40px;
+  min-height: 40px;
+}
+.portrait-game-frame .how-to.home-panel {
+  grid-template-rows: 52px 42px minmax(0, 1fr) 40px;
+  gap: 6px;
+  padding: 10px;
+}
+.portrait-game-frame .how-to .panel-close {
+  width: 100%;
+  min-height: 40px;
+  margin: 0;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) {
+  grid-template-rows: 38px minmax(0, 1fr) 48px 52px auto;
+  gap: 5px;
+  padding: 9px 10px;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) > .series-play { min-height: 48px; }
+.portrait-game-frame .series-picker:not(.series-results-panel) > .series-results-button { min-height: 52px; }
+.portrait-game-frame .series-picker:not(.series-results-panel) > .series-resources .message-link { min-height: 48px; }
+.portrait-game-frame .series-picker:not(.series-results-panel) > .panel-close {
+  display: none;
+}
+.portrait-game-frame .series-results-panel.home-panel {
+  grid-template-rows: 40px auto minmax(0, 1fr) 40px;
+  gap: 5px;
+  padding: 9px 10px;
+}
+.portrait-game-frame .series-results-panel > .panel-close {
+  display: block;
+  min-height: 40px;
+}
+
+@media (max-height: 700px) {
+  .portrait-game-frame.game-frame {
+    width: min(100dvw, calc(100svh * .512658), 430px);
+    height: auto;
+    border-radius: 0;
+  }
+}
