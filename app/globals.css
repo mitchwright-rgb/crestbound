@@ -186,7 +186,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 }
 .portrait-game-frame.game-frame {
   --console-header: 32px;
-  --console-controls: clamp(132px, 21svh, 174px);
+  --console-screen-height: min(calc((100dvw - 32px) * 1.3333), calc(100svh - 330px), 540px);
   width: min(100dvw, 430px);
   height: 100svh;
   max-width: 430px;
@@ -200,13 +200,15 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 }
 .portrait-game-frame::before {
   z-index: 5;
-  inset: var(--console-header) 7px var(--console-controls);
+  inset: var(--console-header) 7px auto;
+  height: var(--console-screen-height);
   border-radius: 9px;
   background: radial-gradient(ellipse at center, transparent 58%, rgb(1 7 9 / 34%) 100%);
 }
 .portrait-game-frame::after {
   z-index: 45;
-  inset: var(--console-header) 7px var(--console-controls);
+  inset: var(--console-header) 7px auto;
+  height: var(--console-screen-height);
   border-radius: 9px;
 }
 .handheld-brand {
@@ -228,7 +230,8 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .handheld-screen {
   position: absolute;
   z-index: 1;
-  inset: var(--console-header) 7px var(--console-controls);
+  inset: var(--console-header) 7px auto;
+  height: var(--console-screen-height);
   overflow: hidden;
   border: 7px solid #071316;
   border-radius: 9px 9px 15px 9px;
@@ -240,8 +243,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .handheld-control-bay {
   position: absolute;
   z-index: 10;
-  inset: auto 0 0;
-  height: var(--console-controls);
+  inset: calc(var(--console-header) + var(--console-screen-height) + 8px) 0 0;
   overflow: hidden;
   background:
     radial-gradient(circle at 17% 32%, rgb(120 215 210 / 10%), transparent 20%),
@@ -297,7 +299,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 }
 .portrait-game-frame .home-cover {
   width: 100%;
-  height: clamp(142px, 31svh, 270px);
+  height: 49%;
   display: block;
   flex: 0 0 auto;
 }
@@ -329,19 +331,20 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   justify-content: center;
   gap: 6px;
   overflow: hidden;
-  padding: 7px 9px 8px;
+  padding: 9px 10px 10px;
   border-top: 4px solid #11a7a3;
   background: #061b20;
 }
 .portrait-game-frame .home-dashboard::before { content: none; }
-.portrait-game-frame .home-dashboard .daily-course { min-height: 52px; padding: 6px 9px; }
-.portrait-game-frame .home-dashboard .daily-course span { padding-right: 70px; font-size: 9px; }
+.portrait-game-frame .home-dashboard .daily-course { min-height: 54px; padding: 7px 9px; }
+.portrait-game-frame .home-dashboard .daily-course span { padding-right: 78px; font-size: 8px; }
 .portrait-game-frame .home-dashboard .daily-course b { font-size: 13px; }
-.portrait-game-frame .home-dashboard .daily-course em { font-size: 9px; }
+.portrait-game-frame .home-dashboard .daily-course em { font-size: 8px; }
 .portrait-game-frame .home-dashboard .route-condition { display: none; }
-.portrait-game-frame .home-dashboard .streak-badge { top: 5px; right: 6px; font-size: 6px; }
-.portrait-game-frame .home-dashboard .play-button { height: auto; min-height: 44px; padding: 7px; font-size: 10px; }
-.portrait-game-frame .home-dashboard .daily-glance { min-height: 58px; gap: 4px; padding: 6px 9px; }
+.portrait-game-frame .home-dashboard .streak-badge { top: 7px; right: 7px; font-size: 7px; }
+.portrait-game-frame .home-dashboard .play-button,
+.portrait-game-frame .home-dashboard .home-links { display: none; }
+.portrait-game-frame .home-dashboard .daily-glance { min-height: 38px; gap: 2px; padding: 5px 9px; }
 .portrait-game-frame .home-dashboard .home-social-stats small { font-size: 8px; }
 .portrait-game-frame .home-dashboard .home-social-stats b { font-size: 9px; }
 .portrait-game-frame .home-dashboard .daily-glance .community-progress { padding-top: 3px; }
@@ -353,6 +356,33 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .portrait-game-frame .home-dashboard .home-links button { min-height: 37px; padding: 4px 3px; font-size: 8px; }
 .portrait-game-frame .home-dashboard .series-routes-link strong { font-size: 9px; }
 .portrait-game-frame .home-dashboard .series-routes-link small { display: none; }
+.portrait-game-frame .handheld-screen-menu {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-top: 1px;
+  font: 8px/1 var(--font-pixel), monospace;
+}
+.portrait-game-frame .handheld-screen-menu > div {
+  min-width: 0;
+  min-height: 31px;
+  display: grid;
+  grid-template-columns: 12px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 6px;
+  border: 2px solid #17444b;
+  color: #9fc9c7;
+  background: #09262d;
+}
+.portrait-game-frame .handheld-screen-menu > div.active {
+  border-color: var(--gold-light);
+  color: #071316;
+  background: var(--gold-light);
+  box-shadow: 2px 2px 0 #020708;
+}
+.portrait-game-frame .handheld-screen-menu small { color: inherit; font-size: 6px; white-space: nowrap; }
 
 /* Menus and results remain contained by the handheld screen. */
 .portrait-game-frame .home-panel {
@@ -364,23 +394,37 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   overflow-y: auto;
 }
 .portrait-game-frame .game-modal {
-  width: calc(100% - 22px);
-  max-height: calc(100% - 22px);
+  left: 7px;
+  top: 7px;
+  width: calc(100% - 14px);
+  height: calc(100% - 14px);
+  max-height: none;
+  transform: none;
   overflow-y: auto;
-  padding: 15px 12px;
+  padding: 11px 10px;
+  border-width: 3px;
+  outline-width: 2px;
+  box-shadow: 4px 4px 0 #020707, inset 0 0 0 1px rgb(120 215 210 / 10%);
+  image-rendering: pixelated;
+  text-rendering: geometricPrecision;
 }
+.portrait-game-frame:has(.game-modal)::after { display: none; }
+.portrait-game-frame .game-modal h2 { margin: 5px 0 8px; font-size: 22px; text-shadow: 2px 2px 0 #9c5714, 4px 4px 0 #020707; }
+.portrait-game-frame .game-modal > p:not(:first-child) { margin: 0 auto 8px; font-size: 11px; }
+.portrait-game-frame .game-modal > button { min-height: 36px; padding: 6px 10px; font-size: 9px; }
+.portrait-game-frame .game-modal .secondary { min-height: 32px; margin-top: 6px; }
 
 /* Gameplay uses the console screen; controls stay in the permanent bay. */
 .portrait-game-frame .game-canvas { inset: 0; width: 100%; height: 100%; object-fit: contain; }
 .portrait-game-frame:has(.hud) .game-canvas {
-  inset: 50% 5px auto;
-  width: calc(100% - 10px);
-  height: auto;
-  aspect-ratio: 16 / 9;
-  transform: translateY(-50%);
-  border: 5px solid #10292e;
-  outline: 2px solid #52777a;
-  box-shadow: 5px 6px 0 rgb(1 8 10 / 58%);
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 3 / 4;
+  transform: none;
+  border: 0;
+  outline: 0;
+  box-shadow: none;
   object-fit: fill;
 }
 .portrait-game-frame:has(.hud) .hud { top: 6px; left: 6px; right: 6px; }
@@ -396,7 +440,8 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .handheld-menu-controls {
   position: absolute;
   z-index: 2;
-  inset: 24px 13px 10px;
+  inset: 50% 13px auto;
+  transform: translateY(-50%);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -486,8 +531,8 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 .handheld-menu-controls button:disabled { opacity: .55; }
 
 @media (max-height: 700px) {
-  .portrait-game-frame.game-frame { --console-header: 28px; --console-controls: 132px; border-radius: 0; }
-  .portrait-game-frame .home-cover { height: 156px; }
+  .portrait-game-frame.game-frame { --console-header: 28px; --console-screen-height: min(calc((100dvw - 32px) * 1.3333), calc(100svh - 280px), 430px); border-radius: 0; }
+  .portrait-game-frame .home-cover { height: 46%; }
   .portrait-game-frame .home-dashboard { gap: 4px; padding-block: 5px; }
   .portrait-game-frame .home-dashboard .daily-course { min-height: 45px; }
   .portrait-game-frame .home-dashboard .daily-glance { min-height: 50px; }

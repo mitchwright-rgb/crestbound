@@ -457,25 +457,22 @@ test('menu guidance uses readable in-place views instead of a scrolling document
   assert.match(game, /<header><h3>Top Scores<\/h3>/);
 });
 
-test('home summary stays pinned to today while leaderboard filters change', () => {
+test('handheld home keeps community progress independent from leaderboard filters', () => {
   const game = readFileSync(new URL('./crestbound-game.tsx', import.meta.url), 'utf8');
   const leaderboard = readFileSync(new URL('./api/leaderboard/route.ts', import.meta.url), 'utf8');
-  assert.match(game, /const \[dailyLeader, setDailyLeader\]/);
-  assert.match(game, /const \[dailyPlayers, setDailyPlayers\]/);
-  assert.match(game, /const loadDailySummary = useCallback/);
+  assert.match(game, /const loadCommunitySummary = useCallback/);
   assert.match(game, /board: 'daily'/);
-  assert.match(game, /setDailyLeader\(data\.entries\?\.\[0\] \?\? null\)/);
-  assert.match(game, /setDailyPlayers\(data\.players \?\? 0\)/);
-  assert.match(game, /TODAY&apos;S TOP/);
-  assert.match(game, /dailyPlayers === undefined \? 'CHECKING…'/);
-  assert.doesNotMatch(game, /<small>TOP SCORE<\/small><b>\{entries\[0\]/);
-  assert.doesNotMatch(game, /<small>TODAY<\/small><b>\{community\.players/);
+  assert.match(game, /setCommunity\(\{ players: data\.weeklyPlayers/);
+  assert.match(game, /COMMUNITY LIGHT · WEEK/);
+  assert.match(game, /className="handheld-screen-menu"/);
+  assert.doesNotMatch(game, /className="home-links"/);
+  assert.doesNotMatch(game, /className="play-button"/);
   assert.match(leaderboard, /players: ranked\.length/);
   assert.match(leaderboard, /weeklyPlayers: summary\?\.players \?\? 0/);
   assert.match(game, /const requestId = \+\+boardRequestRef\.current/);
-  assert.match(game, /const requestId = \+\+dailySummaryRequestRef\.current/);
+  assert.match(game, /const requestId = \+\+communitySummaryRequestRef\.current/);
   assert.match(game, /if \(requestId !== boardRequestRef\.current\) return/);
-  assert.match(game, /if \(requestId !== dailySummaryRequestRef\.current\) return/);
+  assert.match(game, /if \(requestId !== communitySummaryRequestRef\.current\) return/);
 });
 
 test('Subsplash uses one permanent portrait handheld without an orientation gate', () => {
@@ -487,7 +484,8 @@ test('Subsplash uses one permanent portrait handheld without an orientation gate
   assert.match(source, /SUNCREST APP/);
   assert.match(styles, /Permanent Suncrest handheld shell/);
   assert.match(styles, /\.portrait-game-frame:has\(\.hud\) \.game-canvas/);
-  assert.match(styles, /aspect-ratio: 16 \/ 9/);
+  assert.match(styles, /aspect-ratio: 3 \/ 4/);
+  assert.match(source, /width=\{180\} height=\{240\}/);
   assert.match(shell, /handheld-screen/);
   assert.match(shell, /handheld-control-bay/);
   assert.match(source, /handheld-menu-controls/);

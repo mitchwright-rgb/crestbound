@@ -27,8 +27,9 @@ type StreakCelebration = { days: number; milestone: boolean; message: string };
 
 const WORLD_W = 15400;
 const FINISH_X = 15135;
-const VIEW_W = 1280;
+const VIEW_W = 540;
 const VIEW_H = 720;
+const RENDER_SCALE = 1 / 3;
 
 const courseSpecs = [
   { id: 'goldline', name: 'Goldline Rooftops', short: 'GOLDLINE', accent: '#f5d263', description: 'Balanced rooftops, branching high paths, and precision shortcuts.' },
@@ -140,11 +141,9 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
   const dashCoachRef = useRef(false);
   const runMetricsRef = useRef({ dashCount: 0 });
   const boardRequestRef = useRef(0);
-  const dailySummaryRequestRef = useRef(0);
+  const communitySummaryRequestRef = useRef(0);
   const [board, setBoard] = useState<Board>('daily');
   const [entries, setEntries] = useState<BoardEntry[]>([]);
-  const [dailyLeader, setDailyLeader] = useState<BoardEntry | null | undefined>(undefined);
-  const [dailyPlayers, setDailyPlayers] = useState<number | undefined>(undefined);
   const [boardStatus, setBoardStatus] = useState<'loading' | 'ready' | 'offline'>('loading');
   const [nickname, setNickname] = useState('');
   const [submitState, setSubmitState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
@@ -157,6 +156,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
   const [isNewBestScore, setIsNewBestScore] = useState(false);
   const [showScoreIntro, setShowScoreIntro] = useState(false);
   const [homePanel, setHomePanel] = useState<HomePanel>('none');
+  const [homeSelection, setHomeSelection] = useState(0);
   const [helpTab, setHelpTab] = useState<HelpTab>('play');
   const homePanelRef = useRef<HTMLElement>(null);
   const homePanelTriggerRef = useRef<HTMLElement | null>(null);
@@ -361,23 +361,17 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
     }
   }, [dailyCourse.id]);
 
-  const loadDailySummary = useCallback(async () => {
-    const requestId = ++dailySummaryRequestRef.current;
-    setDailyLeader(undefined);
-    setDailyPlayers(undefined);
+  const loadCommunitySummary = useCallback(async () => {
+    const requestId = ++communitySummaryRequestRef.current;
     try {
       const params = new URLSearchParams({ board: 'daily', courseId: dailyCourse.id, playerId: playerIdRef.current });
       const response = await fetch(`/api/leaderboard?${params}`, { cache: 'no-store' });
-      if (!response.ok) throw new Error('Daily summary unavailable');
+      if (!response.ok) throw new Error('Community summary unavailable');
       const data = await response.json() as { entries?: BoardEntry[]; players?: number; weeklyPlayers?: number; lights?: number; goal?: number; nearby?: BoardEntry[]; playerRank?: number | null; recent?: string[] };
-      if (requestId !== dailySummaryRequestRef.current) return;
-      setDailyLeader(data.entries?.[0] ?? null);
-      setDailyPlayers(data.players ?? 0);
+      if (requestId !== communitySummaryRequestRef.current) return;
       setCommunity({ players: data.weeklyPlayers ?? 0, lights: data.lights ?? 0, goal: data.goal ?? 2500, nearby: data.nearby ?? [], playerRank: data.playerRank ?? null, recent: data.recent ?? [] });
     } catch {
-      if (requestId !== dailySummaryRequestRef.current) return;
-      setDailyLeader(undefined);
-      setDailyPlayers(undefined);
+      if (requestId !== communitySummaryRequestRef.current) return;
     }
   }, [dailyCourse.id]);
 
@@ -387,9 +381,9 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
   }, [board, loadBoard]);
 
   useEffect(() => {
-    const load = window.setTimeout(() => { void loadDailySummary(); }, 0);
+    const load = window.setTimeout(() => { void loadCommunitySummary(); }, 0);
     return () => window.clearTimeout(load);
-  }, [loadDailySummary]);
+  }, [loadCommunitySummary]);
 
   const stopMusic = useCallback(() => {
     const music = musicRef.current;
@@ -448,8 +442,25 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
     setHomePanel('none');
     requestAnimationFrame(() => {
       if (homePanelTriggerRef.current?.isConnected) homePanelTriggerRef.current.focus();
-      else document.querySelector<HTMLElement>('.play-button')?.focus();
+      else document.querySelector<HTMLElement>('.menu-primary-control')?.focus();
     });
+  }
+
+  function activateHomeSelection() {
+    if (homeSelection === 0) { void startGame(true); return; }
+    if (homeSelection === 1) {
+      setSeriesWeekIndex(activeSeries?.weekIndex ?? 0);
+      openHomePanel('series');
+      track('series_open');
+      return;
+    }
+    if (homeSelection === 2) {
+      openHomePanel('leaderboard');
+      track('leaderboard_open');
+      return;
+    }
+    setHelpTab('play');
+    openHomePanel('help');
   }
 
   function openSeriesResource(title: string, url: string) {
@@ -610,7 +621,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
       setRank(data.rank ?? null);
       setScoreResult({ score: data.score ?? localScore.total, breakdown: data.breakdown ?? localScore, contribution: data.community?.contribution ?? runResult.sparks });
       if (data.community) applyCommunityUpdate(data.community);
-      setSubmitState('saved'); setBoard('daily'); void loadBoard('daily'); void loadDailySummary();
+      setSubmitState('saved'); setBoard('daily'); void loadBoard('daily'); void loadCommunitySummary();
     } catch (error) { setSubmitError(error instanceof Error ? error.message : 'Couldn\'t post this run.'); setSubmitState('error'); }
   }
 
@@ -724,10 +735,10 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
       { skyTop: '#06111f', skyMid: '#0a2333', skyLow: '#174251', haze: '#245d68', far: '#153746', near: '#092431', window: '#f5c84d', rail: '#24aaa9', edge: '#0b666d', blockA: '#0e3541', blockB: '#092a35', support: '#061c25' },
     ][activeCourseIndex];
     const skyLayer = document.createElement('canvas');
-    skyLayer.width = VIEW_W / 4; skyLayer.height = VIEW_H / 4;
+    skyLayer.width = VIEW_W / 3; skyLayer.height = VIEW_H / 3;
     const skyContext = skyLayer.getContext('2d');
     if (skyContext) {
-      skyContext.setTransform(.25, 0, 0, .25, 0, 0);
+      skyContext.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0);
       const skyGradient = skyContext.createLinearGradient(0, 0, 0, VIEW_H);
       skyGradient.addColorStop(0, atmosphere.skyTop);
       skyGradient.addColorStop(.38, atmosphere.skyMid);
@@ -738,10 +749,10 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
     const skylineTileWidth = 1440;
     const skylineTiles = [0, 1].map((layer) => {
       const tile = document.createElement('canvas');
-      tile.width = skylineTileWidth / 4; tile.height = VIEW_H / 4;
+      tile.width = skylineTileWidth / 3; tile.height = VIEW_H / 3;
       const tileContext = tile.getContext('2d');
       if (!tileContext) return tile;
-      tileContext.setTransform(.25, 0, 0, .25, 0, 0);
+      tileContext.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, 0, 0);
       tileContext.imageSmoothingEnabled = false;
       const baseY = layer ? 505 : 430;
       const building = layer ? atmosphere.near : atmosphere.far;
@@ -1032,7 +1043,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
         flushTelemetry();
         tone('win'); setGameScreen('won');
       }
-      cameraX += (Math.max(0, Math.min(WORLD_W - VIEW_W, player.x - 390)) - cameraX) * Math.min(1, dt * 5.5);
+      cameraX += (Math.max(0, Math.min(WORLD_W - VIEW_W, player.x - 170)) - cameraX) * Math.min(1, dt * 5.5);
       if (elapsed - lastHud > 0.2) {
         lastHud = elapsed;
         const stored = window.localStorage.getItem(bestStorageKey);
@@ -1044,12 +1055,13 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
       const ctx = context;
       const shakeX = !reducedMotion && screenShake > 0 ? ((Math.floor(elapsed * 60) % 3) - 1) * 4 : 0;
       // Physics stays sub-pixel smooth, while the rendered camera lands on the
-      // 4-unit grid that maps exactly to one backing-canvas pixel.
-      const renderCameraX = Math.round(cameraX / 4) * 4;
+      // The 3-unit grid maps exactly to one backing-canvas pixel in the
+      // handheld's full-height portrait gameplay viewport.
+      const renderCameraX = Math.round(cameraX / 3) * 3;
       // Keep the playable rooftop above a phone's thumb controls without
       // changing the course geometry or the desktop composition.
       const touchWorldLift = touchLandscape.matches ? 120 : 0;
-      ctx.setTransform(.25, 0, 0, .25, shakeX * .25, 0);
+      ctx.setTransform(RENDER_SCALE, 0, 0, RENDER_SCALE, shakeX * RENDER_SCALE, 0);
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(skyLayer, 0, 0, skyLayer.width, skyLayer.height, -8, 0, VIEW_W + 16, VIEW_H);
       ctx.save();
@@ -1439,21 +1451,22 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seriesMode, seriesWeekIndex, routeSeed]);
 
+  const homeMenuOptions = ['DAILY RUN', 'MESSAGE ROUTES', 'LEADERBOARD', 'HOW TO PLAY'];
   const handheldControls = screen === 'playing' ? (
-    <div ref={touchControlsRef} className="touch-controls" aria-label="Touch controls">
+    <div ref={touchControlsRef} className="touch-controls" aria-label="Handheld game controls">
       <div className="direction-pad"><small aria-hidden="true">MOVE</small><button type="button" data-control="left" aria-label="Move left" onPointerDown={(event) => beginPress('left', event)} onPointerUp={(event) => endPress('left', event)} onPointerCancel={(event) => endPress('left', event)} onLostPointerCapture={(event) => endPress('left', event)}>←</button><button type="button" data-control="right" aria-label="Move right" onPointerDown={(event) => beginPress('right', event)} onPointerUp={(event) => endPress('right', event)} onPointerCancel={(event) => endPress('right', event)} onLostPointerCapture={(event) => endPress('right', event)}>→</button></div>
       <div className="action-pad"><button className={hud.dashReady ? 'dash-control ready' : 'dash-control'} type="button" data-control="dash" aria-label={hud.dashReady ? 'B button: Dash ready' : 'B button: Dash charging'} onPointerDown={(event) => beginPress('dash', event)} onPointerUp={(event) => endPress('dash', event)} onPointerCancel={(event) => endPress('dash', event)} onLostPointerCapture={(event) => endPress('dash', event)}><b aria-hidden="true">B</b><small>DASH</small></button><button className="jump-control" type="button" data-control="jump" aria-label="A button: Jump — tap twice for double jump" onPointerDown={(event) => beginPress('jump', event)} onPointerUp={(event) => endPress('jump', event)} onPointerCancel={(event) => endPress('jump', event)} onLostPointerCapture={(event) => endPress('jump', event)}><b aria-hidden="true">A</b><small>JUMP 2X</small></button></div>
     </div>
   ) : (
     <div className="handheld-menu-controls" aria-label="Handheld menu controls">
-      <div className="menu-direction-pad"><small>MENU</small><button type="button" aria-label="Open leaderboard" onClick={() => { openHomePanel('leaderboard'); track('leaderboard_open'); }}>←</button><button type="button" aria-label="Open how to play" onClick={() => { setHelpTab('play'); openHomePanel('help'); }}>→</button><span><i>BOARD</i><i>HELP</i></span></div>
-      <div className="menu-action-pad"><button type="button" aria-label={homePanel !== 'none' ? 'B button: Back' : 'B button: Open Message Routes'} onClick={() => homePanel !== 'none' ? closeHomePanel() : openHomePanel('series')}><b>B</b><small>{homePanel !== 'none' ? 'BACK' : 'ROUTES'}</small></button><button type="button" aria-label="A button: Run with Sunny" disabled={runStartState === 'connecting'} onClick={() => void startGame(true)}><b>A</b><small>RUN</small></button></div>
+      <div className="menu-direction-pad"><small>CHOOSE</small><button type="button" aria-label="Previous menu option" disabled={homePanel !== 'none'} onClick={() => setHomeSelection((value) => (value + homeMenuOptions.length - 1) % homeMenuOptions.length)}>←</button><button type="button" aria-label="Next menu option" disabled={homePanel !== 'none'} onClick={() => setHomeSelection((value) => (value + 1) % homeMenuOptions.length)}>→</button><span><i>PREV</i><i>NEXT</i></span></div>
+      <div className="menu-action-pad"><button type="button" aria-label="B button: Back" disabled={homePanel === 'none'} onClick={closeHomePanel}><b>B</b><small>BACK</small></button><button className="menu-primary-control" type="button" aria-label={`A button: Select ${homeMenuOptions[homeSelection]}`} disabled={homePanel !== 'none' || runStartState === 'connecting'} onClick={activateHomeSelection}><b>A</b><small>SELECT</small></button></div>
     </div>
   );
 
   return (
     <PortraitGameShell controls={handheldControls} theme={isSeries ? activeSeries?.series.theme : undefined} label="Crestbound platform game starring Sunny">
-        <canvas ref={canvasRef} className="game-canvas" width={320} height={180} tabIndex={0} aria-label="Platform game. Use arrows or A and D to move, Space to jump, and Shift to dash." />
+        <canvas ref={canvasRef} className="game-canvas" width={180} height={240} tabIndex={0} aria-label="Platform game. Use arrows or A and D to move, Space to jump, and Shift to dash." />
 
         {screen !== 'title' && (
           <header className="hud" aria-live="polite" aria-atomic="false">
@@ -1498,24 +1511,15 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
                   <small className="route-condition">{dailyCondition.name} · {dailyCondition.description}</small>
                   {streak > 0 && <small className={`streak-badge ${streakReward(streak).milestone ? 'milestone' : ''}`} title={`New route in ${dailyReset}`}><span aria-hidden="true">✦</span> {streak} day streak</small>}
                 </div>
-                <button className="play-button" type="button" disabled={runStartState === 'connecting'} onClick={() => void startGame(true)}>{runStartState === 'connecting' ? 'Connecting Ranked Run…' : 'Run with Sunny'} {runStartState !== 'connecting' && <span aria-hidden="true">▶</span>}</button>
                 {runStartState === 'error' && <p className="run-start-error" role="alert"><b>RUN NOT STARTED</b><span>{runStartError}</span></p>}
                 <div className={`daily-glance ${communityGoalReached ? 'goal-reached' : ''}`}>
-                  <div className="home-social-stats">
-                    <span><small>TODAY&apos;S TOP</small><b>{dailyLeader === undefined ? 'CHECKING…' : dailyLeader ? `${dailyLeader.name} · ${dailyLeader.score.toLocaleString()}` : 'CLAIM #1'}</b></span>
-                    <span><small>TODAY</small><b>{dailyPlayers === undefined ? 'CHECKING…' : `${dailyPlayers} ${dailyPlayers === 1 ? 'RUNNER' : 'RUNNERS'}`}</b></span>
-                  </div>
                   <div className={`community-progress ${communityGoalReached ? 'goal-reached' : ''}`}>
                     <div><span>{communityGoalReached ? 'WEEKLY GOAL CLEARED' : 'COMMUNITY LIGHT · WEEK'}</span><b>{communityGoalReached ? 'SKYLINE LIT' : `${community.lights.toLocaleString()} / ${community.goal.toLocaleString()}`}</b></div>
                     <progress aria-label={`${community.lights} of ${community.goal} community lights collected this week`} max={community.goal} value={Math.min(community.lights, community.goal)} />
                     {communityGoalReached && <small className="community-reward">✦ COMMUNITY CREST UNLOCKED ✦</small>}
                   </div>
                 </div>
-                <div className="home-links">
-                  <button className="series-routes-link" type="button" onClick={() => { setSeriesWeekIndex(activeSeries?.weekIndex ?? 0); openHomePanel('series'); track('series_open'); }}><strong>MESSAGE ROUTES</strong><small>{activeSeries ? `${activeSeries.series.name} · ${activeSeries.series.kind === 'special' ? 'Special challenge' : `${activeSeries.series.weeks.length} weekly challenges`} →` : 'Extra routes inspired by Suncrest messages'}</small></button>
-                  <button type="button" onClick={() => { openHomePanel('leaderboard'); track('leaderboard_open'); }}>Leaderboard</button>
-                  <button type="button" onClick={() => { setHelpTab('play'); openHomePanel('help'); }}>How to Play</button>
-                </div>
+                <div className="handheld-screen-menu" role="listbox" aria-label="Crestbound menu">{homeMenuOptions.map((item, index) => <div role="option" aria-selected={homeSelection === index} className={homeSelection === index ? 'active' : ''} key={item}><span aria-hidden="true">{homeSelection === index ? '▶' : '·'}</span>{item}{item === 'MESSAGE ROUTES' && activeSeries ? <small>{activeSeries.series.weeks.length} AVAILABLE</small> : null}</div>)}</div>
               </div>
             </div>
             {homePanel === 'leaderboard' && <aside ref={homePanelRef} className="leaderboard home-panel" role="dialog" aria-modal="true" aria-labelledby="leaderboard-title" tabIndex={-1}>
@@ -1547,7 +1551,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
                 {(['play', 'score', 'world'] as HelpTab[]).map((tab) => <button id={`help-tab-${tab}`} className={helpTab === tab ? 'active' : ''} type="button" role="tab" aria-selected={helpTab === tab} aria-controls="help-tabpanel" onClick={() => setHelpTab(tab)} key={tab}>{tab === 'play' ? 'Play' : tab === 'score' ? 'Score' : 'World'}</button>)}
               </div>
               <div id="help-tabpanel" className="help-content" role="tabpanel" aria-labelledby={`help-tab-${helpTab}`}>
-                {helpTab === 'play' && <section className="help-play"><div className="control-directory"><article><b>RUN</b><span>Arrows · A/D · touch</span></article><article><b>JUMP 2X</b><span>Space or JUMP · tap twice</span></article><article><b>DASH</b><span>Shift · X · DASH</span></article></div><div className="today-guide"><small>TODAY&apos;S ROUTE</small><b>{modifier.name} · {objective.name}</b><span>{modifier.description}</span>{!isSeries && <span><b>{dailyCondition.name}:</b> {dailyCondition.description}</span>}<span>{objective.description}. Finish for Bronze; reach the target for Silver or Gold.</span></div><p>Crestbound is designed for portrait play inside its handheld console.</p><p className="app-tip"><b>SUNCREST APP</b> Keep your phone upright and use the A, B, and D-pad controls.</p></section>}
+                {helpTab === 'play' && <section className="help-play"><div className="control-directory"><article><b>RUN</b><span>D-PAD · Arrows · A/D</span></article><article><b>JUMP 2X</b><span>A · Space · tap twice</span></article><article><b>DASH</b><span>B · Shift · X</span></article></div><div className="today-guide"><small>TODAY&apos;S ROUTE</small><b>{modifier.name} · {objective.name}</b><span>{modifier.description}</span>{!isSeries && <span><b>{dailyCondition.name}:</b> {dailyCondition.description}</span>}<span>{objective.description}. Finish for Bronze; reach the target for Silver or Gold.</span></div><p>Crestbound is designed for portrait play inside its handheld console.</p><p className="app-tip"><b>SUNCREST APP</b> Keep your phone upright and use the A, B, and D-pad controls.</p></section>}
                 {helpTab === 'score' && <section className="scoring-directory help-card-grid"><article><b>+500 · FINISH</b><span>Clear the route to bank a score.</span></article><article><b>UP TO +1,200 · PACE</b><span>Finish faster for more points.</span></article><article><b>UP TO +800 · LIGHT</b><span>Collect a larger share of the route&apos;s Light.</span></article><article><b>UP TO +200 · CHALLENGE</b><span>Earn Silver or Gold—or complete the Series objective.</span></article><p><b>EVERY FINISH COUNTS</b> All collected Light also goes to Suncrest&apos;s weekly community goal. Highest score wins; time breaks an exact tie.</p></section>}
                 {helpTab === 'world' && <section className="help-world"><div className="world-rules help-card-grid"><article><b>GOLD LIGHT</b><span>Shortens Dash recharge.</span></article><article><b>STORM LIGHT</b><span>Readies Dash and shields one hit.</span></article><article><b>CHECKPOINT</b><span>Saves progress and restores one life.</span></article><article><b>ENEMY</b><span>Dash through or land from above.</span></article></div><div className="twist-directory"><h3>Daily Twists</h3>{modifierSpecs.map((item) => <article className={item.id === modifier.id && !isPractice ? 'today' : ''} key={item.id}><b>{item.name}{item.id === modifier.id && !isPractice ? ' · TODAY' : ''}</b><span>{item.shortDescription}</span></article>)}</div></section>}
               </div>
