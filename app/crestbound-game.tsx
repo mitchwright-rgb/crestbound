@@ -190,7 +190,6 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
     ? previousBestScore == null ? 'FIRST CREST SCORE' : `NEW PERSONAL BEST · +${Math.max(0, scoreDelta ?? 0).toLocaleString()}`
     : scoreDelta === 0 ? 'MATCHED YOUR BEST' : `${Math.abs(Math.min(0, scoreDelta ?? 0)).toLocaleString()} POINTS FROM YOUR BEST`;
   const seriesProgressCount = activeSeries ? activeSeries.series.weeks.filter((week) => completedSeriesWeeks.includes(week.id)).length : 0;
-  const messageRouteChallenge = activeSeries?.series.kind === 'special' ? 'EXCLUSIVE SPECIAL CHALLENGE' : 'EXCLUSIVE SERIES CHALLENGE';
   const communityGoalReached = community.goal > 0 && community.lights >= community.goal;
 
   useEffect(() => { communityRef.current = community; }, [community]);
@@ -1460,7 +1459,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [seriesMode, seriesWeekIndex, routeSeed]);
 
-  const homeMenuOptions = ['DAILY RUN', 'MESSAGE ROUTES', 'LEADERBOARD', 'HOW TO PLAY'];
+  const homeMenuOptions = ['DAILY RUN', 'BONUS STAGES', 'LEADERBOARD', 'HOW TO PLAY'];
   const quitPausedRun = () => {
     track('quit', { hits: hud.hits, checkpoint: hud.checkpoint, progress: hud.progress, elapsedMs: hud.time * 1000, lights: hud.sparks, lightTotal: hud.total, lightPercent: hud.total ? hud.sparks / hud.total * 100 : 0, dashCount: runMetricsRef.current.dashCount, signatureCount: hud.signatureCount });
     flushTelemetry();
@@ -1470,15 +1469,15 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
   const resultActionItems: Array<{ label: string; className?: string; action: () => void }> = screen === 'over'
     ? [
       { label: 'Run It Back', action: () => void startGame() },
-      { label: isSeries ? 'Back to Message Routes' : 'Back to Home', className: 'secondary back-home-action', action: () => { setGameScreen('title'); if (isSeries) openHomePanel('series'); } },
+      { label: isSeries ? 'Back to Bonus Stages' : 'Back to Home', className: 'secondary back-home-action', action: () => { setGameScreen('title'); if (isSeries) openHomePanel('series'); } },
     ]
     : screen === 'won'
       ? [
         { label: 'Run It Again', action: () => void startGame() },
-        ...(activeSeries && !isSeries ? [{ label: activeSeries.series.kind === 'special' ? `Try ${activeSeries.series.name}` : `Try ${activeSeries.series.weeks.length} Message Routes`, className: 'series-result-cta', action: () => { setGameScreen('title'); setSeriesWeekIndex(activeSeries.weekIndex); openHomePanel('series'); } }] : []),
+        ...(activeSeries && !isSeries ? [{ label: activeSeries.series.kind === 'special' ? `Try ${activeSeries.series.name}` : `Play ${activeSeries.series.weeks.length} Bonus Stages`, className: 'series-result-cta', action: () => { setGameScreen('title'); setSeriesWeekIndex(activeSeries.weekIndex); openHomePanel('series'); } }] : []),
         ...(isSeries ? [{ label: 'Run Today\'s Route', className: 'series-result-cta', action: () => { setSeriesMode(false); setGameScreen('title'); } }] : []),
         ...(isSeries && seriesMessage ? [{ label: 'Watch This Week\'s Message', className: 'message-result-cta', action: () => { setGameScreen('title'); setSeriesWeekIndex(seriesWeekIndex); openSeriesResource(seriesMessage.title, seriesMessage.appUrl || seriesMessage.url); } }] : []),
-        ...(isSeries ? [{ label: 'Back to Message Routes', className: 'secondary series-back-action', action: () => { setGameScreen('title'); setSeriesWeekIndex(seriesWeekIndex); openHomePanel('series'); } }] : []),
+        ...(isSeries ? [{ label: 'Back to Bonus Stages', className: 'secondary series-back-action', action: () => { setGameScreen('title'); setSeriesWeekIndex(seriesWeekIndex); openHomePanel('series'); } }] : []),
         ...(!isSeries ? [{ label: 'View Leaderboard', className: 'secondary', action: () => { setGameScreen('title'); openHomePanel('leaderboard'); void loadBoard('daily'); } }] : []),
         { label: 'Back to Home', className: 'secondary back-home-action', action: backToHome },
       ]
@@ -1509,9 +1508,9 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
       { label: 'Back', action: closeHomePanel },
     ]
     : homePanel === 'series-results'
-      ? [{ label: 'Message Routes', action: () => openHomePanel('series') }]
+      ? [{ label: 'Bonus Stages', action: () => openHomePanel('series') }]
       : homePanel === 'resource'
-        ? [{ label: 'Message Routes', action: () => openHomePanel('series') }]
+        ? [{ label: 'Bonus Stages', action: () => openHomePanel('series') }]
         : homePanel === 'leaderboard'
           ? [{ label: 'Done', action: closeHomePanel }]
           : homePanel === 'help'
@@ -1629,7 +1628,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
                     {communityGoalReached && <small className="community-reward">✦ COMMUNITY CREST UNLOCKED ✦</small>}
                   </div>
                 </div>
-                <div className="handheld-screen-menu" role="listbox" aria-label="Crestbound menu">{homeMenuOptions.map((item, index) => <div role="option" aria-selected={homeSelection === index} className={homeSelection === index ? 'active' : ''} key={item}><span aria-hidden="true">{homeSelection === index ? '▶' : ''}</span>{item}{item === 'MESSAGE ROUTES' && activeSeries ? <small>{activeSeries.series.weeks.length} AVAILABLE</small> : null}</div>)}</div>
+                <div className="handheld-screen-menu" role="listbox" aria-label="Crestbound menu">{homeMenuOptions.map((item, index) => <div role="option" aria-selected={homeSelection === index} className={`${homeSelection === index ? 'active ' : ''}${item === 'BONUS STAGES' ? 'bonus-menu-option' : ''}`} key={item}><span aria-hidden="true">{homeSelection === index ? '▶' : ''}</span>{item}{item === 'BONUS STAGES' && activeSeries ? <small>MESSAGE ROUTES · {activeSeries.series.weeks.length}</small> : null}</div>)}</div>
               </div>
             </div>
             {homePanel === 'leaderboard' && <aside ref={homePanelRef} className="leaderboard home-panel" role="dialog" aria-modal="true" aria-labelledby="leaderboard-title" tabIndex={-1}>
@@ -1669,46 +1668,47 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
             </aside>}
             {homePanel === 'series' && <aside ref={homePanelRef} className="course-picker series-picker home-panel" data-series-theme={activeSeries?.series.theme} role="dialog" aria-modal="true" aria-labelledby="series-title" tabIndex={-1}>
               <button className="panel-dismiss" type="button" aria-label="Close Message Routes" onClick={closeHomePanel}>X</button>
-              <h2 id="series-title">Message Routes</h2>
+              <h2 id="series-title" className="bonus-stage-title"><span>Bonus Stages</span><small>Message Routes</small></h2>
               <p className="controller-hint">← → CHOOSE ROUTE · ↑ ↓ CHOOSE ACTION</p>
               {activeSeries && seriesWeek ? <>
                 <section className="series-feature series-feature-compact" data-series-theme={activeSeries.series.theme}>
                   <div className="series-week">
-                    <span>{activeSeries.series.shortName} · {activeSeries.series.kind === 'special' ? 'THIS WEEKEND' : seriesWeekIndex === activeSeries.weekIndex ? 'THIS WEEK' : `WEEK ${seriesWeekIndex + 1}`}</span>
+                    <span className="bonus-availability">{completedSeriesWeeks.includes(seriesWeek.id) ? '✓ BONUS STAGE CLEARED' : seriesWeekIndex === activeSeries.weekIndex ? '✦ BONUS STAGE UNLOCKED' : 'BONUS STAGE OPEN'}</span>
+                    <small>{activeSeries.series.shortName} · {activeSeries.series.kind === 'special' ? 'THIS WEEKEND' : seriesWeekIndex === activeSeries.weekIndex ? 'THIS WEEK' : `WEEK ${seriesWeekIndex + 1}`}</small>
                     <b>{seriesWeek.routeName}</b>
                     <div className="series-mechanic">
-                      <span>{messageRouteChallenge}</span>
+                      <span>{activeSeries.series.shortName} CHALLENGE</span>
                       <b>{activeSeries.series.mechanicAction}</b>
                       <small>{activeSeries.series.mechanicHelp}</small>
                     </div>
                   </div>
                   <div className="series-route-chooser">
-                    <span className="series-route-count">{activeSeries.weekIndex + 1} {activeSeries.weekIndex === 0 ? 'ROUTE' : 'ROUTES'}{activeSeries.weekIndex > 0 ? ' · CHOOSE ONE' : ''} · {seriesProgressCount} COMPLETE</span>
+                    <span className="series-route-count">SERIES PASS · {seriesProgressCount}/{activeSeries.series.weeks.length} STAGES CLEARED</span>
                     <div className="series-week-dots" style={{ gridTemplateColumns: `repeat(${activeSeries.series.weeks.length}, minmax(0, 1fr))` }} aria-label={`${seriesProgressCount} of ${activeSeries.series.weeks.length} routes completed`}>
                       {activeSeries.series.weeks.map((week, index) => {
                         const locked = index > activeSeries.weekIndex;
                         const complete = completedSeriesWeeks.includes(week.id);
                         const state = [complete ? 'complete' : '', index === activeSeries.weekIndex ? 'current' : '', index === seriesWeekIndex ? 'selected' : ''].filter(Boolean).join(' ');
-                        return <button type="button" className={state} disabled={locked} aria-label={locked ? `Week ${index + 1} unlocks ${week.sunday}` : `Select week ${index + 1}: ${week.title}`} aria-pressed={index === seriesWeekIndex} onClick={() => setSeriesWeekIndex(index)} key={week.id}>{locked ? `W${index + 1} · SOON` : `W${index + 1}${complete ? ' · DONE' : index === activeSeries.weekIndex ? ' · NOW' : ' · OPEN'}`}</button>;
+                        return <button type="button" className={state} disabled={locked} aria-label={locked ? `Stage ${index + 1} unlocks ${week.sunday}` : `Select bonus stage ${index + 1}: ${week.title}`} aria-pressed={index === seriesWeekIndex} onClick={() => setSeriesWeekIndex(index)} key={week.id}><b>{complete ? '✓' : locked ? '•' : index + 1}</b><small>{locked ? 'SOON' : complete ? 'CLEARED' : index === activeSeries.weekIndex ? 'NOW' : 'OPEN'}</small></button>;
                       })}
                     </div>
                   </div>
                 </section>
-                <button className={`series-play ${activePanelSelection === 0 ? 'controller-selected' : ''}`} type="button" onClick={() => { pendingSeriesStartRef.current = true; setSeriesMode(true); closeHomePanel(); }}>Play {activeSeries.series.kind === 'special' ? 'Special Route' : `Week ${seriesWeekIndex + 1}: ${seriesWeek.routeName}`} ▶</button>
+                <button className={`series-play ${activePanelSelection === 0 ? 'controller-selected' : ''}`} type="button" onClick={() => { pendingSeriesStartRef.current = true; setSeriesMode(true); closeHomePanel(); }}><span>PLAY BONUS STAGE</span><small className="bonus-play-reward">{seriesWeek.routeName} · +200 CREST SCORE</small><b>▶</b></button>
                 <button className={`series-results-button ${activePanelSelection === 1 ? 'controller-selected' : ''}`} type="button" onClick={() => openHomePanel('series-results')}><span><small>SELECTED ROUTE</small><strong>Results &amp; Leaderboard</strong></span><b>{seriesCompletions} {seriesCompletions === 1 ? 'FINISHER' : 'FINISHERS'} →</b></button>
-                <div className="series-resources"><button className={`message-link ${activePanelSelection === 2 ? 'controller-selected' : ''}`} type="button" onClick={() => { track('message_open'); openSeriesResource(seriesMessage?.title || 'This Week\'s Message', seriesMessage?.appUrl || seriesMessage?.url || activeSeries.series.messageUrl); }}><span className="message-icon" aria-hidden="true">▶</span><span><strong>{seriesMessage ? "Watch This Week's Message" : 'Message Details'}</strong><small>{seriesMessage?.title || 'Connect this route to Suncrest'}</small></span></button></div>
+                <div className="series-resources"><button className={`message-link ${activePanelSelection === 2 ? 'controller-selected' : ''}`} type="button" onClick={() => { track('message_open'); openSeriesResource(seriesMessage?.title || 'This Week\'s Message', seriesMessage?.appUrl || seriesMessage?.url || activeSeries.series.messageUrl); }}><span className="message-icon" aria-hidden="true">▶</span><span><strong>{seriesMessage ? 'Behind This Bonus Stage' : 'Message Behind This Stage'}</strong><small>{seriesMessage?.title || 'Connect this route to Suncrest'}</small></span></button></div>
               </> : <p>No Message Route is active today. The Daily Run is still ready to play.</p>}
               <button className={`panel-close ${activePanelSelection === 3 ? 'controller-selected' : ''}`} type="button" onClick={closeHomePanel}>Back</button>
             </aside>}
             {homePanel === 'series-results' && <aside ref={homePanelRef} className="course-picker series-picker series-results-panel home-panel" role="dialog" aria-modal="true" aria-labelledby="series-results-panel-title" tabIndex={-1}>
               <button className="panel-dismiss" type="button" aria-label="Close Message Route results" onClick={closeHomePanel}>X</button>
-              <button className="series-results-back" type="button" onClick={() => setHomePanel('series')}>← Message Routes</button>
+              <button className="series-results-back" type="button" onClick={() => setHomePanel('series')}>← Bonus Stages</button>
               <p className="kicker">{seriesWeek?.routeName || 'MESSAGE ROUTE'}</p><h2 id="series-results-panel-title">Results &amp; Leaderboard</h2>
               <section className="series-results" aria-label="Selected Message Route results"><header><h3>Top Scores</h3><b>{seriesCompletions} {seriesCompletions === 1 ? 'FINISHER' : 'FINISHERS'}</b></header><div className="series-result-legend score-board" aria-hidden="true"><span>RANK</span><span>RUNNER</span><span>SCORE</span></div><ol>{seriesBoardStatus === 'loading' && <li className="series-result-message">LOADING RESULTS…</li>}{seriesBoardStatus === 'offline' && <li className="series-result-message">RESULTS ARE TEMPORARILY OFFLINE.</li>}{seriesBoardStatus === 'ready' && seriesEntries.length === 0 && <li className="series-result-message">BE THE FIRST TO FINISH THIS ROUTE.</li>}{seriesBoardStatus === 'ready' && seriesEntries.slice(0, 7).map((entry) => <li className={`${entry.isPlayer ? 'you ' : ''}score-board`} key={`${entry.rank}-${entry.name}`}><b>#{entry.rank}</b><span>{entry.name}</span><time>{entry.score.toLocaleString()}</time></li>)}</ol><p>{activeSeries ? `${activeSeries.series.mechanicAction} for the full +200 Message Route bonus.` : 'Complete the Message Route challenge for the full +200 bonus.'}</p></section>
-              <button className="panel-close controller-selected" type="button" onClick={() => openHomePanel('series')}>Back to Message Routes</button>
+              <button className="panel-close controller-selected" type="button" onClick={() => openHomePanel('series')}>Back to Bonus Stages</button>
             </aside>}
             {homePanel === 'resource' && seriesResource && <aside ref={homePanelRef} className="message-viewer home-panel" role="dialog" aria-modal="true" aria-labelledby="resource-title" tabIndex={-1}>
-              <header><button type="button" onClick={() => openHomePanel('series')} aria-label="Back to Message Routes">← Back</button><div><small>FROM MESSAGE ROUTES</small><strong id="resource-title">{seriesResource.title}</strong></div></header>
+              <header><button type="button" onClick={() => openHomePanel('series')} aria-label="Back to Bonus Stages">← Back</button><div><small>FROM BONUS STAGES · MESSAGE ROUTES</small><strong id="resource-title">{seriesResource.title}</strong></div></header>
               <iframe src={seriesResource.url} title={seriesResource.title} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
             </aside>}
           </div>
