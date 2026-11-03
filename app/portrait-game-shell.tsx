@@ -23,11 +23,6 @@ export default function PortraitGameShell({ children, controls, label, theme }: 
         <div className="handheld-screen">{children}</div>
         <footer className="handheld-control-bay">
           {controls}
-          <div className="handheld-model" aria-hidden="true">
-            <strong>CRESTBOUND</strong>
-            <span>SUNCREST ARCADE · 01</span>
-          </div>
-          <span className="handheld-speaker" aria-hidden="true" />
         </footer>
       </section>
     </main>

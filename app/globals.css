@@ -4755,6 +4755,105 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .portrait-game-frame .series-picker:not(.series-results-panel) > .series-route-chooser { grid-template-rows: 13px 27px; }
 }
 
+/* Final hierarchy pass: Bonus Stages mirrors Home instead of becoming a
+   dashboard. One focal route card, one quiet progress line, one console menu. */
+.portrait-game-frame .series-picker:not(.series-results-panel) {
+  grid-template-rows: 32px 96px 38px minmax(0, 1fr);
+  gap: 5px;
+  padding: 8px;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) > h2 {
+  padding: 3px 6px;
+  font-size: 15px;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) > h2 small { font-size: 6px; }
+.portrait-game-frame .series-picker:not(.series-results-panel) > .series-feature {
+  padding: 9px;
+  border-left-width: 3px;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-week {
+  grid-template-rows: auto auto 1fr;
+  gap: 4px;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-mechanic {
+  padding-top: 5px;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) > .series-route-chooser {
+  min-height: 0;
+  display: grid;
+  grid-template-columns: auto minmax(70px, 1fr) auto;
+  grid-template-rows: 1fr;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 7px;
+  border: 0;
+  background: transparent;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-progress-heading {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-progress-heading span {
+  color: var(--cb-teal);
+  font-size: 6px;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-progress-heading b {
+  color: var(--cb-muted);
+  font-size: 6px;
+}
+.portrait-game-frame .series-progress-track {
+  height: 5px;
+  overflow: hidden;
+  border: 1px solid var(--cb-line);
+  background: #06171b;
+}
+.portrait-game-frame .series-progress-track i {
+  height: 100%;
+  display: block;
+  background: var(--cb-teal);
+}
+.portrait-game-frame .series-route-chooser > small {
+  color: var(--cb-muted);
+  font: 5px/1 var(--font-pixel), monospace;
+  white-space: nowrap;
+}
+.portrait-game-frame .series-week-dots { display: none !important; }
+
+/* Submenu footers are controller hints, not a second gold call to action. */
+.portrait-game-frame .panel-close,
+.portrait-game-frame .series-results-panel > .panel-close {
+  border: 0;
+  border-top: 1px solid var(--cb-line);
+  outline: 0 !important;
+  color: var(--cb-muted) !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* The shell stays quiet: no secondary wordmark, speaker marks, or Start rails. */
+.handheld-model,
+.handheld-speaker { display: none !important; }
+.console-start-control {
+  box-shadow: none;
+  background: transparent;
+}
+.console-start-control::before,
+.console-start-control::after { display: none !important; content: none !important; }
+
+@media (max-height: 700px) {
+  .portrait-game-frame .series-picker:not(.series-results-panel) {
+    grid-template-rows: 28px 78px 32px minmax(0, 1fr);
+    gap: 4px;
+    padding: 6px;
+  }
+  .portrait-game-frame .series-route-chooser > small { display: none; }
+  .portrait-game-frame .series-picker:not(.series-results-panel) > .series-route-chooser {
+    grid-template-columns: auto minmax(70px, 1fr);
+  }
+}
+
 /* Bonus Stage results use the same single-column console grammar as Home. */
 .portrait-game-frame .series-results-panel.home-panel {
   left: 50%;
