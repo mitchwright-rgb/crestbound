@@ -1505,7 +1505,6 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
       { label: `Play Week ${seriesWeekIndex + 1}`, action: () => { pendingSeriesStartRef.current = true; setSeriesMode(true); closeHomePanel(); } },
       { label: 'Results', action: () => openHomePanel('series-results') },
       { label: 'Watch Message', action: () => { track('message_open'); openSeriesResource(seriesMessage?.title || 'This Week\'s Message', seriesMessage?.appUrl || seriesMessage?.url || activeSeries.series.messageUrl); } },
-      { label: 'Back', action: closeHomePanel },
     ]
     : homePanel === 'series-results'
       ? [{ label: 'Bonus Stages', action: () => openHomePanel('series') }]
@@ -1673,7 +1672,6 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
                 <section className="series-feature series-feature-compact" data-series-theme={activeSeries.series.theme}>
                   <div className="series-week">
                     <span className="bonus-availability">{completedSeriesWeeks.includes(seriesWeek.id) ? '✓ BONUS STAGE CLEARED' : seriesWeekIndex === activeSeries.weekIndex ? '✦ BONUS STAGE UNLOCKED' : 'BONUS STAGE OPEN'}</span>
-                    <small>{activeSeries.series.shortName} · {activeSeries.series.kind === 'special' ? 'THIS WEEKEND' : seriesWeekIndex === activeSeries.weekIndex ? 'THIS WEEK' : `WEEK ${seriesWeekIndex + 1}`}</small>
                     <b>{seriesWeek.routeName}</b>
                     <div className="series-mechanic">
                       <span>{activeSeries.series.shortName} CHALLENGE</span>
@@ -1696,7 +1694,6 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
                 <button className={`series-results-button ${activePanelSelection === 1 ? 'controller-selected' : ''}`} type="button" onClick={() => openHomePanel('series-results')}><span><small>SELECTED ROUTE</small><strong>Results &amp; Leaderboard</strong></span><b>{seriesCompletions} {seriesCompletions === 1 ? 'FINISHER' : 'FINISHERS'} →</b></button>
                 <div className="series-resources"><button className={`message-link ${activePanelSelection === 2 ? 'controller-selected' : ''}`} type="button" onClick={() => { track('message_open'); openSeriesResource(seriesMessage?.title || 'This Week\'s Message', seriesMessage?.appUrl || seriesMessage?.url || activeSeries.series.messageUrl); }}><span className="message-icon" aria-hidden="true">▶</span><span><strong>{seriesMessage ? 'Behind This Bonus Stage' : 'Message Behind This Stage'}</strong><small>{seriesMessage?.title || 'Connect this route to Suncrest'}</small></span></button></div>
               </> : <p>No Message Route is active today. The Daily Run is still ready to play.</p>}
-              <button className={`panel-close ${activePanelSelection === 3 ? 'controller-selected' : ''}`} type="button" onClick={closeHomePanel}>Back</button>
             </aside>}
             {homePanel === 'series-results' && <aside ref={homePanelRef} className="course-picker series-picker series-results-panel home-panel" role="dialog" aria-modal="true" aria-labelledby="series-results-panel-title" tabIndex={-1}>
               <button className="panel-dismiss" type="button" aria-label="Close Message Route results" onClick={closeHomePanel}>X</button>

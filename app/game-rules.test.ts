@@ -449,6 +449,7 @@ test('menu guidance uses readable in-place views instead of a scrolling document
   assert.match(game, /PLAY BONUS STAGE/);
   assert.match(game, /SERIES PASS · \{seriesProgressCount\}/);
   assert.match(game, /bonus-play-reward/);
+  assert.doesNotMatch(game, /activePanelSelection === 3/);
   assert.match(game, /complete \? 'CLEARED'/);
   assert.match(game, /Select bonus stage \$\{index \+ 1\}: \$\{week\.title\}/);
   assert.match(styles, /Single-viewport menus/);
