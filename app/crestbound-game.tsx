@@ -1519,7 +1519,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
                     {communityGoalReached && <small className="community-reward">✦ COMMUNITY CREST UNLOCKED ✦</small>}
                   </div>
                 </div>
-                <div className="handheld-screen-menu" role="listbox" aria-label="Crestbound menu">{homeMenuOptions.map((item, index) => <div role="option" aria-selected={homeSelection === index} className={homeSelection === index ? 'active' : ''} key={item}><span aria-hidden="true">{homeSelection === index ? '▶' : '·'}</span>{item}{item === 'MESSAGE ROUTES' && activeSeries ? <small>{activeSeries.series.weeks.length} AVAILABLE</small> : null}</div>)}</div>
+                <div className="handheld-screen-menu" role="listbox" aria-label="Crestbound menu">{homeMenuOptions.map((item, index) => <div role="option" aria-selected={homeSelection === index} className={homeSelection === index ? 'active' : ''} key={item}><span aria-hidden="true">{homeSelection === index ? '▶' : ''}</span>{item}{item === 'MESSAGE ROUTES' && activeSeries ? <small>{activeSeries.series.weeks.length} AVAILABLE</small> : null}</div>)}</div>
               </div>
             </div>
             {homePanel === 'leaderboard' && <aside ref={homePanelRef} className="leaderboard home-panel" role="dialog" aria-modal="true" aria-labelledby="leaderboard-title" tabIndex={-1}>
