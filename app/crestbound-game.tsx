@@ -1669,7 +1669,6 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
             {homePanel === 'series' && <aside ref={homePanelRef} className="course-picker series-picker home-panel" data-series-theme={activeSeries?.series.theme} role="dialog" aria-modal="true" aria-labelledby="series-title" tabIndex={-1}>
               <button className="panel-dismiss" type="button" aria-label="Close Message Routes" onClick={closeHomePanel}>X</button>
               <h2 id="series-title" className="bonus-stage-title"><span>Bonus Stages</span><small>Message Routes</small></h2>
-              <p className="controller-hint">← → CHOOSE ROUTE · ↑ ↓ CHOOSE ACTION</p>
               {activeSeries && seriesWeek ? <>
                 <section className="series-feature series-feature-compact" data-series-theme={activeSeries.series.theme}>
                   <div className="series-week">
@@ -1679,21 +1678,20 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
                     <div className="series-mechanic">
                       <span>{activeSeries.series.shortName} CHALLENGE</span>
                       <b>{activeSeries.series.mechanicAction}</b>
-                      <small>{activeSeries.series.mechanicHelp}</small>
-                    </div>
-                  </div>
-                  <div className="series-route-chooser">
-                    <span className="series-route-count">SERIES PASS · {seriesProgressCount}/{activeSeries.series.weeks.length} STAGES CLEARED</span>
-                    <div className="series-week-dots" style={{ gridTemplateColumns: `repeat(${activeSeries.series.weeks.length}, minmax(0, 1fr))` }} aria-label={`${seriesProgressCount} of ${activeSeries.series.weeks.length} routes completed`}>
-                      {activeSeries.series.weeks.map((week, index) => {
-                        const locked = index > activeSeries.weekIndex;
-                        const complete = completedSeriesWeeks.includes(week.id);
-                        const state = [complete ? 'complete' : '', index === activeSeries.weekIndex ? 'current' : '', index === seriesWeekIndex ? 'selected' : ''].filter(Boolean).join(' ');
-                        return <button type="button" className={state} disabled={locked} aria-label={locked ? `Stage ${index + 1} unlocks ${week.sunday}` : `Select bonus stage ${index + 1}: ${week.title}`} aria-pressed={index === seriesWeekIndex} onClick={() => setSeriesWeekIndex(index)} key={week.id}><b>{complete ? '✓' : locked ? '•' : index + 1}</b><small>{locked ? 'SOON' : complete ? 'CLEARED' : index === activeSeries.weekIndex ? 'NOW' : 'OPEN'}</small></button>;
-                      })}
                     </div>
                   </div>
                 </section>
+                <div className="series-route-chooser">
+                  <span className="series-route-count">SERIES PASS · {seriesProgressCount}/{activeSeries.series.weeks.length} CLEARED</span>
+                  <div className="series-week-dots" style={{ gridTemplateColumns: `repeat(${activeSeries.series.weeks.length}, minmax(0, 1fr))` }} aria-label={`${seriesProgressCount} of ${activeSeries.series.weeks.length} routes completed`}>
+                    {activeSeries.series.weeks.map((week, index) => {
+                      const locked = index > activeSeries.weekIndex;
+                      const complete = completedSeriesWeeks.includes(week.id);
+                      const state = [complete ? 'complete' : '', index === activeSeries.weekIndex ? 'current' : '', index === seriesWeekIndex ? 'selected' : ''].filter(Boolean).join(' ');
+                      return <button type="button" className={state} disabled={locked} aria-label={locked ? `Stage ${index + 1} unlocks ${week.sunday}` : `Select bonus stage ${index + 1}: ${week.title}`} aria-pressed={index === seriesWeekIndex} onClick={() => setSeriesWeekIndex(index)} key={week.id}><b>{complete ? '✓' : locked ? '•' : index + 1}</b><small>{locked ? 'SOON' : complete ? 'CLEARED' : index === activeSeries.weekIndex ? 'NOW' : 'OPEN'}</small></button>;
+                    })}
+                  </div>
+                </div>
                 <button className={`series-play ${activePanelSelection === 0 ? 'controller-selected' : ''}`} type="button" onClick={() => { pendingSeriesStartRef.current = true; setSeriesMode(true); closeHomePanel(); }}><span>PLAY BONUS STAGE</span><small className="bonus-play-reward">{seriesWeek.routeName} · +200 CREST SCORE</small><b>▶</b></button>
                 <button className={`series-results-button ${activePanelSelection === 1 ? 'controller-selected' : ''}`} type="button" onClick={() => openHomePanel('series-results')}><span><small>SELECTED ROUTE</small><strong>Results &amp; Leaderboard</strong></span><b>{seriesCompletions} {seriesCompletions === 1 ? 'FINISHER' : 'FINISHERS'} →</b></button>
                 <div className="series-resources"><button className={`message-link ${activePanelSelection === 2 ? 'controller-selected' : ''}`} type="button" onClick={() => { track('message_open'); openSeriesResource(seriesMessage?.title || 'This Week\'s Message', seriesMessage?.appUrl || seriesMessage?.url || activeSeries.series.messageUrl); }}><span className="message-icon" aria-hidden="true">▶</span><span><strong>{seriesMessage ? 'Behind This Bonus Stage' : 'Message Behind This Stage'}</strong><small>{seriesMessage?.title || 'Connect this route to Suncrest'}</small></span></button></div>

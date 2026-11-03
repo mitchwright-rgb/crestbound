@@ -443,6 +443,8 @@ test('menu guidance uses readable in-place views instead of a scrolling document
   assert.match(game, /EVERY FINISH COUNTS/);
   assert.match(game, /Daily Twists/);
   assert.match(game, /series-route-chooser/);
+  assert.match(styles, /-webkit-text-size-adjust: 100%/);
+  assert.match(styles, /> \.series-route-chooser \{\s*grid-row: 3/);
   assert.match(game, /Bonus Stages/);
   assert.match(game, /PLAY BONUS STAGE/);
   assert.match(game, /SERIES PASS · \{seriesProgressCount\}/);
@@ -531,7 +533,7 @@ test('every home menu panel is navigable from the handheld controls', () => {
   assert.match(source, /homePanel !== 'none'/);
   assert.match(source, /Previous tab or route/);
   assert.match(source, /D-PAD CHANGES PAGE/);
-  assert.match(source, /CHOOSE ROUTE · ↑ ↓ CHOOSE ACTION/);
+  assert.match(source, /Select bonus stage \$\{index \+ 1\}/);
   assert.match(styles, /Controller-native menu pass/);
   assert.match(styles, /\.portrait-game-frame \.home-cover \{ height: 28%; \}/);
   assert.match(styles, /\.handheld-screen-menu > div \{[\s\S]*?border: 0;[\s\S]*?background: transparent/);
