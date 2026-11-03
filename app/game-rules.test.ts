@@ -408,7 +408,7 @@ test('post-run layouts keep Daily and Message Route results distinct and landsca
   assert.match(game, /NEW PERSONAL BEST/);
   assert.match(game, /POINTS FROM YOUR BEST/);
   assert.match(game, /BADGE EARNED/);
-  assert.match(game, /series-route-count/);
+  assert.match(game, /series-progress-heading/);
   assert.match(game, /mechanicAction/);
   assert.match(game, /series-status/);
   assert.match(game, /Back to Bonus Stages/);
@@ -447,7 +447,11 @@ test('menu guidance uses readable in-place views instead of a scrolling document
   assert.match(styles, /> \.series-route-chooser \{\s*grid-row: 3/);
   assert.match(game, /Bonus Stages/);
   assert.match(game, /PLAY BONUS STAGE/);
-  assert.match(game, /SERIES PASS · \{seriesProgressCount\}/);
+  assert.match(game, /SERIES PROGRESS/);
+  assert.match(game, /\{seriesProgressCount\} OF \{activeSeries\.series\.weeks\.length\} WEEKLY STAGES CLEARED/);
+  assert.match(styles, /Bonus Stages follows the home-screen rhythm/);
+  assert.match(styles, /grid-template-rows: 31px auto 62px 48px 43px 47px/);
+  assert.match(styles, /grid-template-rows: auto auto auto/);
   assert.match(game, /bonus-play-reward/);
   assert.doesNotMatch(game, /activePanelSelection === 3/);
   assert.match(game, /complete \? 'CLEARED'/);

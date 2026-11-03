@@ -1674,13 +1674,13 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
                     <span className="bonus-availability">{completedSeriesWeeks.includes(seriesWeek.id) ? '✓ BONUS STAGE CLEARED' : seriesWeekIndex === activeSeries.weekIndex ? '✦ BONUS STAGE UNLOCKED' : 'BONUS STAGE OPEN'}</span>
                     <b>{seriesWeek.routeName}</b>
                     <div className="series-mechanic">
-                      <span>{activeSeries.series.shortName} CHALLENGE</span>
+                      <span>STAGE GOAL · {activeSeries.series.shortName}</span>
                       <b>{activeSeries.series.mechanicAction}</b>
                     </div>
                   </div>
                 </section>
                 <div className="series-route-chooser">
-                  <span className="series-route-count">SERIES PASS · {seriesProgressCount}/{activeSeries.series.weeks.length} CLEARED</span>
+                  <div className="series-progress-heading"><span>SERIES PROGRESS</span><b>{seriesProgressCount} OF {activeSeries.series.weeks.length} WEEKLY STAGES CLEARED</b></div>
                   <div className="series-week-dots" style={{ gridTemplateColumns: `repeat(${activeSeries.series.weeks.length}, minmax(0, 1fr))` }} aria-label={`${seriesProgressCount} of ${activeSeries.series.weeks.length} routes completed`}>
                     {activeSeries.series.weeks.map((week, index) => {
                       const locked = index > activeSeries.weekIndex;
