@@ -160,6 +160,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
   const [showScoreIntro, setShowScoreIntro] = useState(false);
   const [homePanel, setHomePanel] = useState<HomePanel>('none');
   const [homeSelection, setHomeSelection] = useState(0);
+  const [panelSelection, setPanelSelection] = useState(0);
   const [consoleSelection, setConsoleSelection] = useState(0);
   const [helpTab, setHelpTab] = useState<HelpTab>('play');
   const homePanelRef = useRef<HTMLElement>(null);
@@ -440,11 +441,13 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
 
   function openHomePanel(panel: Exclude<HomePanel, 'none'>) {
     homePanelTriggerRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setPanelSelection(0);
     setHomePanel(panel);
   }
 
   function closeHomePanel() {
     setHomePanel('none');
+    setPanelSelection(0);
     requestAnimationFrame(() => {
       if (homePanelTriggerRef.current?.isConnected) homePanelTriggerRef.current.focus();
       else document.querySelector<HTMLElement>('.menu-primary-control')?.focus();
@@ -1496,6 +1499,48 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
     const backAction = modalActionItems.at(-1);
     backAction?.action();
   };
+  const boardOptions: Board[] = ['daily', 'weekly', 'all'];
+  const helpOptions: HelpTab[] = ['play', 'score', 'world'];
+  const panelActionItems: Array<{ label: string; action: () => void }> = homePanel === 'series' && activeSeries && seriesWeek
+    ? [
+      { label: `Play Week ${seriesWeekIndex + 1}`, action: () => { pendingSeriesStartRef.current = true; setSeriesMode(true); closeHomePanel(); } },
+      { label: 'Results', action: () => openHomePanel('series-results') },
+      { label: 'Watch Message', action: () => { track('message_open'); openSeriesResource(seriesMessage?.title || 'This Week\'s Message', seriesMessage?.appUrl || seriesMessage?.url || activeSeries.series.messageUrl); } },
+      { label: 'Back', action: closeHomePanel },
+    ]
+    : homePanel === 'series-results'
+      ? [{ label: 'Message Routes', action: () => openHomePanel('series') }]
+      : homePanel === 'resource'
+        ? [{ label: 'Message Routes', action: () => openHomePanel('series') }]
+        : homePanel === 'leaderboard'
+          ? [{ label: 'Done', action: closeHomePanel }]
+          : homePanel === 'help'
+            ? [{ label: 'Got It', action: closeHomePanel }]
+            : [];
+  const activePanelSelection = panelActionItems.length ? Math.min(panelSelection, panelActionItems.length - 1) : 0;
+  const movePanelSelection = (direction: number, horizontal = false) => {
+    if (homePanel === 'leaderboard') {
+      const current = boardOptions.indexOf(board);
+      setBoard(boardOptions[(current + direction + boardOptions.length) % boardOptions.length]);
+      return;
+    }
+    if (homePanel === 'help') {
+      const current = helpOptions.indexOf(helpTab);
+      setHelpTab(helpOptions[(current + direction + helpOptions.length) % helpOptions.length]);
+      return;
+    }
+    if (homePanel === 'series' && horizontal && activeSeries) {
+      const unlockedCount = Math.max(1, activeSeries.weekIndex + 1);
+      setSeriesWeekIndex((current) => (current + direction + unlockedCount) % unlockedCount);
+      return;
+    }
+    if (panelActionItems.length > 1) setPanelSelection((current) => (current + direction + panelActionItems.length) % panelActionItems.length);
+  };
+  const activatePanelSelection = () => panelActionItems[activePanelSelection]?.action();
+  const activatePanelBack = () => {
+    if (homePanel === 'series-results' || homePanel === 'resource') openHomePanel('series');
+    else closeHomePanel();
+  };
   const handheldControls = screen === 'playing' ? (
     <>
       <div ref={touchControlsRef} className="touch-controls" aria-label="Handheld game controls">
@@ -1511,6 +1556,14 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
         <div className="menu-action-pad"><button type="button" aria-label="B button: Back" disabled={showScoreIntro} onClick={activateConsoleBack}><b>B</b><small>BACK</small></button><button className="menu-primary-control" type="button" aria-label={`A button: ${modalActionItems[activeConsoleSelection]?.label ?? 'Select'}`} onClick={activateConsoleSelection}><b>A</b><small>SELECT</small></button></div>
       </div>
       <button className="console-start-control" type="button" aria-label={`Start button: ${modalActionItems[activeConsoleSelection]?.label ?? 'Select'}`} onClick={activateConsoleSelection}><i aria-hidden="true" />START</button>
+    </>
+  ) : homePanel !== 'none' ? (
+    <>
+      <div className="handheld-menu-controls panel-console-controls" aria-label={`${homePanel} screen controls`}>
+        <div className="menu-direction-pad"><small>{homePanel === 'series' ? 'ROUTE / ACTION' : 'CHANGE'}</small><button className="pad-up" type="button" aria-label="Previous panel option" onClick={() => movePanelSelection(-1)}>↑</button><button className="pad-left" type="button" aria-label="Previous tab or route" onClick={() => movePanelSelection(-1, true)}>←</button><button className="pad-right" type="button" aria-label="Next tab or route" onClick={() => movePanelSelection(1, true)}>→</button><button className="pad-down" type="button" aria-label="Next panel option" onClick={() => movePanelSelection(1)}>↓</button><span><i>PREV</i><i>NEXT</i></span></div>
+        <div className="menu-action-pad"><button type="button" aria-label="B button: Back" onClick={activatePanelBack}><b>B</b><small>BACK</small></button><button className="menu-primary-control" type="button" aria-label={`A button: ${panelActionItems[activePanelSelection]?.label ?? 'Select'}`} onClick={activatePanelSelection}><b>A</b><small>SELECT</small></button></div>
+      </div>
+      <button className="console-start-control menu-start-control" type="button" aria-label={`Start button: ${panelActionItems[activePanelSelection]?.label ?? 'Select'}`} onClick={activatePanelSelection}><i aria-hidden="true" />START</button>
     </>
   ) : (
     <>
@@ -1581,7 +1634,7 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
             </div>
             {homePanel === 'leaderboard' && <aside ref={homePanelRef} className="leaderboard home-panel" role="dialog" aria-modal="true" aria-labelledby="leaderboard-title" tabIndex={-1}>
               <button className="panel-dismiss" type="button" aria-label="Close leaderboard" onClick={closeHomePanel}>X</button>
-              <div className="board-heading"><span id="leaderboard-title">TOP RUNS</span><small>{board === 'daily' ? 'TODAY' : board === 'weekly' ? 'THIS WEEK' : 'ALL TIME'}</small></div>
+              <div className="board-heading"><span id="leaderboard-title">TOP RUNS</span><small>← D-PAD →</small></div>
               <div className="board-table">
                 <div className="board-tabs">
                   {(['daily', 'weekly', 'all'] as Board[]).map((item) => <button className={board === item ? 'active' : ''} aria-pressed={board === item} type="button" key={item} onClick={() => setBoard(item)}>{item === 'daily' ? 'TODAY' : item === 'weekly' ? 'WEEK' : 'ALL'}</button>)}
@@ -1599,11 +1652,11 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
                 {board === 'daily' && community.recent.length > 0 && <p className="recent-finishers">JUST RAN: {community.recent.join(' · ')}</p>}
                 <p>{board === 'weekly' ? 'YOUR BEST CREST SCORE FROM EACH DAY BUILDS YOUR WEEKLY TOTAL.' : 'HIGH SCORE WINS: FINISH, MOVE FAST, COLLECT LIGHT, AND COMPLETE THE CHALLENGE.'}</p>
               </div>
-              <button className="panel-close" type="button" onClick={closeHomePanel}>Close</button>
+              <button className="panel-close controller-selected" type="button" onClick={closeHomePanel}>Done</button>
             </aside>}
             {homePanel === 'help' && <aside ref={homePanelRef} className="how-to home-panel" role="dialog" aria-modal="true" aria-labelledby="help-title" tabIndex={-1}>
               <button className="panel-dismiss" type="button" aria-label="Close how to play" onClick={closeHomePanel}>X</button>
-              <div className="help-heading"><p className="kicker">READY, SUNNY?</p><h2 id="help-title">How to Play</h2></div>
+              <div className="help-heading"><p className="kicker">← D-PAD CHANGES PAGE →</p><h2 id="help-title">How to Play</h2></div>
               <div className="help-tabs" role="tablist" aria-label="How to Play sections">
                 {(['play', 'score', 'world'] as HelpTab[]).map((tab) => <button id={`help-tab-${tab}`} className={helpTab === tab ? 'active' : ''} type="button" role="tab" aria-selected={helpTab === tab} aria-controls="help-tabpanel" onClick={() => setHelpTab(tab)} key={tab}>{tab === 'play' ? 'Play' : tab === 'score' ? 'Score' : 'World'}</button>)}
               </div>
@@ -1612,11 +1665,12 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
                 {helpTab === 'score' && <section className="scoring-directory help-card-grid"><article><b>+500 · FINISH</b><span>Clear the route to bank a score.</span></article><article><b>UP TO +1,200 · PACE</b><span>Finish faster for more points.</span></article><article><b>UP TO +800 · LIGHT</b><span>Collect a larger share of the route&apos;s Light.</span></article><article><b>UP TO +200 · CHALLENGE</b><span>Earn Silver or Gold—or complete the Series objective.</span></article><p><b>EVERY FINISH COUNTS</b> All collected Light also goes to Suncrest&apos;s weekly community goal. Highest score wins; time breaks an exact tie.</p></section>}
                 {helpTab === 'world' && <section className="help-world"><div className="world-rules help-card-grid"><article><b>GOLD LIGHT</b><span>Shortens Dash recharge.</span></article><article><b>STORM LIGHT</b><span>Readies Dash and shields one hit.</span></article><article><b>CHECKPOINT</b><span>Saves progress and restores one life.</span></article><article><b>ENEMY</b><span>Dash through or land from above.</span></article></div><div className="twist-directory"><h3>Daily Twists</h3>{modifierSpecs.map((item) => <article className={item.id === modifier.id && !isPractice ? 'today' : ''} key={item.id}><b>{item.name}{item.id === modifier.id && !isPractice ? ' · TODAY' : ''}</b><span>{item.shortDescription}</span></article>)}</div></section>}
               </div>
-              <button className="panel-close" type="button" onClick={closeHomePanel}>Got It</button>
+              <button className="panel-close controller-selected" type="button" onClick={closeHomePanel}>Got It</button>
             </aside>}
             {homePanel === 'series' && <aside ref={homePanelRef} className="course-picker series-picker home-panel" data-series-theme={activeSeries?.series.theme} role="dialog" aria-modal="true" aria-labelledby="series-title" tabIndex={-1}>
               <button className="panel-dismiss" type="button" aria-label="Close Message Routes" onClick={closeHomePanel}>X</button>
               <h2 id="series-title">Message Routes</h2>
+              <p className="controller-hint">← → CHOOSE ROUTE · ↑ ↓ CHOOSE ACTION</p>
               {activeSeries && seriesWeek ? <>
                 <section className="series-feature series-feature-compact" data-series-theme={activeSeries.series.theme}>
                   <div className="series-week">
@@ -1640,21 +1694,21 @@ export default function Home({ initialDay, initialDailyRoute, initialActiveSerie
                     </div>
                   </div>
                 </section>
-                <button className="series-play" type="button" onClick={() => { pendingSeriesStartRef.current = true; setSeriesMode(true); closeHomePanel(); }}>Play {activeSeries.series.kind === 'special' ? 'Special Route' : `Week ${seriesWeekIndex + 1}: ${seriesWeek.routeName}`} ▶</button>
-                <button className="series-results-button" type="button" onClick={() => openHomePanel('series-results')}><span><small>SELECTED MESSAGE ROUTE</small><strong>Results &amp; Leaderboard</strong></span><b>{seriesCompletions} {seriesCompletions === 1 ? 'FINISHER' : 'FINISHERS'} →</b></button>
-                <div className="series-resources"><button className="message-link" type="button" onClick={() => { track('message_open'); openSeriesResource(seriesMessage?.title || 'This Week\'s Message', seriesMessage?.appUrl || seriesMessage?.url || activeSeries.series.messageUrl); }}><span className="message-icon" aria-hidden="true">▶</span><span><strong>{seriesMessage ? "Watch This Week's Message" : 'Message Details'}</strong><small>{seriesMessage?.title || 'Connect this route to Suncrest'}</small></span></button></div>
+                <button className={`series-play ${activePanelSelection === 0 ? 'controller-selected' : ''}`} type="button" onClick={() => { pendingSeriesStartRef.current = true; setSeriesMode(true); closeHomePanel(); }}>Play {activeSeries.series.kind === 'special' ? 'Special Route' : `Week ${seriesWeekIndex + 1}: ${seriesWeek.routeName}`} ▶</button>
+                <button className={`series-results-button ${activePanelSelection === 1 ? 'controller-selected' : ''}`} type="button" onClick={() => openHomePanel('series-results')}><span><small>SELECTED ROUTE</small><strong>Results &amp; Leaderboard</strong></span><b>{seriesCompletions} {seriesCompletions === 1 ? 'FINISHER' : 'FINISHERS'} →</b></button>
+                <div className="series-resources"><button className={`message-link ${activePanelSelection === 2 ? 'controller-selected' : ''}`} type="button" onClick={() => { track('message_open'); openSeriesResource(seriesMessage?.title || 'This Week\'s Message', seriesMessage?.appUrl || seriesMessage?.url || activeSeries.series.messageUrl); }}><span className="message-icon" aria-hidden="true">▶</span><span><strong>{seriesMessage ? "Watch This Week's Message" : 'Message Details'}</strong><small>{seriesMessage?.title || 'Connect this route to Suncrest'}</small></span></button></div>
               </> : <p>No Message Route is active today. The Daily Run is still ready to play.</p>}
-              <button className="panel-close" type="button" onClick={closeHomePanel}>Close</button>
+              <button className={`panel-close ${activePanelSelection === 3 ? 'controller-selected' : ''}`} type="button" onClick={closeHomePanel}>Back</button>
             </aside>}
             {homePanel === 'series-results' && <aside ref={homePanelRef} className="course-picker series-picker series-results-panel home-panel" role="dialog" aria-modal="true" aria-labelledby="series-results-panel-title" tabIndex={-1}>
               <button className="panel-dismiss" type="button" aria-label="Close Message Route results" onClick={closeHomePanel}>X</button>
               <button className="series-results-back" type="button" onClick={() => setHomePanel('series')}>← Message Routes</button>
               <p className="kicker">{seriesWeek?.routeName || 'MESSAGE ROUTE'}</p><h2 id="series-results-panel-title">Results &amp; Leaderboard</h2>
               <section className="series-results" aria-label="Selected Message Route results"><header><h3>Top Scores</h3><b>{seriesCompletions} {seriesCompletions === 1 ? 'FINISHER' : 'FINISHERS'}</b></header><div className="series-result-legend score-board" aria-hidden="true"><span>RANK</span><span>RUNNER</span><span>SCORE</span></div><ol>{seriesBoardStatus === 'loading' && <li className="series-result-message">LOADING RESULTS…</li>}{seriesBoardStatus === 'offline' && <li className="series-result-message">RESULTS ARE TEMPORARILY OFFLINE.</li>}{seriesBoardStatus === 'ready' && seriesEntries.length === 0 && <li className="series-result-message">BE THE FIRST TO FINISH THIS ROUTE.</li>}{seriesBoardStatus === 'ready' && seriesEntries.slice(0, 7).map((entry) => <li className={`${entry.isPlayer ? 'you ' : ''}score-board`} key={`${entry.rank}-${entry.name}`}><b>#{entry.rank}</b><span>{entry.name}</span><time>{entry.score.toLocaleString()}</time></li>)}</ol><p>{activeSeries ? `${activeSeries.series.mechanicAction} for the full +200 Message Route bonus.` : 'Complete the Message Route challenge for the full +200 bonus.'}</p></section>
-              <button className="panel-close" type="button" onClick={() => setHomePanel('series')}>Back to Message Routes</button>
+              <button className="panel-close controller-selected" type="button" onClick={() => openHomePanel('series')}>Back to Message Routes</button>
             </aside>}
             {homePanel === 'resource' && seriesResource && <aside ref={homePanelRef} className="message-viewer home-panel" role="dialog" aria-modal="true" aria-labelledby="resource-title" tabIndex={-1}>
-              <header><button type="button" onClick={() => setHomePanel('series')} aria-label="Back to Message Routes">← Back</button><div><small>FROM MESSAGE ROUTES</small><strong id="resource-title">{seriesResource.title}</strong></div></header>
+              <header><button type="button" onClick={() => openHomePanel('series')} aria-label="Back to Message Routes">← Back</button><div><small>FROM MESSAGE ROUTES</small><strong id="resource-title">{seriesResource.title}</strong></div></header>
               <iframe src={seriesResource.url} title={seriesResource.title} allow="autoplay; fullscreen; picture-in-picture" allowFullScreen />
             </aside>}
           </div>

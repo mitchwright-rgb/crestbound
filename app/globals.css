@@ -3608,3 +3608,206 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .portrait-game-frame .win-modal .result-actions > button,
   .portrait-game-frame .win-modal .result-actions .secondary { min-height: 30px; }
 }
+
+/* Controller-native menu pass. The screen behaves like a game interface;
+   touch remains available, but no primary flow depends on it. */
+.portrait-game-frame .home-cover { height: 28%; }
+.portrait-game-frame .home-dashboard {
+  gap: 4px;
+  padding: 7px 10px 9px;
+}
+.portrait-game-frame .handheld-screen-menu {
+  gap: 1px;
+  margin: 2px 4px 0;
+  border: 0;
+  background: transparent;
+}
+.portrait-game-frame .handheld-screen-menu > div {
+  min-height: 30px;
+  padding: 4px 7px;
+  border: 0;
+  color: #a7c9c7;
+  background: transparent;
+}
+.portrait-game-frame .handheld-screen-menu > div.active {
+  color: var(--gold-light);
+  background: transparent;
+  box-shadow: inset 3px 0 0 var(--gold), inset 0 -1px 0 #315d63;
+}
+.portrait-game-frame .handheld-screen-menu > div:not(.active) > span { opacity: 0; }
+
+.portrait-game-frame .home-panel { overflow: hidden; }
+.portrait-game-frame .home-panel > .panel-dismiss { display: none; }
+.portrait-game-frame .home-panel button.controller-selected {
+  border-color: var(--gold) !important;
+  outline: 2px solid #fff0bc !important;
+  outline-offset: -5px;
+  color: #071316 !important;
+  background: var(--gold) !important;
+  box-shadow: inset 0 -3px 0 #d77c0c !important;
+}
+.portrait-game-frame .controller-hint {
+  margin: 0;
+  color: #9fc9c7;
+  font: 7px/1.2 var(--font-pixel), monospace;
+  letter-spacing: .04em;
+  text-align: center;
+}
+
+.portrait-game-frame .board-tabs,
+.portrait-game-frame .help-tabs {
+  gap: 4px;
+  border: 0;
+  background: transparent;
+}
+.portrait-game-frame .board-tabs button,
+.portrait-game-frame .help-tabs button {
+  border: 0;
+  border-bottom: 2px solid #31575a;
+  color: #789b9c;
+  background: transparent;
+}
+.portrait-game-frame .board-tabs button.active,
+.portrait-game-frame .help-tabs button.active {
+  border-color: var(--gold);
+  color: var(--gold-light);
+  background: #123137;
+  box-shadow: inset 0 -3px 0 var(--gold);
+}
+
+.portrait-game-frame .series-picker:not(.series-results-panel) {
+  grid-template-rows: 31px 14px minmax(0, 1fr) 42px 42px 47px 36px;
+  gap: 4px;
+  padding: 8px 9px;
+  border-color: #315d63;
+  outline-color: var(--series-highlight, var(--gold));
+  background: #061b20;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) > h2 {
+  margin: 0;
+  color: var(--gold-light);
+  font-size: 18px;
+  line-height: 1;
+  text-align: left;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) > .controller-hint { grid-row: 2; }
+.portrait-game-frame .series-picker:not(.series-results-panel) > .series-feature {
+  grid-row: 3;
+  min-height: 0;
+  gap: 6px;
+  padding: 8px;
+  overflow: hidden;
+  border: 0;
+  border-left: 4px solid var(--series-accent, var(--gold));
+  outline: 0;
+  color: #d7e8e5;
+  background: #0a262c !important;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-week {
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-week > span { font-size: 8px !important; }
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-week > span { color: #8de0db !important; }
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-week > b { color: var(--gold-light) !important; font-size: 12px !important; }
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-mechanic {
+  gap: 2px;
+  margin: 2px 0 0;
+  padding: 6px 7px;
+  border: 0;
+  border-top: 1px solid #315d63;
+  background: transparent;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-mechanic > span { color: #ff8767 !important; }
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-mechanic > b { color: #fff8e9 !important; }
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-mechanic > small { color: #bfe9e6 !important; }
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-route-chooser { gap: 4px; }
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-route-count { font-size: 7px !important; }
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-week-dots { gap: 3px !important; }
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-week-dots button {
+  min-height: 28px;
+  padding: 3px 2px;
+  border-width: 1px;
+  font-size: 7px;
+  color: #8fb6b5 !important;
+  background: #061b20 !important;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-week-dots button.selected {
+  outline: 2px solid var(--gold-light);
+  outline-offset: -4px;
+  color: #071316 !important;
+  background: var(--gold) !important;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) > .series-play,
+.portrait-game-frame .series-picker:not(.series-results-panel) > .series-results-button,
+.portrait-game-frame .series-picker:not(.series-results-panel) > .series-resources,
+.portrait-game-frame .series-picker:not(.series-results-panel) > .panel-close { margin: 0; }
+.portrait-game-frame .series-picker:not(.series-results-panel) > .series-play {
+  grid-row: 4;
+  min-height: 42px;
+  border: 1px solid #315d63;
+  color: #d7e8e5;
+  background: #09262d;
+  box-shadow: none;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) > .series-results-button {
+  grid-row: 5;
+  min-height: 42px;
+  padding: 5px 8px;
+  border-width: 1px 1px 1px 4px;
+  border-color: #315d63 #315d63 #315d63 #ff8767;
+  color: #d7e8e5;
+  background: #09262d;
+  box-shadow: none;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) > .series-resources { grid-row: 6; }
+.portrait-game-frame .series-picker:not(.series-results-panel) > .series-resources .message-link {
+  min-height: 47px;
+  padding: 5px 8px;
+  border: 1px solid #315d63;
+  color: #d7e8e5;
+  background: #09262d;
+  box-shadow: none;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) > .series-resources .message-link strong {
+  color: #d7e8e5 !important;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) > .series-resources .message-link span:last-child {
+  color: #9fc9c7 !important;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) > .panel-close {
+  grid-row: 7;
+  display: block;
+  min-height: 36px;
+  border-color: #315d63;
+  color: #9fc9c7;
+  background: transparent;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) .controller-selected {
+  outline-offset: -4px;
+}
+
+@media (max-height: 700px) {
+  .portrait-game-frame .home-cover { height: 24%; }
+  .portrait-game-frame .home-dashboard .daily-course { min-height: 43px; }
+  .portrait-game-frame .home-dashboard .daily-glance { min-height: 31px; }
+  .portrait-game-frame .handheld-screen-menu > div { min-height: 25px; padding-block: 3px; }
+  .portrait-game-frame .series-picker:not(.series-results-panel) > .series-feature {
+    gap: 3px;
+    padding: 5px;
+  }
+  .portrait-game-frame .series-picker:not(.series-results-panel) .series-mechanic {
+    margin-top: 0;
+    padding: 4px 6px;
+  }
+  .portrait-game-frame .series-picker:not(.series-results-panel) .series-mechanic > small { display: none; }
+  .portrait-game-frame .series-picker:not(.series-results-panel) .series-route-count { font-size: 6px !important; }
+  .portrait-game-frame .series-picker:not(.series-results-panel) .series-week-dots { gap: 2px !important; }
+  .portrait-game-frame .series-picker:not(.series-results-panel) .series-week-dots button {
+    min-height: 21px;
+    padding: 2px 1px;
+    font-size: 6px;
+  }
+}

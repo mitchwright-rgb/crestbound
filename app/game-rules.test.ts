@@ -458,7 +458,7 @@ test('menu guidance uses readable in-place views instead of a scrolling document
   assert.match(styles, /\.leaderboard \.board-list \{ min-height: 0; display: flex; flex-direction: column/);
   assert.match(styles, /\.board-table \{ min-height: 0; display: grid; grid-template-rows: auto auto minmax\(0, 1fr\)/);
   assert.match(game, /<div className="board-table">[\s\S]*?<ol className="board-list"/);
-  assert.match(game, /<div className="board-context">[\s\S]*?<button className="panel-close"/);
+  assert.match(game, /<div className="board-context">[\s\S]*?<button className="panel-close[^\"]*"/);
   assert.match(styles, /\.series-results-panel\.home-panel \{[\s\S]*?height: auto;[\s\S]*?grid-template-rows: 44px auto auto 44px/);
   assert.match(styles, /\.series-results-panel \.series-results ol \{[\s\S]*?display: flex; flex-direction: column/);
   assert.match(game, /<header><h3>Top Scores<\/h3>/);
@@ -513,4 +513,22 @@ test('Subsplash uses one permanent portrait handheld without an orientation gate
   assert.doesNotMatch(source, /'Pause game'\}\>\{screen === 'paused' \? '▶' : 'Ⅱ'/);
   assert.match(source, />B<\/b><small>DASH<\/small>/);
   assert.match(source, />A<\/b><small>JUMP 2X<\/small>/);
+});
+
+test('every home menu panel is navigable from the handheld controls', () => {
+  const source = readFileSync(new URL('./crestbound-game.tsx', import.meta.url), 'utf8');
+  const styles = readFileSync(new URL('./globals.css', import.meta.url), 'utf8');
+  assert.match(source, /const \[panelSelection, setPanelSelection\]/);
+  assert.match(source, /const panelActionItems/);
+  assert.match(source, /const movePanelSelection/);
+  assert.match(source, /const activatePanelSelection/);
+  assert.match(source, /const activatePanelBack/);
+  assert.match(source, /homePanel !== 'none'/);
+  assert.match(source, /Previous tab or route/);
+  assert.match(source, /D-PAD CHANGES PAGE/);
+  assert.match(source, /CHOOSE ROUTE · ↑ ↓ CHOOSE ACTION/);
+  assert.match(styles, /Controller-native menu pass/);
+  assert.match(styles, /\.portrait-game-frame \.home-cover \{ height: 28%; \}/);
+  assert.match(styles, /\.handheld-screen-menu > div \{[\s\S]*?border: 0;[\s\S]*?background: transparent/);
+  assert.match(styles, /button\.controller-selected/);
 });
