@@ -4754,3 +4754,308 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   .portrait-game-frame .series-picker:not(.series-results-panel) > .series-feature .series-mechanic { padding-top: 4px; }
   .portrait-game-frame .series-picker:not(.series-results-panel) > .series-route-chooser { grid-template-rows: 13px 27px; }
 }
+
+/* Bonus Stage results use the same single-column console grammar as Home. */
+.portrait-game-frame .series-results-panel.home-panel {
+  left: 50%;
+  top: 50%;
+  width: calc(100% - 12px);
+  height: calc(100% - 12px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 32px 34px minmax(0, 1fr) 30px;
+  align-content: stretch;
+  gap: 5px;
+  margin: 0;
+  transform: translate(-50%, -50%);
+  padding: 8px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #071f25, #061b20);
+}
+.portrait-game-frame .series-results-panel > .series-results-back {
+  grid-column: 1;
+  grid-row: 1;
+  min-height: 0;
+  margin: 0;
+}
+.portrait-game-frame .series-results-panel > .kicker { display: none; }
+.portrait-game-frame .series-results-panel > h2 {
+  grid-column: 1;
+  grid-row: 2;
+  align-self: center;
+  margin: 0;
+  color: var(--cb-gold-light);
+  font-size: 15px;
+  line-height: 1.1;
+  text-align: left;
+}
+.portrait-game-frame .series-results-panel > .series-results {
+  grid-column: 1;
+  grid-row: 3;
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 38px 24px minmax(0, 1fr) auto;
+  margin: 0;
+  overflow: hidden;
+}
+.portrait-game-frame .series-results-panel .series-results header {
+  min-height: 0;
+  padding: 7px 9px;
+}
+.portrait-game-frame .series-results-panel .series-result-legend,
+.portrait-game-frame .series-results-panel .series-results li {
+  grid-template-columns: 38px minmax(0, 1fr) 62px;
+  gap: 6px;
+}
+.portrait-game-frame .series-results-panel .series-result-legend {
+  padding: 6px 8px;
+  font-size: 7px;
+}
+.portrait-game-frame .series-results-panel .series-results ol {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.portrait-game-frame .series-results-panel .series-results li {
+  min-height: 29px;
+  padding: 5px 8px;
+  font-size: 8px;
+}
+.portrait-game-frame .series-results-panel .series-results li.series-result-message {
+  grid-template-columns: minmax(0, 1fr);
+  place-items: center;
+  padding-inline: 14px;
+  text-align: center;
+}
+.portrait-game-frame .series-results-panel .series-results > p {
+  padding: 6px 8px;
+  font-size: 8px;
+  line-height: 1.25;
+}
+.portrait-game-frame .series-results-panel > .panel-close {
+  grid-column: 1;
+  grid-row: 4;
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  font-size: 7px;
+  line-height: 1;
+  text-align: center;
+}
+
+@media (max-height: 700px) {
+  .portrait-game-frame .series-results-panel.home-panel {
+    grid-template-rows: 28px 28px minmax(0, 1fr) 26px;
+    gap: 4px;
+    padding: 6px;
+  }
+  .portrait-game-frame .series-results-panel > h2 { font-size: 13px; }
+  .portrait-game-frame .series-results-panel > .series-results { grid-template-rows: 32px 21px minmax(0, 1fr); }
+  .portrait-game-frame .series-results-panel .series-results > p { display: none; }
+}
+
+/* Controller authority and final console consistency.
+   Navigation lives on the physical D-pad, A, B, and Start controls. Screen
+   content communicates state but cannot create a second, competing touch UI. */
+.handheld-control-bay::before { display: none; }
+.console-start-control {
+  bottom: 28px;
+  width: 84px;
+  height: 34px;
+  grid-template-columns: 36px auto;
+  gap: 7px;
+  padding: 3px 7px;
+  border-radius: 999px;
+  color: #503507;
+  background: #f2b52b;
+  box-shadow: 0 0 0 4px #f2b52b;
+}
+.console-start-control i { width: 36px; }
+.handheld-model { bottom: 76px; }
+
+.handheld-screen .home-panel button,
+.handheld-screen .game-modal > button,
+.handheld-screen .result-actions button,
+.handheld-screen .dash-coach button { pointer-events: none; }
+.portrait-game-frame .panel-close,
+.portrait-game-frame .series-results-back {
+  display: grid;
+  place-items: center;
+  min-height: 38px;
+  font: 8px/1 var(--font-pixel), monospace;
+}
+.portrait-game-frame .board-tabs,
+.portrait-game-frame .help-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.portrait-game-frame .board-tabs > div,
+.portrait-game-frame .help-tabs > div {
+  min-width: 0;
+  display: grid;
+  place-items: center;
+  border-right: 2px solid #172c30;
+  color: var(--cb-muted);
+  background: var(--cb-panel);
+  font: 8px/1 var(--font-pixel), monospace;
+  text-transform: uppercase;
+}
+.portrait-game-frame .board-tabs > div:last-child,
+.portrait-game-frame .help-tabs > div:last-child { border-right: 0; }
+.portrait-game-frame .board-tabs > div.active,
+.portrait-game-frame .help-tabs > div.active {
+  color: #071316;
+  background: var(--cb-teal);
+  box-shadow: inset 0 -3px 0 #30918f;
+}
+.portrait-game-frame .board-message small {
+  color: var(--cb-teal);
+  font: 7px/1.2 var(--font-pixel), monospace;
+}
+
+/* Bonus Stages is the Home dashboard in bonus mode: one route card, one
+   progress rail, and the same three-row console menu. */
+.portrait-game-frame .series-picker:not(.series-results-panel) {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: 38px 108px 58px minmax(0, 1fr);
+  align-content: stretch;
+  gap: 6px;
+  padding: 9px;
+  overflow: hidden;
+  border: 2px solid var(--cb-line);
+  outline: 2px solid #172c30;
+  background: linear-gradient(180deg, #071f25, #061b20);
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) > h2 { grid-row: 1; }
+.portrait-game-frame .series-picker:not(.series-results-panel) > .series-feature { grid-row: 2; }
+.portrait-game-frame .series-picker:not(.series-results-panel) > .series-route-chooser { grid-row: 3; }
+.portrait-game-frame .series-picker:not(.series-results-panel) > .bonus-stage-menu { grid-row: 4; }
+.portrait-game-frame .series-picker:not(.series-results-panel) > h2 {
+  min-height: 0;
+  margin: 0;
+  padding: 4px 7px;
+  align-items: center;
+  border-bottom: 1px solid #173f45;
+  color: var(--cb-gold-light);
+  font-size: 17px;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) > h2 small {
+  color: var(--cb-teal);
+  font-size: 7px;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) > .series-feature {
+  min-height: 0;
+  padding: 10px;
+  border: 0;
+  border-left: 4px solid var(--series-accent, var(--cb-gold));
+  background: var(--cb-panel) !important;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-week {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  align-content: center;
+  gap: 5px;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-week > .bonus-availability {
+  color: var(--cb-coral) !important;
+  font-size: 7px !important;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-week > b {
+  color: var(--cb-gold-light) !important;
+  font-size: 15px !important;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-mechanic {
+  align-self: end;
+  margin: 0;
+  padding-top: 7px;
+  border-top: 1px solid var(--cb-line);
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-mechanic > span {
+  color: var(--cb-coral) !important;
+  font-size: 7px !important;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) .series-mechanic > b {
+  color: var(--cb-text) !important;
+  font-size: 10px !important;
+}
+.portrait-game-frame .series-picker:not(.series-results-panel) > .series-route-chooser {
+  min-height: 0;
+  display: grid;
+  grid-template-rows: 16px 32px;
+  gap: 3px;
+  padding: 4px 6px;
+  border: 0;
+  border-left: 4px solid var(--cb-coral);
+  background: #082329;
+}
+.portrait-game-frame .series-progress-heading span { color: var(--cb-teal); font-size: 7px; }
+.portrait-game-frame .series-progress-heading b { color: var(--cb-muted); font-size: 6px; }
+.portrait-game-frame .series-week-dots { gap: 3px; }
+.portrait-game-frame .series-week-dots > div {
+  min-width: 0;
+  display: grid;
+  place-items: center;
+  gap: 1px;
+  border: 1px solid var(--cb-line);
+  color: var(--cb-muted);
+  background: #071f25;
+  font: 7px/1 var(--font-pixel), monospace;
+}
+.portrait-game-frame .series-week-dots > div b { font-size: 8px; }
+.portrait-game-frame .series-week-dots > div small { font-size: 5px; }
+.portrait-game-frame .series-week-dots > div.selected {
+  border-color: var(--cb-gold);
+  color: #071316;
+  background: var(--cb-gold);
+}
+.portrait-game-frame .bonus-stage-menu {
+  min-height: 0;
+  height: 100%;
+  margin: 0;
+  border: 1px solid var(--cb-line);
+}
+.portrait-game-frame .bonus-stage-menu > div {
+  min-height: 0;
+  padding: 6px 8px;
+  font-size: 9px;
+}
+.portrait-game-frame .bonus-stage-menu > div strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.portrait-game-frame .bonus-stage-menu > div small {
+  max-width: 118px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.portrait-game-frame .coach-confirm {
+  justify-self: center;
+  min-width: 132px;
+  padding: 7px 12px;
+  border: 2px solid #171b1c;
+  color: #071316;
+  background: var(--cb-gold);
+  font: 7px/1 var(--font-pixel), monospace;
+  text-align: center;
+}
+
+@media (max-height: 700px) {
+  .console-start-control { bottom: 20px; }
+  .handheld-model { bottom: 64px; }
+  .portrait-game-frame .series-picker:not(.series-results-panel) {
+    grid-template-rows: 31px 82px 50px minmax(0, 1fr);
+    gap: 4px;
+    padding: 7px;
+  }
+  .portrait-game-frame .series-picker:not(.series-results-panel) > .series-feature { min-height: 0; padding: 7px; }
+  .portrait-game-frame .series-picker:not(.series-results-panel) .series-week { gap: 3px; }
+  .portrait-game-frame .series-picker:not(.series-results-panel) .series-week > b { font-size: 12px !important; }
+  .portrait-game-frame .series-picker:not(.series-results-panel) .series-mechanic { padding-top: 4px; }
+  .portrait-game-frame .series-picker:not(.series-results-panel) > .series-route-chooser { grid-template-rows: 13px 27px; }
+}
