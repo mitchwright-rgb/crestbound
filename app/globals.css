@@ -194,10 +194,10 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   border: 4px solid #020708;
   border-radius: 18px 18px 30px 18px;
   background:
-    linear-gradient(120deg, rgb(255 255 255 / 15%), transparent 25% 76%, rgb(255 255 255 / 6%)),
-    linear-gradient(155deg, rgb(32 115 120 / 88%), rgb(52 39 76 / 90%));
-  box-shadow: inset 0 0 0 2px rgb(167 245 238 / 18%), 0 0 0 3px #2e7f83, 10px 16px 0 rgb(0 0 0 / 38%);
-  backdrop-filter: saturate(1.25) blur(3px);
+    linear-gradient(115deg, rgb(255 255 255 / 62%), transparent 22% 76%, rgb(255 255 255 / 28%)),
+    linear-gradient(165deg, rgb(238 246 244 / 86%), rgb(194 209 211 / 80%));
+  box-shadow: inset 0 0 0 3px rgb(255 255 255 / 68%), 0 0 0 3px #9cb2b5, 10px 16px 0 rgb(0 0 0 / 34%);
+  backdrop-filter: saturate(.85) blur(4px);
 }
 .portrait-game-frame::before {
   z-index: 5;
@@ -221,12 +221,12 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   grid-template-columns: 1fr auto auto;
   align-items: center;
   gap: 10px;
-  color: #78d7d2;
+  color: #334447;
   font: 7px/1 var(--font-pixel), monospace;
   letter-spacing: .11em;
   pointer-events: none;
 }
-.handheld-brand strong { color: var(--gold-light); font-size: 8px; }
+.handheld-brand strong { color: #172327; font-size: 8px; }
 .handheld-brand i { width: 19px; height: 19px; display: grid; place-items: center; border-radius: 50%; color: #071316; background: var(--coral); font-style: normal; }
 .handheld-screen {
   position: absolute;
@@ -247,9 +247,9 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   inset: calc(var(--console-header) + var(--console-screen-height) + 8px) 0 0;
   overflow: hidden;
   background:
-    linear-gradient(115deg, rgb(255 255 255 / 7%), transparent 30%),
-    linear-gradient(180deg, rgb(26 102 108 / 92%), rgb(48 37 70 / 96%));
-  box-shadow: inset 0 5px 0 rgb(123 229 220 / 22%), inset 0 0 38px rgb(2 7 8 / 12%);
+    linear-gradient(115deg, rgb(255 255 255 / 46%), transparent 30%),
+    linear-gradient(180deg, rgb(228 239 237 / 82%), rgb(187 201 203 / 86%));
+  box-shadow: inset 0 5px 0 rgb(255 255 255 / 56%), inset 0 0 38px rgb(42 57 59 / 8%);
 }
 .handheld-control-bay::before {
   position: absolute;
@@ -264,6 +264,16 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   background: #071b20;
   box-shadow: inset 0 2px 0 #174b52;
 }
+.handheld-control-bay::after {
+  position: absolute;
+  z-index: 0;
+  inset: 48px 34px 40px;
+  content: '';
+  background: url('/internal-phone-hardware.svg') center / contain no-repeat;
+  opacity: .19;
+  filter: contrast(.9);
+  pointer-events: none;
+}
 .handheld-speaker {
   z-index: 1;
   position: absolute;
@@ -276,19 +286,6 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   background: repeating-linear-gradient(90deg, #06171b 0 4px, transparent 4px 10px);
   pointer-events: none;
 }
-.handheld-easter-egg {
-  position: absolute;
-  left: 50%;
-  bottom: 52px;
-  display: flex;
-  gap: 2px;
-  transform: translateX(-50%);
-  color: rgb(137 214 207 / 16%);
-  font: 7px/1 monospace;
-  pointer-events: none;
-}
-.handheld-easter-egg i { font-style: normal; }
-
 /* The title/menu is the portrait version in every host orientation. */
 .portrait-game-frame .title-screen {
   width: 100%;
@@ -486,7 +483,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   transform: none;
   content: '';
   border-radius: 8px;
-  background: linear-gradient(#071a1e 0 0) 44px 0 / 44px 132px no-repeat, linear-gradient(#071a1e 0 0) 0 44px / 132px 44px no-repeat;
+  background: linear-gradient(#101719 0 0) 44px 0 / 44px 132px no-repeat, linear-gradient(#101719 0 0) 0 44px / 132px 44px no-repeat;
   filter: drop-shadow(4px 4px 0 rgb(2 7 7 / 58%));
 }
 .handheld-control-bay .direction-pad > small,
@@ -495,7 +492,7 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   left: 50%;
   top: -18px;
   transform: translateX(-50%);
-  color: #78aaa9;
+  color: #34484b;
   font: 8px/1 var(--font-pixel), monospace;
   letter-spacing: .12em;
 }
@@ -553,13 +550,13 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
   transform: rotate(9deg);
 }
 .handheld-control-bay .touch-controls .dash-control,
-.menu-action-pad button:first-child { color: #fff8e9; background: #b84d61; outline-color: #e48a98; }
+.menu-action-pad button:first-child { color: #fff8e9; background: #b94357; outline-color: #e48a98; }
 .handheld-control-bay .action-pad button b,
 .menu-action-pad button b { font: 20px/1 var(--font-pixel), monospace; }
 .handheld-control-bay .action-pad button small,
 .menu-action-pad button small { font: 6px/1 var(--font-pixel), monospace; }
 .handheld-control-bay .touch-controls .jump-control,
-.menu-action-pad button:last-child { color: #172327; background: var(--gold); outline-color: #d8931d; }
+.menu-action-pad button:last-child { color: #fff8e9; background: #d95162; outline-color: #f08b97; }
 .handheld-control-bay .touch-controls .dash-control.ready { color: #071316; background: var(--teal-light); }
 .menu-direction-pad > span { display: none; }
 .menu-direction-pad i { font-style: normal; }
@@ -576,140 +573,6 @@ body::before { position: fixed; z-index: -1; inset: -100vmax; content: ''; backg
 
 @media (min-width: 431px) {
   .portrait-game-frame.game-frame { height: min(100svh, 900px); }
-}
-
-/* Subsplash keeps its embedded browser in portrait. Gameplay therefore uses a
-   deliberate widescreen playfield between the compact HUD and thumb controls
-   instead of blocking the run behind an orientation prompt. */
-@media (max-width: 700px) and (orientation: portrait) {
-  .game-frame:has(.hud) {
-    background:
-      radial-gradient(circle at 50% 82%, rgb(120 215 210 / 9%), transparent 28%),
-      linear-gradient(180deg, #041316 0 14%, #0a2429 14% 78%, #06171b 78%),
-      #041316;
-  }
-  .game-frame:has(.hud) .game-canvas {
-    inset: 42% 15px auto;
-    width: calc(100% - 30px);
-    height: auto;
-    aspect-ratio: 16 / 9;
-    transform: translateY(-50%);
-    border: 9px solid #10292e;
-    outline: 3px solid #52777a;
-    background: #071316;
-    box-shadow: 8px 10px 0 rgb(1 8 10 / 62%), inset 0 0 0 2px #020707;
-    object-fit: fill;
-  }
-  .game-frame:has(.hud) .hud {
-    top: max(10px, env(safe-area-inset-top));
-    align-items: start;
-  }
-  .game-frame:has(.hud) .hud-brand {
-    display: none;
-  }
-  .game-frame:has(.hud) .hud-stats {
-    justify-self: start;
-    border-width: 2px;
-    outline-width: 1px;
-    box-shadow: 3px 3px 0 rgb(2 7 8 / 45%);
-  }
-  .game-frame:has(.hud) .hud-stats span {
-    min-width: 52px;
-    padding: 3px 4px;
-  }
-  .game-frame:has(.hud) .hud-actions {
-    gap: 5px;
-  }
-  .game-frame:has(.hud) .hud-actions button {
-    min-width: 42px;
-    min-height: 42px;
-    border-width: 2px;
-    box-shadow: 3px 3px 0 rgb(2 7 8 / 45%);
-  }
-  .game-frame:has(.hud) .route-meter {
-    width: min(72vw, 340px);
-    height: 7px;
-    justify-self: center;
-    margin: 2px 0 0;
-  }
-  .game-frame:has(.hud) .touch-controls {
-    left: max(18px, env(safe-area-inset-left));
-    right: max(18px, env(safe-area-inset-right));
-    bottom: max(24px, env(safe-area-inset-bottom));
-    align-items: center;
-  }
-  .game-frame:has(.hud) .touch-controls > div {
-    gap: 7px;
-  }
-  .game-frame:has(.hud) .direction-pad {
-    position: relative;
-    display: grid;
-    grid-template-columns: repeat(2, 62px);
-    gap: 0;
-    padding: 34px 0 20px;
-  }
-  .game-frame:has(.hud) .direction-pad::before {
-    position: absolute;
-    left: 50%;
-    top: 25px;
-    width: 38px;
-    height: 84px;
-    transform: translateX(-50%);
-    content: '';
-    border: 3px solid #020707;
-    background: #132f34;
-    box-shadow: inset 0 0 0 3px #294b4e;
-  }
-  .game-frame:has(.hud) .direction-pad > small {
-    position: absolute;
-    left: 50%;
-    top: 0;
-    transform: translateX(-50%);
-    color: #78aaa9;
-    font: 8px/1 var(--font-pixel), monospace;
-    letter-spacing: .15em;
-  }
-  .game-frame:has(.hud) .touch-controls button {
-    position: relative;
-    z-index: 1;
-    width: 62px;
-    height: 62px;
-    border-width: 3px;
-    outline-width: 1px;
-    box-shadow: 3px 3px 0 #020707;
-    font-size: 24px;
-  }
-  .game-frame:has(.hud) .direction-pad button:first-of-type { border-radius: 8px 0 0 8px; }
-  .game-frame:has(.hud) .direction-pad button:last-of-type { border-radius: 0 8px 8px 0; }
-  .game-frame:has(.hud) .action-pad {
-    display: grid;
-    grid-template-columns: repeat(2, 78px);
-    align-items: center;
-    gap: 8px;
-    transform: rotate(-9deg);
-  }
-  .game-frame:has(.hud) .touch-controls .dash-control,
-  .game-frame:has(.hud) .touch-controls .jump-control {
-    width: 78px;
-    height: 78px;
-    display: grid;
-    place-content: center;
-    gap: 3px;
-    border-radius: 50%;
-    transform: rotate(9deg);
-    font-size: 10px;
-  }
-  .game-frame:has(.hud) .action-pad button b { font: 24px/1 var(--font-pixel), monospace; }
-  .game-frame:has(.hud) .action-pad button small { font: 7px/1 var(--font-pixel), monospace; }
-  .game-frame:has(.hud) .touch-controls .dash-control.ready {
-    color: #071316;
-    background: repeating-linear-gradient(0deg, var(--teal-light) 0 5px, #62c8c5 5px 6px);
-  }
-  .game-frame:has(.hud) .dash-coach {
-    bottom: max(116px, calc(env(safe-area-inset-bottom) + 108px));
-    width: calc(100% - 30px);
-    padding: 11px 12px;
-  }
 }
 
 /* Daily course and Suncrest competition loop */

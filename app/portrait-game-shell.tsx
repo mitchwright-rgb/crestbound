@@ -23,7 +23,6 @@ export default function PortraitGameShell({ children, controls, label, theme }: 
         <div className="handheld-screen">{children}</div>
         <footer className="handheld-control-bay">
           {controls}
-          <span className="handheld-easter-egg" aria-hidden="true"><i>•</i><i>‿</i><i>•</i></span>
           <span className="handheld-speaker" aria-hidden="true" />
         </footer>
       </section>
